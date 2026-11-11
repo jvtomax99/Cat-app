@@ -20,6 +20,12 @@ the phone's browser and can be added to the home screen.
 - **(Merlin?)** Free, paid, or not decided yet?
 
 ## Features (live) and Done when
+- **Opening screen** (not live yet: on branch `claude/cat-app-opening-menu-vmvfz6`).
+  Done when: opening the app shows the Pocket Kitten logo over the real
+  Mochi in her room while it loads, one tap on Play goes to the game, the
+  very first open plays a short film that ends on the real Mochi with no
+  visible cut, it never plays sound by itself, and a save or a sleeping
+  Mochi is untouched (`tools/qa/title.mjs`).
 - **Mochi looks like herself.** Done when: she's recognisably the same
   peculiar, endearing kitten (her Meshy model, fur, real eyes), checked in
   close-ups in the review pack.
@@ -73,6 +79,14 @@ decor, Miso, phase 08 (app screens), phase 09 (test group).
 - Sharing with the 1000-member group after the test group.
 
 ## Decisions
+- Opening screen: one tap every open, and it doubles as the loading screen
+  so it costs no waiting. The film plays once per device (not in the backup
+  code), is skippable, and is skipped for people who ask for less motion or
+  are saving data. No menu items, no music. Merlin picked "Runway film first
+  time only". 2026-11-11.
+- Merlin OK'd spending the Runway and Meshy credits already in the accounts
+  on the opening screen (film, logo, three toys). Mochi herself stays on her
+  own model. 2026-11-11.
 - Nothing goes live without Merlin's "Go live"; one preview branch,
   published at /preview/ (no per-feature branches, no Vercel). 2026-11-11.
 - Asset and design budget: $50 total. 2026-11-11.

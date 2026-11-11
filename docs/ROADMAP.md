@@ -13,7 +13,7 @@ One phase per session (see `WORKFLOW.md`). Briefs are in `docs/phases/`.
 | 06 | Christmas tree mischief | todo (December) | Mochi climbs and bats at the tree. |
 | 07 | [Walk like a cat again](phases/07-walk-grace.md) | live (build 171) | Walk set to measured cat numbers, stutter-step fixed, a trot for every run, gallop only flat out. Merlin: "much much better". |
 | 10 | Seasonal looks stored away | live (build 174) | Halloween hidden from the picker out of October (`?decor=halloween` shows it); a room left in it wakes up as Thanksgiving. Christmas: waiting on Orion's image. |
-| 08 | Friendly app screens | todo | Merlin wants it "real app ready": an easy, clear interface. Needs a brief with Merlin/Orion first. |
+| 08 | Friendly app screens | todo | Merlin wants it "real app ready": an easy, clear interface. Needs a brief with Merlin/Orion first. One piece is built ahead of the rest: the opening screen (logo, Play, first-time film), on branch `claude/cat-app-opening-menu-vmvfz6` in `jvtomax99/Cat-app`, not on the preview branch yet, awaiting Merlin. |
 | 09 | Small test group | todo | Share with 10-20 people (different phones) with a way to send feedback, before the 1000-member group. |
 
 ## Done (live build 174, `97f11c8`)

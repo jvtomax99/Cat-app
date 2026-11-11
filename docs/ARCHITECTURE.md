@@ -19,6 +19,7 @@ preview branch.
 | `kitchen.js` | `Kitchen`: island, shelves, sink and faucet, pendant lamp, robot vacuum, terrace, dog (`?dog`). Layout constants in `K`; spots in `layout()`. |
 | `decor.js` | Seasonal decor for both rooms; `pillowGeometry`. Seasonal looks have `months` and are stored away out of season (`inSeason`, `decorNow`; `?decor=halloween` shows one anyway). |
 | `pet-state.js`, `save.js` | Care meters, saves, offline progress. |
+| `title.js` | The opening screen: logo, Play, loading bar, the first-time film, the bloom into the game. Page and timing only; the 3D side is in `app.js` (`titleReveal`, `titleCamera`, `titleLife`, `titleEnter`, the toys). |
 | `sound.js`, `meows.js` | Short sounds and meows (no ambient loops). |
 
 ## Frame loop (app.js)
@@ -90,10 +91,33 @@ eating reach → pick a pose → `cat.update(dt, t, ctl)` (MotionCat).
 - github.io is blocked from the cloud container; check the deploy workflow run instead.
 - Night: `clockNight()` (sunset table) or `?night=0` / `?night=1`.
 
+## Opening screen
+- `#title` is in `index.html` from the first paint and `body.title-on`
+  makes the room full screen behind it (like Watch mode). `openTitle()` in
+  `app.js` gets `onReveal` (room ready and any film over: pose her, set the
+  camera), `onPlay` (greet), `onEnter` (screen covered: game layout, camera
+  glides to the room, toys removed).
+- While `title.on`, `idleLife` does nothing but `titleLife` (blinks, head
+  tilts, the yarn ball). The care meters and the save are untouched.
+- The film's last frame is a real screenshot: study, Mochi sitting at
+  (0, 0, .5) facing +z, camera `TITLE_CLOSE`, portrait (fov 46). The live
+  scene opens on exactly that, then eases to `TITLE_WIDE`. Change the pose,
+  the study behind her or `TITLE_CLOSE` and the hand-over shows a jump:
+  retake `sources/title/film-last-frame.png` and remake the film.
+- The film is daylight, so day is forced until Play when the film plays.
+- Seen-the-film flag: `localStorage[<save key> + '-intro']`, apart from the
+  save and not in backup codes.
+- `?title=0` no opening screen, `?title=film` the film again, `?title=1`
+  with `?debug` (which otherwise skips it, for the QA tools and review pack).
+- Toys (`dist/assets/models/`) are packed with meshopt: the loader needs
+  `vendor/meshopt_decoder.module.js` (fetched only on the opening screen).
+  Remake from `models/title-toys/` with `gltf-transform optimize
+  --compress meshopt --texture-compress webp --texture-size 512`.
+
 ## Debug (`?debug` → `window.kitten`)
 `brain`, `pet`, `cat`, `room`, `kitchen`, `place`, `view`, `camera`,
 `step(dt, n, draw)`, `act`, `setActivity`, `walkTo`, `jumpTo`, `jumpDown`,
 `goTo('kitchen' | 'room')`, `stroll`, `stealSalmon`, `drinkFaucet`,
 `vacuumRide`, `vacuumAttack`, `ridePendant`, `nightLife`, `setNight(bool)`,
 `knockItem`, `tapCups`, and others (see the end of app.js).
-URL flags: `?debug`, `?frames`, `?night=0/1`, `?dog`, `?motion=classic`.
+URL flags: `?debug`, `?frames`, `?night=0/1`, `?dog`, `?motion=classic`, `?title=0/1/film`.
