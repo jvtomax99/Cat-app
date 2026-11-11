@@ -5,6 +5,6 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "check": "node --check dist/app.js && node --check dist/real-cat.js && node --check dist/cat-rig.js && node --check dist/motion.js && node --check dist/motion-cat.js && node --check dist/face-sculpt.js && node --check dist/sound.js && node --check dist/save.js && node --check dist/decor.js && node --check dist/room.js && node checks.mjs && node save-checks.mjs"
+    "check": "node --check dist/app.js && node --check dist/real-cat.js && node --check dist/cat-rig.js && node --check dist/motion.js && node --check dist/motion-cat.js && node --check dist/face-sculpt.js && node --check dist/sound.js && node --check dist/save.js && node --check dist/decor.js && node --check dist/room.js && node --check dist/title.js && node checks.mjs && node save-checks.mjs"
   }
 }

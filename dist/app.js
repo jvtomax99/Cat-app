@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import {fresh, advance, care, mood} from './pet-state.js';
 import {DECORS, applyDecor, inSeason, decorNow, applyKitchenDecor} from './decor.js';
-import {load as loadSave, store as storeSave, keepStorage, toCode, fromCode} from './save.js';
+import {load as loadSave, store as storeSave, keepStorage, toCode, fromCode, keys as saveKeys} from './save.js';
 import {RealCat, EXPRESSIONS} from './real-cat.js';
 import {MotionCat} from './motion-cat.js';
 import {Room} from './room.js';
 import {Kitchen} from './kitchen.js';
 import {Sounds} from './sound.js';
+import {openTitle} from './title.js';
+import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 const $ = s => document.querySelector(s);
 const {damp, clamp, lerp} = THREE.MathUtils;
@@ -516,10 +518,29 @@ function onRug(v) {
 }
 const randomRugPoint = () => place !== room ? place.randomFloorPoint() : onRug(new THREE.Vector3(rand(-1.4, 1.4), 0, rand(-.7, 1.2)));
 
+// ---------------------------------------------------------------------------
+// The opening screen (title.js): the logo and Play over the live room, and
+// the very first time a short film. ?title=0 skips it and ?title=film plays
+// the film again; the QA tools and the review pack (?debug) open straight on
+// the room.
+// ---------------------------------------------------------------------------
+const titleAsk = new URLSearchParams(location.search);
+let titleView = null, titleToys = null, titleDay = null;
+const title = openTitle({
+  mode: !renderer || titleAsk.get('title') === '0' || (titleAsk.has('debug') && !titleAsk.has('title')) ? 'off' : titleAsk.get('title') === 'film' ? 'film' : 'auto',
+  storage, key: saveKeys().main + '-intro',
+  onReveal: () => titleReveal(), onPlay: () => greet(true), onEnter: () => titleEnter(),
+  onPointer: e => { if (!pet.sleeping) trackPointer(e); }, onTap: e => titleTap(e),
+});
+// The film is in daylight, so the room it hands over to is too, until Play.
+// (Before the first refresh(), further down, which lights the room.)
+if (title.film) { titleDay = {was: forcedNight}; forcedNight = false; night = false; }
+
 let ready = false;
 cat.load('./assets/mochi-ragdoll.glb', p => {
   if (!p.total) return;
   const pct = Math.round(p.loaded / p.total * 100);
+  title.progress(pct);
   $('#load-fill').style.width = pct + '%';
   $('#load-progress').textContent = pct < 100 ? pct + '% · bringing your kitten home' : 'Fluffing the fur…';
 }).then(() => {
@@ -530,8 +551,10 @@ cat.load('./assets/mochi-ragdoll.glb', p => {
   host.classList.add('ready');
   $('#loading').classList.add('done');
   setTimeout(() => $('#loading').hidden = true, 900);
-  greet(true);
+  // (Behind the opening screen she says hello when Play is pressed.)
+  if (title.on) title.ready(); else greet(true);
 }).catch(e => {
+  title.abort();
   $('#loading strong').textContent = 'Your kitten couldn’t load.';
   $('#load-progress').textContent = 'Please reload to try again.';
   console.error(e);
@@ -1084,6 +1107,8 @@ function placeSpeech() {
 
 // Little unprompted behaviours that make the kitten feel alive.
 function idleLife(t) {
+  // On the opening screen she stays put (titleLife); her day starts at Play.
+  if (title.on) { if (titleView) titleLife(t); return; }
   // Birds by day, bats on Halloween evenings (so before the sleeping return).
   watchBirds(t);
   vacuumLife(t);
@@ -2664,6 +2689,117 @@ CAMERA_VIEWS.room();
 view.focus.copy(view.goal.focus);
 Object.assign(view, {yaw: view.goal.yaw, pitch: view.goal.pitch, dist: view.goal.dist, cut: 0, lift: 0});
 
+// ---------------------------------------------------------------------------
+// The opening screen's scene. She sits facing the camera, close up: that is
+// the film's last frame exactly (sources/title/film-last-frame.png), so the
+// film can fade into the live room. The camera then eases back to leave room
+// for the logo, and drifts a little. Asleep, she is left asleep in her bed.
+// ---------------------------------------------------------------------------
+const TITLE_CLOSE = {y: .55, yaw: .1, pitch: .06, dist: 2.3}, TITLE_WIDE = {y: .86, yaw: .1, pitch: .1, dist: 3.6};
+function titleReveal() {
+  const asleep = pet.sleeping, base = brain.elevation || 0;
+  if (!asleep) {
+    if (place === room) brain.pos.set(0, 0, .5);
+    brain.heading = 0; brain.target = null;
+    setActivity('sit');
+  }
+  const h = brain.heading;
+  const to = asleep ? {y: .75, yaw: h + .5, pitch: .34, dist: 3.6} : {...TITLE_WIDE, yaw: h + TITLE_WIDE.yaw};
+  // After the film: the film's last frame. Otherwise most of the way back
+  // already, so the logo (up since loading) never sits on her face.
+  const from = asleep ? {...to, y: .6, dist: 3} : title.film ? {...TITLE_CLOSE, yaw: h + TITLE_CLOSE.yaw} : {...to, y: lerp(TITLE_CLOSE.y, to.y, .7), dist: lerp(TITLE_CLOSE.dist, to.dist, .7)};
+  setCamMode('title');
+  view.focus.set(brain.pos.x, base + from.y, brain.pos.z);
+  Object.assign(view, {yaw: from.yaw, pitch: from.pitch, dist: from.dist, cut: 0, lift: 0, glideUntil: Infinity});
+  // (After the film the close-up holds a moment, so the hand-over is still.)
+  titleView = {from, to, base, t0: clockNow + (title.film ? .7 : .15), next: clockNow + 3.5};
+  titleCamera();
+  if (!asleep) loadTitleToys();
+}
+function titleCamera() {
+  const v = titleView, s = clockNow - v.t0, g = view.goal, p = s < 0 ? v.from : v.to, drift = Math.max(0, s) * motion;
+  g.focus.set(brain.pos.x, v.base + p.y, brain.pos.z);
+  g.yaw = p.yaw + Math.sin(drift * .3) * .1;
+  g.pitch = p.pitch;
+  g.dist = p.dist - (1 - Math.cos(drift * .19)) * .12;
+}
+function titleLife(t) {
+  const v = titleView;
+  if (pet.sleeping) { if (t > brain.nextZ) { brain.nextZ = t + rand(2.2, 3.4); burst('z', 1); } return; }
+  if (t < v.next) return;
+  v.next = t + rand(3.2, 5.5);
+  const toys = (titleToys || []).filter(o => t > o.userData.born + .6), yarn = toys.find(o => o.userData.rolls);
+  const choice = pick(['blink', 'blink', 'tilt', toys.length ? 'toy' : 'tilt', yarn ? 'roll' : 'blink']);
+  if (choice === 'blink') { glanceAt(camera.position, 2.2); slowBlink(); }
+  if (choice === 'tilt') { express('curious', 1.8); twitchEar(); }
+  if (choice === 'toy') glanceAt(pick(toys).position, 1.7);
+  // The yarn ball rolls a little way and back; her eyes go with it.
+  if (choice === 'roll') { yarn.userData.roll = t; brain.glance = yarn.position; brain.glanceUntil = t + 2.8; v.next = t + 4; }
+}
+function titleTap(e) {
+  setPointer(e);
+  if (!hitsCat()) return;
+  if (pet.sleeping) { twitchEar(); return; }
+  express('joy', 1.4); burst('heart', 3); meow('chirp', 'reply');
+  brain.tailUpUntil = clockNow + 2;
+}
+// A few of her toys on the floor beside her, on the opening screen only
+// (Meshy models, see CREDITS.md; they are put away when the game starts).
+// at: [to her right, in front of her].
+const TITLE_TOYS = [
+  {file: 'yarn-ball', size: .3, at: [-.43, .22], turn: 2.4, rolls: true},
+  {file: 'felt-mouse', size: .22, at: [.42, .34], turn: -2.2},
+  {file: 'fabric-fish', size: .26, at: [.43, -.5], turn: .9},
+];
+async function loadTitleToys() {
+  titleToys = [];
+  const loader = new GLTFLoader(), h = brain.heading, cos = Math.cos(h), sin = Math.sin(h), y = brain.elevation || 0;
+  // (The toys are packed small; this unpacks them. Fetched only here.)
+  try { loader.setMeshoptDecoder((await import('./vendor/meshopt_decoder.module.js')).MeshoptDecoder); } catch { return; }
+  if (!titleView) return;
+  TITLE_TOYS.forEach((d, i) => loader.load(`./assets/models/${d.file}.glb`, g => {
+    if (!titleView) return;
+    const o = g.scene, box = new THREE.Box3().setFromObject(o), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+    const k = d.size / Math.max(size.x, size.y, size.z), holder = new THREE.Group();
+    o.scale.setScalar(k); o.position.copy(c).multiplyScalar(-k);
+    o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+    holder.add(o);
+    holder.position.set(brain.pos.x + d.at[0] * cos + d.at[1] * sin, y + size.y * k / 2 + .012, brain.pos.z - d.at[0] * sin + d.at[1] * cos);
+    holder.rotation.y = h + d.turn;
+    holder.scale.setScalar(.001);
+    holder.userData = {born: Math.max(clockNow, titleView.t0) + .35 + i * .25, home: holder.position.clone(), radius: size.y * k / 2, rolls: !!d.rolls, roll: null};
+    scene.add(holder);
+    titleToys.push(holder);
+  }, undefined, () => {}));
+}
+function titleToyLife(t) {
+  for (const o of titleToys || []) {
+    const u = o.userData, p = clamp((t - u.born) / .55, 0, 1);
+    // (They pop in with a little overshoot.)
+    o.scale.setScalar(Math.max(.001, 1 + 2.7 * (p - 1) ** 3 + 1.7 * (p - 1) ** 2));
+    if (u.roll != null) {
+      const q = clamp((t - u.roll) / 2.8, 0, 1), dx = Math.sin(q * Math.PI) * .22 * motion;
+      o.position.x = u.home.x + dx;
+      o.rotation.z = -dx / u.radius;
+      if (q >= 1) u.roll = null;
+    }
+  }
+}
+// Play was pressed and the screen is covered: back to the game's layout,
+// and the camera sweeps out from her to the whole room.
+function titleEnter() {
+  titleView = null;
+  for (const o of titleToys || []) {
+    scene.remove(o);
+    o.traverse(m => { if (m.isMesh) { m.geometry.dispose(); for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap']) m.material[k]?.dispose(); m.material.dispose(); } });
+  }
+  titleToys = null;
+  if (titleDay) { forcedNight = titleDay.was; titleDay = null; refresh(); }
+  brain.nextIdle = clockNow + 7; brain.nextShow = Math.max(brain.nextShow, clockNow + 12); brain.nextBird = Math.max(brain.nextBird, clockNow + 14);
+  // (Once the layout has changed size.)
+  setTimeout(() => { view.glideUntil = clockNow + 3; CAMERA_VIEWS.room(); }, 80);
+}
+
 function updateCamera(dt) {
   const g = view.goal, following = view.mode === 'follow' && ready;
   let distGoal = g.dist;
@@ -2680,13 +2816,15 @@ function updateCamera(dt) {
     // Your own zoom wins for a while after you pinch or scroll.
     if (clockNow - view.zoomedAt > 8) distGoal = Math.max(g.dist, fitDistance(frame.radius));
   }
-  const r = following ? 2.2 : 5;
+  // (A glide: the opening screen's slow camera, and its sweep out to the room.)
+  const glide = clockNow < (view.glideUntil || 0);
+  const r = glide ? 1.5 : following ? 2.2 : 5, turn = glide ? 1.5 : 8;
   view.focus.x = damp(view.focus.x, g.focus.x, r, dt);
   view.focus.y = damp(view.focus.y, g.focus.y, r, dt);
   view.focus.z = damp(view.focus.z, g.focus.z, r, dt);
-  view.yaw = damp(view.yaw, g.yaw, 8, dt);
-  view.pitch = damp(view.pitch, g.pitch, 8, dt);
-  view.dist = damp(view.dist, distGoal, following && distGoal > g.dist ? 1.6 : 7, dt);
+  view.yaw = damp(view.yaw, g.yaw, turn, dt);
+  view.pitch = damp(view.pitch, g.pitch, turn, dt);
+  view.dist = damp(view.dist, distGoal, glide ? 1.5 : following && distGoal > g.dist ? 1.6 : 7, dt);
   camOffset.set(Math.sin(view.yaw) * Math.cos(view.pitch), Math.sin(view.pitch), Math.cos(view.yaw) * Math.cos(view.pitch));
   // Spring arm: if the camera would leave the room, shorten the arm instead.
   let d = view.dist;
@@ -2791,6 +2929,7 @@ function frame(now) {
   if (ready && brain.activity === 'catnap') pet.energy = Math.min(100, pet.energy + dt / 60);
   updatePlay(dt, t);
   if (ready) updateCat(dt, t);
+  if (titleView) { titleCamera(); titleToyLife(t); }
   updateCamera(dt);
   updateRoom(dt, t);
   if (ready) {
