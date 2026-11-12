@@ -1,47 +1,52 @@
-# Handoff — 2026-11-11
+# Handoff: 2026-11-12, branch `claude/cat-app-opening-menu-vmvfz6`
 
-## State
-- Live: build 174 = `97f11c8` (walk and trot, Halloween away).
-- Preview: `f027528` on `claude/expressive-cat-modern-ui-65z6r5`, phase 02
-  (Vision) done, **waiting on Merlin** to look and say "Go live" (7 commits
-  `ad829b7`..`f027528`; go live with the last one).
-- Build numbers = commits on the branch; count in a full clone.
+This branch is a side line. It started from `main` at `43fdbf8`, before
+the title screen, the cinematic and the long-haired Mochi reached the fork.
+Nothing here is on the preview branch. Do not merge it as it is.
 
-## Phase 02, in short
-The vacuum never went through anything (measured); she did. Her tail now
-keeps out of the kitchen's furniture (`clearTail` in motion.js, the
-kitchen's `tailSolids`), the keep-out and the vacuum's lanes fit her body,
-she boards and leaves the vacuum from a side with room, the gap by the
-window steps is entered by its mouth. Numbers and leftovers:
-`docs/phases/02-vacuum-vision.md`. Pictures: `qa-out/vision-evidence/`
-(not committed; rerun `tools/qa/vacuum.mjs` to make new ones).
+## What Merlin asked here
+2026-11-11: "use Runway and Meshy, create a cute but exciting opening start
+menu". He picked "Runway film first time only". 2026-11-12, after seeing
+it: "the cat's face needs vast improvement, it doesn't look cute and it
+doesn't look like a cat", then "let's continue but with the new model".
+The new model is the long-haired Mochi, already the default cat on the
+preview branch `claude/expressive-cat-modern-ui-65z6r5` (`d38641f`).
 
-## Next (Merlin's order)
-1. Merlin looks at the preview; "Go live" → `git push origin f027528:main`,
-   check the Deploy workflow, add a row to `MILESTONES.md`.
-2. Phase 03, the study: a `tailSolids` list in `studyLayout()` (app.js)
-   from the study's furniture (room.js: beds, chair, mantel, bookcase,
-   walls), and `tools/qa/tail.mjs` for both rooms (copy the body-point and
-   solid-reading parts of `vacuum.mjs`). The mechanism is done.
-3. Christmas decor (waiting on Orion's image), Miso (waiting on the .glb),
-   phases 08, 09.
+## The clash (waiting on Merlin)
+The preview branch already has an opening screen: "Enter" gate, the
+7.6 s zoomies cinematic with the real Mochi, her name, "Tap to start"
+(`docs/phases/11-title-cinematic.md` there; in that session he picked the
+real-cat cinematic over a generated film). This branch built a second one
+with the same names (`#title`, `titleView`, `titleLife`,
+`tools/qa/title.mjs`), so the two cannot both be merged. Asked him which
+way to go; recommended: keep the cinematic (it shows whatever cat is in
+the app), and carry over from here only the logo and the toys.
 
-## Gotchas learned this phase
-- Every pass that "should have worked" didn't until measured: run
-  `tools/qa/vacuum.mjs` (2 seeds x 600 s, ~25 real minutes for both in
-  parallel) after any change to kitchen.js margins, FLOOR, KEEP_OUT, the
-  vacuum's pads or `clearTail`.
-- The window lane is just wide enough for the vacuum with her aboard:
-  `KEEP_OUT.x0`, the riding pad (.7) and `VAC_FLOOR_RIDE.x0` (-5.3) are
-  tuned together; see ARCHITECTURE.
-- `route()` drops any circle that holds the goal: never let a goal sit
-  inside a padded circle (randomFloorPoint handles the vacuum's).
-- The cloud container restarts kill background runs: launch them with
-  `run_in_background`, outputs in the scratchpad, and check they finished
-  (`overlap(s):` in the output).
-- Screenshots in the QA nudge the clock a frame; same AT list = same run.
+## Built on this branch (3 commits, `304f505`..`21b55f7`, pushed)
+- `dist/title.js` and the `title*` functions in `dist/app.js`: logo and
+  Play over the live room while it loads, a first-time film, a bloom into
+  the game, camera glide. Checked with `tools/qa/title.mjs`: day, night,
+  asleep, kitchen, wide screen, film at night all "ok". The film path on
+  its own (page markup + `title.js`, no 3D): plays to the end, hands over,
+  is remembered as seen, Play removes the screen.
+- Assets worth keeping whichever way he picks:
+  - `dist/assets/title/pocket-kitten-logo.webp` (95 KB, Runway).
+  - `dist/assets/models/yarn-ball.glb`, `felt-mouse.glb`,
+    `fabric-fish.glb` (Meshy; packed with meshopt, they need
+    `dist/vendor/meshopt_decoder.module.js`); fuller copies in
+    `models/title-toys/`.
+- Out of date: `dist/assets/title/mochi-hello.mp4` shows the first Mochi.
+  A film for the long-haired Mochi has to be made again from two new
+  screenshots (how: `docs/ARCHITECTURE.md` here, "Opening screen";
+  about 210 Runway credits a take).
+- Credits used here: Runway about 255, Meshy 237. `CREDITS.md` has rows.
 
-## Paste into a new chat
-> Read CLAUDE.md and HANDOFF.md. Phase 02 is on preview waiting for
-> Merlin. If Merlin says Go live, do that; otherwise do phase 03 for the
-> study (docs/phases/03-tail-collision.md).
+## Not done
+- The reviewer check of this branch's code was stopped half way (usage
+  limit, then the clash made it pointless until Merlin picks).
+- Nothing from here is on the preview branch.
+
+## Next step
+Wait for Merlin's pick, then work on the preview branch (the fork's
+CLAUDE.md there says every change goes to it). Bring files over with
+`git checkout origin/claude/cat-app-opening-menu-vmvfz6 -- <path>`.
