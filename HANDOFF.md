@@ -18,9 +18,10 @@ The preview branch already has an opening screen: "Enter" gate, the
 (`docs/phases/11-title-cinematic.md` there; in that session he picked the
 real-cat cinematic over a generated film). This branch built a second one
 with the same names (`#title`, `titleView`, `titleLife`,
-`tools/qa/title.mjs`), so the two cannot both be merged. Asked him which
-way to go; recommended: keep the cinematic (it shows whatever cat is in
-the app), and carry over from here only the logo and the toys.
+`tools/qa/title.mjs`), so the two cannot both be merged. **Merlin picked
+(2026-11-12): keep the cinematic, add this branch's Pocket Kitten logo and
+the three toys to it. No film.** The work moves to a new chat on the
+preview branch.
 
 ## Built on this branch (3 commits, `304f505`..`21b55f7`, pushed)
 - `dist/title.js` and the `title*` functions in `dist/app.js`: logo and
@@ -47,6 +48,6 @@ the app), and carry over from here only the logo and the toys.
 - Nothing from here is on the preview branch.
 
 ## Next step
-Wait for Merlin's pick, then work on the preview branch (the fork's
+Work on the preview branch (the fork's
 CLAUDE.md there says every change goes to it). Bring files over with
 `git checkout origin/claude/cat-app-opening-menu-vmvfz6 -- <path>`.
