@@ -3678,6 +3678,8 @@ function titleReady() {
     return;
   }
   titleStage = 'still';
+  // (For the footer on the preview: why the quiet title, not the film.)
+  noteFilm('quiet title: ' + [reduceMotion && 'Reduce Motion is on', pet.sleeping && 'asleep', introParam === 'short' && 'intro=short', !renderer && 'no 3D'].filter(Boolean).join(', ') + '; look "' + room.decor + '", screen ' + camera.aspect.toFixed(2) + (LONGHAIR ? '' : ', first Mochi'));
   $('#title-sub').textContent = 'is fast asleep';
   $('#title-go').textContent = pet.sleeping ? (fine ? 'Click to tiptoe in' : 'Tap to tiptoe in') : (fine ? 'Click to wake her' : 'Tap to wake her');
   $('#title-go').hidden = false;
