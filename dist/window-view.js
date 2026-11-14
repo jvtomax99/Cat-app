@@ -10,15 +10,15 @@
 // the shader (so the clouds drift, the waves roll in and the sea glitters);
 // the dunes are three pictures painted in code below, with see-through tops.
 //
-// The kitchen's terrace view is the same thing with its own layers (the
-// low wall and the olive trees in pots nearest).
+// The kitchen's outside is built in 3D (terrace.js); there this sheet
+// stands far off behind it and draws only the sky, sea and beach.
 //
 // Mood: 0 day, 1 night, 2 dusk (Halloween's evening). `setMood` picks one,
 // `update` fades towards it.
 import * as THREE from 'three';
 
 const TAU = Math.PI * 2;
-function rng(seed) {
+export function rng(seed) {
   return () => {
     seed |= 0; seed = seed + 0x6D2B79F5 | 0;
     let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
@@ -33,9 +33,7 @@ function rng(seed) {
 // how far behind the sheet it stands, how wide the picture is before it
 // repeats, its bottom and top (0 = the middle of the sheet), how much it
 // sways, the size of its picture and what paints it.
-// The kitchen's sheet stands 1.4 behind its glazing, at the far edge of the
-// real paving: `ground` carries the paving on (drawn by the shader) from
-// the sheet's foot to the terrace wall, `deep` further out.
+const NONE = {depth: 1, wide: 1, y0: -1e4, y1: -9999, sway: 0, px: [2, 2], draw() {}};
 const SCENES = {
   study: {
     home: [0, -.25, 6.5], aim: [0, 0], sheen: 1,
@@ -45,13 +43,11 @@ const SCENES = {
       {depth: 1.4, wide: 8, y0: -2.9, y1: -.55, sway: .006, px: [2048, 512], draw: drawNear},
     ],
   },
+  // The kitchen (terrace.js): the sheet stands far out behind real dunes
+  // and only draws the sky, sea and beach, in true perspective (`exact`).
   terrace: {
-    home: [-6, -2.3, 8], aim: [.75, 0], sheen: 0, ground: {y: -5.8, deep: 3},
-    layers: [
-      {depth: 22, wide: 20, y0: -9.1, y1: -5.2, sway: 0, px: [2048, 256], draw: drawFar},
-      {depth: 9, wide: 12, y0: -8.0, y1: -4.5, sway: .0012, px: [2048, 512], draw: drawMid},
-      {depth: 3, wide: 16, y0: -5.8, y1: 1.2, sway: .0006, px: [2048, 1024], draw: drawTerrace},
-    ],
+    home: [0, 0, 20], aim: [.75, 0], sheen: 0, exact: 1,
+    layers: [NONE, NONE, NONE],
   },
 };
 
@@ -62,9 +58,11 @@ function layerTexture(L, draw, aniso) {
   const [w, h] = L.px, c = document.createElement('canvas');
   c.width = w; c.height = h;
   const g = c.getContext('2d'), high = L.y1 - L.y0;
-  for (const dx of [-L.wide, 0, L.wide]) {
+  // (The ground first in all three, then what stands on it: the ground of
+  // one copy must not paint over the grass of another.)
+  for (const part of ['ground', 'things']) for (const dx of [-L.wide, 0, L.wide]) {
     g.setTransform(w / L.wide, 0, 0, -h / high, dx * w / L.wide, h);
-    draw(g, L.wide, high);
+    draw(g, L.wide, high, part);
   }
   const t = new THREE.CanvasTexture(c);
   // Read as painted (the shader mixes the colours as a painter would and
@@ -85,7 +83,7 @@ function blade(g, x, y, len, lean, wd, color) {
   g.beginPath(); g.moveTo(x - wd, y); g.quadraticCurveTo(mx - wd * .6, my, tx, ty); g.quadraticCurveTo(mx + wd * .6, my, x + wd, y); g.closePath(); g.fill();
 }
 // A tuft: blades fanning out from one root, dark at the heart.
-function tuft(g, r, x, y, size, colors, n = 26) {
+export function tuft(g, r, x, y, size, colors, n = 26) {
   for (let i = 0; i < n; i++) {
     const a = (r() - .5) * 1.5, len = size * (.55 + r() * .6);
     blade(g, x + (r() - .5) * size * .22, y - size * .04, len * Math.cos(a * .6), Math.sin(a) * len * .7 + size * .12, size * (.012 + r() * .012), colors[Math.floor(r() * colors.length)]);
@@ -93,14 +91,15 @@ function tuft(g, r, x, y, size, colors, n = 26) {
 }
 // Sand under a skyline: pale and sunlit on top, deeper below, with soft
 // shadows on the slopes turned from the sun and a little grain.
-function sand(g, r, wide, high, top, [light, deep], shade) {
+function sand(g, r, wide, high, top, [light, deep], shade, part) {
   const grad = g.createLinearGradient(0, high, 0, 0);
   grad.addColorStop(0, light); grad.addColorStop(1, deep);
   g.fillStyle = grad;
   // (Drawn well past both edges, so shadows that cross an edge are whole.)
   g.beginPath(); g.moveTo(-wide, 0);
   for (let x = -wide; x <= wide * 2; x += .04) g.lineTo(x, top(x));
-  g.lineTo(wide * 2, 0); g.closePath(); g.fill();
+  g.lineTo(wide * 2, 0); g.closePath();
+  if (part === 'ground') return g.fill();
   g.save(); g.clip();
   // (Soft-edged by a gradient, not the canvas blur: iPhones have none.)
   for (let i = 0; i < 26; i++) {
@@ -122,14 +121,15 @@ function sand(g, r, wide, high, top, [light, deep], shade) {
 }
 
 const GRASS_FAR = ['#8f8d52', '#a89a58', '#76804a', '#b7a866', '#837a44'];
-const GRASS = ['#b9a85a', '#d8c47a', '#8f9a52', '#a08c44', '#c9b266', '#748246', '#e3d294'];
+export const GRASS = ['#b9a85a', '#d8c47a', '#8f9a52', '#a08c44', '#c9b266', '#748246', '#e3d294'];
 const GRASS_NEAR = ['#c7b25e', '#e2cf86', '#93a052', '#a8923f', '#6f7f3f', '#d9c070', '#efe0a2', '#857a3a'];
 
 // Far dunes: a long low ridge with a dip where the path runs down to the
 // beach, thinly grassed.
-function drawFar(g, wide, high) {
+function drawFar(g, wide, high, part) {
   const r = rng(71), top = crest([[.32, 1, .4], [.2, 2, 2.1], [.09, 5, 1.2], [.04, 11, .3]], wide), y = x => high - .62 + top(x);
-  sand(g, r, wide, high, y, ['#e6d4a4', '#c4ac78'], '#7d6c4c');
+  sand(g, r, wide, high, y, ['#e6d4a4', '#c4ac78'], '#7d6c4c', part);
+  if (part === 'ground') return;
   for (let i = 0; i < 4200; i++) {
     const x = r() * wide, patch = .5 + .5 * Math.sin(x * 2.3) * Math.sin(x * .9 + 1);
     if (r() > .25 + patch * .75) continue;
@@ -140,9 +140,10 @@ function drawFar(g, wide, high) {
 
 // Middle dune: nearer, with tufts of beach grass, a few bayberry bushes and
 // a weathered sand fence wandering over it.
-function drawMid(g, wide, high) {
+function drawMid(g, wide, high, part) {
   const r = rng(72), top = crest([[.3, 1, 2.6], [.16, 3, .7], [.07, 7, 2.2]], wide), y = x => high - .75 + top(x);
-  sand(g, r, wide, high, y, ['#ecd7a0', '#b99c62'], '#6f5c3c');
+  sand(g, r, wide, high, y, ['#ecd7a0', '#b99c62'], '#6f5c3c', part);
+  if (part === 'ground') return;
   const things = [];
   for (let i = 0; i < 210; i++) { const x = r() * wide; things.push({kind: 'tuft', x, y: y(x) - r() * r() * 2.4, s: .34 + r() * .3}); }
   for (let i = 0; i < 7; i++) { const x = r() * wide; things.push({kind: 'bush', x, y: y(x) - .25 - r() * 1.2, s: .3 + r() * .25}); }
@@ -169,7 +170,8 @@ function drawMid(g, wide, high) {
 }
 
 // Nearest: tall grass just under the window, with seed heads nodding.
-function drawNear(g, wide, high) {
+function drawNear(g, wide, high, part) {
+  if (part === 'ground') return;
   const r = rng(73);
   for (let i = 0; i < 620; i++) {
     const x = r() * wide, clump = .55 + .45 * Math.sin(x * 1.9 + 1) * Math.sin(x * .7);
@@ -188,63 +190,6 @@ function drawNear(g, wide, high) {
   g.globalCompositeOperation = 'source-atop'; g.fillStyle = shade; g.fillRect(0, -.1, wide, high * .5); g.globalCompositeOperation = 'source-over';
 }
 
-// The kitchen's terrace: a low limestone wall at the far edge of the
-// paving, and olive trees in terracotta pots standing in front of it.
-function drawTerrace(g, wide, high) {
-  const r = rng(74), WALL = .9;
-  for (let row = 0; row < 2; row++) for (let i = -1; i < wide / 1.1 + 1; i++) {
-    const x = i * 1.1 + row * .55, k = r();
-    g.fillStyle = ['#d9cbb0', '#d2c3a6', '#dfd2b8', '#cfbfa0'][Math.floor(k * 4)];
-    g.fillRect(x, row * .4, 1.1, .41);
-    g.fillStyle = 'rgba(120,100,70,.28)'; g.fillRect(x, row * .4, .025, .4); g.fillRect(x, row * .4, 1.1, .02);
-    g.fillStyle = 'rgba(255,250,235,.25)'; g.fillRect(x + .025, row * .4 + .37, 1.075, .03);
-  }
-  // The cap stone, sunlit on top, and the wall's foot in soft shade.
-  g.fillStyle = '#e9dec7'; g.fillRect(-.1, .8, wide + .2, WALL - .8);
-  g.fillStyle = 'rgba(110,92,66,.35)'; g.fillRect(-.1, .775, wide + .2, .03);
-  g.fillStyle = '#f6eedb'; g.fillRect(-.1, WALL - .025, wide + .2, .025);
-  const foot = g.createLinearGradient(0, 0, 0, .3);
-  foot.addColorStop(0, 'rgba(90,76,56,.35)'); foot.addColorStop(1, 'rgba(90,76,56,0)');
-  g.fillStyle = foot; g.fillRect(-.1, 0, wide + .2, .3);
-  for (const [x, s] of [[2.6, 1.3], [8.1, 1.05], [12.9, 1.36]]) {
-    const potH = .95 * s, top = .52 * s, base = .37 * s, trunkTop = potH + 2.0 * s;
-    // Its shadow on the paving, falling to the right.
-    g.save(); g.translate(x + .5 * s, .03); g.scale(1.1 * s, .09 * s);
-    const sh = g.createRadialGradient(0, 0, 0, 0, 0, 1); sh.addColorStop(0, 'rgba(70,58,44,.5)'); sh.addColorStop(1, 'rgba(70,58,44,0)');
-    g.fillStyle = sh; g.fillRect(-1, -1, 2, 2); g.restore();
-    // The trunk: slender and a little crooked, with a few boughs.
-    g.lineCap = 'round';
-    const bough = (x0, y0, x1, y1, wd) => { g.strokeStyle = '#7d7565'; g.lineWidth = wd; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x0 + (x1 - x0) * .2, y0 + (y1 - y0) * .7, x1, y1); g.stroke(); g.strokeStyle = 'rgba(214,206,186,.5)'; g.lineWidth = wd * .35; g.beginPath(); g.moveTo(x0 - wd * .25, y0); g.quadraticCurveTo(x0 + (x1 - x0) * .2 - wd * .25, y0 + (y1 - y0) * .7, x1 - wd * .2, y1); g.stroke(); };
-    bough(x, potH - .05, x + .08 * s, trunkTop, .11 * s);
-    const cx = x + .1 * s, cy = trunkTop + .75 * s, rx = 1.3 * s, ry = 1.0 * s;
-    for (let i = 0; i < 6; i++) { const a = -1.2 + i * .48 + (r() - .5) * .2; bough(x + .08 * s, trunkTop - .25 * s, cx + Math.sin(a) * rx * .7, cy + Math.cos(a) * ry * .45 - .1 * s, .045 * s); }
-    // The crown: leaf by leaf in loose clumps with sky between them, dark
-    // inside and underneath, silvery where the sun catches it.
-    const clumps = []; for (let i = 0; i < 20; i++) { const a = r() * TAU, d = Math.sqrt(r()) * .88; clumps.push([cx + Math.cos(a) * d * rx, cy + Math.sin(a) * d * ry]); }
-    const leaves = [];
-    for (let i = 0; i < 2400; i++) {
-      const [bx, by] = clumps[Math.floor(r() * clumps.length)], a = r() * TAU, d = r() * .36 * s;
-      const lx = bx + Math.cos(a) * d, ly = by + Math.sin(a) * d * .8;
-      // (Lit from the upper left.)
-      const lit = .5 + .5 * ((ly - cy) / ry * .7 - (lx - cx) / rx * .45) + (Math.sin(a) * .25) + (r() - .5) * .5;
-      leaves.push([lx, ly, lit, r() * 3.14]);
-    }
-    leaves.sort((p, q) => p[2] - q[2]);
-    for (const [lx, ly, lit, rot] of leaves) {
-      g.fillStyle = ['#4c5a3a', '#5d6b45', '#75835a', '#8f9b72', '#aab38c', '#c3c9a8'][Math.max(0, Math.min(5, Math.floor(lit * 6)))];
-      g.beginPath(); g.ellipse(lx, ly, .075 * s, .02 * s, rot, 0, TAU); g.fill();
-    }
-    // The pot: terracotta, round (lighter on the sunny side), with a rim.
-    const clay = g.createLinearGradient(x - top, 0, x + top, 0);
-    clay.addColorStop(0, '#d0895c'); clay.addColorStop(.35, '#c67d52'); clay.addColorStop(1, '#96583a');
-    g.fillStyle = clay;
-    g.beginPath(); g.moveTo(x - top, potH); g.lineTo(x + top, potH); g.lineTo(x + base, 0); g.lineTo(x - base, 0); g.closePath(); g.fill();
-    g.fillRect(x - top * 1.07, potH - .13 * s, top * 2.14, .13 * s);
-    g.fillStyle = 'rgba(80,44,26,.3)'; g.fillRect(x - top * 1.04, potH - .16 * s, top * 2.08, .03 * s);
-    g.fillStyle = 'rgba(255,226,196,.3)'; g.fillRect(x - top * 1.07, potH - .03 * s, top * 2.14, .03 * s);
-  }
-}
-
 const VERT = /* glsl */`
 varying vec2 vP;
 varying vec3 vEye;
@@ -260,9 +205,9 @@ precision highp float;
 uniform float uTime, uNight, uDusk;
 uniform sampler2D uFar, uMid, uNear;
 uniform vec4 uFarL, uMidL, uNearL;   // depth, width, bottom, top
-uniform vec3 uSway, uHome, uPave;    // each layer's sway; where it is seen from; the paving now
-uniform vec2 uHalf, uAim, uGround;   // half the sheet's size; sun and moon shift; paving height and reach
-uniform float uSheen;
+uniform vec3 uSway, uHome;           // each layer's sway; where it is seen from
+uniform vec2 uHalf, uAim;            // half the sheet's size; sun and moon shift
+uniform float uSheen, uExact;
 varying vec2 vP;
 varying vec3 vEye;
 
@@ -291,7 +236,7 @@ void main() {
   // and far, and true perspective would then show nothing but sand).
   vec2 home = (vP - uHome.xy) / uHome.z;
   vec2 d = (vP - vEye.xy) / max(vEye.z, .6) - home;
-  vec2 e = home + .7 * d / (1. + abs(d) * 1.4);
+  vec2 e = home + mix(.7 * d / (1. + abs(d) * 1.4), d, uExact);
 
   // Sky: pale at the horizon, deeper overhead.
   float up = max(e.y, 0.), k = 1. - exp(-up * 3.2);
@@ -345,13 +290,6 @@ void main() {
   col = col * (1. - b.a) + b.rgb * tint;
   vec4 c = layer(uNear, uNearL, e, uSway.z);
   col = col * (1. - c.a) + c.rgb * tint * mood(vec3(1.), vec3(.8), vec3(.85));
-  // Paving, from the foot of the sheet out to the wall (the kitchen): the
-  // line of sight meets the ground before it gets as far as the wall.
-  if (uGround.y > 0. && e.y < 0.) {
-    float reach = (uGround.x - vP.y) / e.y;
-    if (reach < uGround.y) col = uPave * (.97 + .05 * noise((vP + e * reach).xx * vec2(3., 0.) + vec2(0., reach * 6.)));
-  }
-
   // The glass itself: a faint slanting sheen, a touch darker in the corners.
   vec2 g = vP / uHalf;
   col += uSheen * .035 * smoothstep(.18, 0., abs(g.x * .6 + g.y * .5 - .25)) * (1. - uNight * .6);
@@ -377,14 +315,14 @@ export function windowView(wide, high, scene = 'study', {anisotropy = 4} = {}) {
       uTime: {value: 0}, uNight: {value: 0}, uDusk: {value: 0}, uHalf: {value: new THREE.Vector2(wide / 2, high / 2)},
       uFar: T(far), uMid: T(mid), uNear: T(near), uFarL: {value: L(far)}, uMidL: {value: L(mid)}, uNearL: {value: L(near)},
       uSway: {value: new THREE.Vector3(far.sway, mid.sway, near.sway)}, uHome: {value: new THREE.Vector3(...S.home)}, uAim: {value: new THREE.Vector2(...S.aim)},
-      uGround: {value: new THREE.Vector2(S.ground?.y ?? 0, S.ground?.deep ?? 0)}, uPave: {value: new THREE.Vector3()}, uSheen: {value: S.sheen},
+      uSheen: {value: S.sheen}, uExact: {value: S.exact ?? 0},
     },
   });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(wide, high), material);
   const u = material.uniforms;
   let want = 0, first = true;
   return {
-    mesh, material, pave,
+    mesh, material, pave, night: () => u.uNight.value,
     setMood(m) { want = m; },
     // (The first frame shows the mood outright, so a launch at night does
     // not open on a sunset.)
@@ -395,8 +333,7 @@ export function windowView(wide, high, scene = 'study', {anisotropy = 4} = {}) {
       u.uDusk.value += ((want === 2 ? 1 : 0) - u.uDusk.value) * k;
       // (Mixed as the shader mixes: by the painted values, not by light.)
       const n = u.uNight.value;
-      u.uPave.value.set(...PAVE_DAY.map((d, i) => d + (PAVE_NIGHT[i] - d) * n));
-      pave.setRGB(u.uPave.value.x, u.uPave.value.y, u.uPave.value.z, THREE.SRGBColorSpace);
+      pave.setRGB(...PAVE_DAY.map((d, i) => d + (PAVE_NIGHT[i] - d) * n), THREE.SRGBColorSpace);
     },
   };
 }

@@ -14,7 +14,7 @@
 // as separate objects with their home positions, apart from the room itself.
 // Same scale as the study: about 2.4 scene units per metre.
 import * as THREE from 'three';
-import {windowView} from './window-view.js';
+import {buildTerrace} from './terrace.js';
 import {Room, MOONLIGHT, DAYLIGHT, rng, canvasTexture, drawNoise, drawLinen, drawWood, roundedBox, lathe} from './room.js';
 
 const {damp} = THREE.MathUtils;
@@ -181,16 +181,15 @@ export class Kitchen {
   // the sea. The bird visits here too.
   buildWindows() {
     const M = this.materials, {z0, z1, y0, y1} = this.windowRect, x = K.left + .02;
-    // The view (window-view.js) stands a little way out, past a strip of
-    // real terrace paving, so there's room outside the doors for a visitor
-    // to walk by. It's larger than the glazing so it fills it from anywhere
-    // in the kitchen.
-    const out = 1.4, sc = 1.45;
-    this.terraceView = windowView((z1 - z0) * sc, (y1 - y0) * sc, 'terrace', {anisotropy: this.room?.outside?.material.uniforms.uFar.value.anisotropy ?? 4});
-    this.glass = this.terraceView.mesh; this.group.add(this.glass);
-    this.glass.position.set(K.left - out, y0 + (y1 - y0) * sc / 2, (z0 + z1) / 2); this.glass.rotation.y = Math.PI / 2;
-    this.paving = this.mesh(new THREE.PlaneGeometry(out + .05, (z1 - z0) * sc), new THREE.MeshBasicMaterial({color: '#e2d6c0', toneMapped: false}), this.group, {cast: false, receive: false});
-    this.paving.rotation.x = -Math.PI / 2; this.paving.position.set(K.left - out / 2, -.001, (z0 + z1) / 2);
+    // Outside (terrace.js): paving out to a low wall, olive trees in pots,
+    // dunes and, far off, the sea. The paving is wide enough outside the
+    // doors for a visitor to walk by.
+    const out = 1.4, wallOut = 4.4;
+    this.terrace = buildTerrace({x: K.left, zc: (z0 + z1) / 2, wallOut, anisotropy: this.room?.outside?.material.uniforms.uFar.value.anisotropy ?? 4});
+    this.group.add(this.terrace.group);
+    this.terraceView = this.terrace.view; this.glass = this.terraceView.mesh;
+    this.paving = this.mesh(new THREE.PlaneGeometry(wallOut + .05, 46), new THREE.MeshBasicMaterial({color: '#e2d6c0', toneMapped: false}), this.group, {cast: false, receive: false});
+    this.paving.rotation.x = -Math.PI / 2; this.paving.position.set(K.left - wallOut / 2, -.001, (z0 + z1) / 2);
     this.outside = {x: K.left - out * .55, z0: z0 - 2.5, z1: z1 + 2.5, door: (z0 + z1) / 2};
     const zc = (z0 + z1) / 2, H = y1 - y0, T = 6.5;
     const v = (w, y0b, y1b, z) => this.box(.12, y1b - y0b, w, x + .04, (y0b + y1b) / 2, z, M.frame, this.group, {cast: false});
@@ -1220,8 +1219,7 @@ export class Kitchen {
     }
     this.updatePaperBats?.(t);
     this.updateChristmas?.(dt, t, night);
-    this.terraceView.setMood(night ? 1 : 0);
-    this.terraceView.update(dt, t);
+    this.terrace.update(dt, t, night);
     this.paving.material.color.copy(this.terraceView.pave);
     this.updateDog(t);
     const R = this.room;

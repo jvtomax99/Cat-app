@@ -9,6 +9,7 @@
 // Scale: about 2.4 scene units per metre, matching Mochi.
 import * as THREE from 'three';
 import {windowView} from './window-view.js';
+import {makeBird} from './bird.js';
 
 const {damp} = THREE.MathUtils;
 const V2 = (x, y) => new THREE.Vector2(x, y);
@@ -667,30 +668,13 @@ export class Room {
     this.sunPatch.position.set(-1.05, .045, -1.25);
   }
 
-  // A small brown bird outside the window, now and then, in daylight. It
+  // A sparrow outside the window, now and then, in daylight. It
   // lives in the window's own space just in front of the glass, behind the
   // glazing bars.
   buildBird(g, W, bottom, h) {
-    const brown = new THREE.MeshStandardMaterial({color: '#6b5240', roughness: .9});
-    const cream = new THREE.MeshStandardMaterial({color: '#cdb69a', roughness: .9});
-    const bird = new THREE.Group();
-    const body = this.mesh(new THREE.SphereGeometry(1, 14, 10), cream, bird, {cast: false});
-    body.scale.set(.085, .065, .02);
-    const back = this.mesh(new THREE.SphereGeometry(1, 14, 10), brown, bird, {cast: false});
-    back.scale.set(.08, .05, .021); back.position.set(-.01, .02, 0);
-    const head = this.mesh(new THREE.SphereGeometry(.045, 12, 10), brown, bird, {cast: false});
-    head.scale.z = .45; head.position.set(.07, .05, 0);
-    const beak = this.mesh(new THREE.ConeGeometry(.012, .035, 6), new THREE.MeshStandardMaterial({color: '#3a2a1c'}), bird, {cast: false});
-    beak.rotation.z = -Math.PI / 2; beak.position.set(.118, .045, 0);
-    const tail = this.mesh(new THREE.BoxGeometry(.08, .012, .015), brown, bird, {cast: false});
-    tail.position.set(-.1, .01, 0); tail.rotation.z = .35;
-    const wing = (side) => {
-      const piv = new THREE.Group(); piv.position.set(-.005, .045, side * .012); bird.add(piv);
-      const w = this.mesh(new THREE.BoxGeometry(.1, .008, .07), brown, piv, {cast: false});
-      w.position.set(-.02, 0, side * .035);
-      return piv;
-    };
-    this.birdWings = [wing(1), wing(-1)];
+    // (bird.js: a house sparrow painted on thin cards.)
+    const made = makeBird(), bird = made.group;
+    this.birdWings = made.wings; this.birdPerch = made.perch;
     bird.visible = false;
     g.add(bird);
     this.bird = bird;
@@ -847,7 +831,11 @@ export class Room {
     if (flap) b.rotation.z = .1;
     b.position.set(x, y, B.z);
     b.scale.set(1.8 * r.dir, 1.8, 1.8);
-    const a = flap ? Math.sin(t * 38) * .9 : .1;
+    // Wings: beating in bursts with a short glide between, as small birds
+    // fly (each wing swings from well above its back to below its belly);
+    // perched, they are folded (the folded wing is part of that picture).
+    this.birdPerch(!flap);
+    const burst = Math.min(1, Math.max(0, 1.25 + Math.sin(t * 6.5) * 1.6)), a = -.35 - Math.sin(t * 34) * 1.05 * burst + (1 - burst) * 1.2;
     this.birdWings[0].rotation.x = a; this.birdWings[1].rotation.x = -a;
   }
 
