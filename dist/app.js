@@ -3595,7 +3595,9 @@ const introParam = new URLSearchParams(location.search).get('intro');
 // found asleep every morning and the film was never seen). Where there is
 // no film (a seasonal look, a wide screen, the first Mochi, reduced motion)
 // she sleeps on behind the still title, as before.
-const filmFits = () => room.decor === 'classic' && LONGHAIR && tallScreen() && new URLSearchParams(location.search).get('film') !== '0';
+// (Every look, Merlin 2026-11-14: in a seasonal look the plain-room film
+// fades into the decorated room.)
+const filmFits = () => LONGHAIR && tallScreen() && new URLSearchParams(location.search).get('film') !== '0';
 if (pet.sleeping && titleOn && renderer && !reduceMotion && introParam !== 'short' && filmFits()) {
   pet.sleeping = false;
   moment('Woke up when you came in.', 'i-sun');
@@ -3843,7 +3845,7 @@ function cineJump(to, toY, perch) {
 }
 function startOpening(withSound) {
   if (filmOK()) return startFilm(withSound);
-  noteFilm('not tried: ' + (room.decor !== 'classic' ? 'the look is "' + room.decor + '"' : !LONGHAIR ? 'first Mochi' : !tallScreen() ? 'wide screen ' + camera.aspect.toFixed(2) : 'switched off'));
+  noteFilm('not tried: ' + (!LONGHAIR ? 'first Mochi' : !tallScreen() ? 'wide screen ' + camera.aspect.toFixed(2) : 'switched off'));
   startCine();
 }
 // The film plays over the room. Under it the room is already set as the

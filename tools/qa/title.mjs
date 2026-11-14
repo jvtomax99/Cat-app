@@ -176,12 +176,23 @@ await run('film file missing: the sequence plays instead', '?debug&intro=full&ni
   await page.waitForSelector('#title.reveal', {timeout: 60000});
   await tapOut(page);
 });
-for (const [name, q, opts] of [['the Christmas look', '?debug&intro=full&night=0&decor=christmas', PHONE], ['the first Mochi', '?debug&intro=full&night=0&mochi=first', PHONE], ['a wide screen', '?debug&intro=full&night=0', DESK]])
+await run('film in the Christmas look too, into the decorated room', '?debug&intro=full&night=0&decor=christmas&filmwait=90000', PHONE, async page => {
+  await withFilm(page);
+  await page.addInitScript(() => { const k = 'pocket-kitten-companion-v1'; localStorage[k] = JSON.stringify({v: 2, name: 'Mochi', decor: 'christmas', updated: Date.now()}); });
+  await page.reload();
+  await page.waitForSelector('#title.gate', {timeout: 120000});
+  if (await page.evaluate(() => kitten.room.decor) !== 'christmas') throw new Error('the Christmas look is not on');
+  await page.click('#enter-mute', {timeout: 120000, noWaitAfter: true});
+  await page.waitForSelector('#title.film.rolling', {timeout: 120000}).catch(async () => { throw new Error('the film did not start, stage ' + await stage(page)); });
+  await page.waitForFunction(() => kitten.title.stage === 'live', null, {timeout: 600000});
+  await liveOK(page);
+  await page.screenshot({path: `${OUT}/film-into-christmas-title.png`, timeout: 120000});
+  await tapOut(page);
+});
+for (const [name, q, opts] of [['the first Mochi', '?debug&intro=full&night=0&mochi=first', PHONE], ['a wide screen', '?debug&intro=full&night=0', DESK]])
   await run('no film in ' + name + ': the sequence', q, opts, async page => {
     await withFilm(page);
-    if (/decor=christmas/.test(q)) { await page.addInitScript(() => { const k = 'pocket-kitten-companion-v1'; localStorage[k] = JSON.stringify({v: 2, name: 'Mochi', decor: 'christmas', updated: Date.now()}); }); await page.reload(); }
     await page.waitForSelector('#title.gate', {timeout: 120000});
-    if (/decor=christmas/.test(q) && await page.evaluate(() => kitten.room.decor) !== 'christmas') throw new Error('the Christmas look is not on');
     await page.click('#enter-mute', {timeout: 120000, noWaitAfter: true});
     await page.waitForTimeout(800);
     if (await stage(page) !== 'cine') throw new Error('stage is ' + await stage(page));
