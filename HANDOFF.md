@@ -9,7 +9,7 @@ outside in 3D and a better bird. Live after two "Go live"s (411, 413):
 - Bird: `dist/bird.js`, a painted sparrow on thin cards.
 Checked: `npm run check`; stills from `tools/qa/window.mjs` (also
 `ROOM=kitchen`) and `tools/qa/bird.mjs`, day and night, no page errors.
-Checked later the same day (on the preview, not live): the Christmas
+Checked later the same day (live, build 416, `911f6d3`): the Christmas
 kitchen looks right day and night; from the study's doorway the sky and sea
 showed past the end and over the top of the kitchen's window wall, fixed by
 carrying that wall on and up (`buildShell` in `dist/kitchen.js`; stills:
