@@ -162,6 +162,11 @@ export class Kitchen {
     const wz0 = -3.7, wz1 = 3.9, wy0 = 0, wy1 = 8.0;
     wall(wz0 - K.back, H, K.left, H / 2, (K.back + wz0) / 2, Math.PI / 2);
     wall(11.5 - wz1, H, K.left, H / 2, (wz1 + 11.5) / 2, Math.PI / 2);
+    // (On past where the room's own camera looks: from the study's doorway
+    // the eye runs along this wall, and the outdoors must not show past its end.)
+    for (let z = 11.5; z < 61; z += 12.4) wall(12.4, H, K.left, H / 2, z + 6.2, Math.PI / 2);
+    // (And up past its top, the whole length: no ceiling hides the sky there.)
+    for (let z = K.back; z < 61; z += 13.1) wall(13.1, 30, K.left, H + 15, z + 6.55, Math.PI / 2);
     wall(wz1 - wz0, H - wy1, K.left, (H + wy1) / 2, (wz0 + wz1) / 2, Math.PI / 2);
     this.windowRect = {z0: wz0, z1: wz1, y0: wy0, y1: wy1};
     // Deep plaster reveals round the opening.
