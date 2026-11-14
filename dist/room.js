@@ -592,7 +592,7 @@ export class Room {
     // 1 night, 2 dusk; a seasonal look may change the pair).
     this.view = {day: 0, night: 1};
     this.glassBottom = bottom; this.glassH = h;
-    this.outside = windowView(W, h, {anisotropy: maxAniso});
+    this.outside = windowView(W, h, 'study', {anisotropy: maxAniso});
     this.glass = this.outside.mesh; g.add(this.glass);
     this.glass.position.set(0, cy, .01);
     // Frame, sashes and muntins.

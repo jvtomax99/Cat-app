@@ -4,11 +4,14 @@
 // It is one flat sheet at the glass, but it is not a flat picture: for each
 // point of the glass the shader works out where the line from the camera
 // through that point would meet things standing at different distances
-// outside (a sky and sea very far off, dunes at 14, 5.5 and 1.4 units), so
+// outside (a sky and sea very far off, dunes at three distances), so
 // the near grass slides past the far dunes as the camera moves, the way a
 // real view does behind glazing bars. The sky, sea and beach are drawn by
 // the shader (so the clouds drift, the waves roll in and the sea glitters);
 // the dunes are three pictures painted in code below, with see-through tops.
+//
+// The kitchen's terrace view is the same thing with its own layers (the
+// low wall and the olive trees in pots nearest).
 //
 // Mood: 0 day, 1 night, 2 dusk (Halloween's evening). `setMood` picks one,
 // `update` fades towards it.
@@ -24,13 +27,32 @@ function rng(seed) {
   };
 }
 
-// Each layer: how far behind the glass it stands, how wide the picture is
-// before it repeats, and its bottom and top (window units, 0 = the middle
-// of the glass), then the size of its picture.
-const LAYERS = {
-  far: {depth: 14, wide: 20, y0: -6.2, y1: -2.0, px: [2048, 256]},
-  mid: {depth: 5.5, wide: 12, y0: -5.4, y1: -1.9, px: [2048, 512]},
-  near: {depth: 1.4, wide: 8, y0: -2.9, y1: -.55, px: [2048, 512]},
+// The two views. `home` is where the view is set up to be seen from (x, y
+// and distance, measured from the middle of the sheet); `aim` shifts the
+// sun's glitter and the moon to where that viewer sees them. Each layer:
+// how far behind the sheet it stands, how wide the picture is before it
+// repeats, its bottom and top (0 = the middle of the sheet), how much it
+// sways, the size of its picture and what paints it.
+// The kitchen's sheet stands 1.4 behind its glazing, at the far edge of the
+// real paving: `ground` carries the paving on (drawn by the shader) from
+// the sheet's foot to the terrace wall, `deep` further out.
+const SCENES = {
+  study: {
+    home: [0, -.25, 6.5], aim: [0, 0], sheen: 1,
+    layers: [
+      {depth: 14, wide: 20, y0: -6.2, y1: -2.0, sway: 0, px: [2048, 256], draw: drawFar},
+      {depth: 5.5, wide: 12, y0: -5.4, y1: -1.9, sway: .0012, px: [2048, 512], draw: drawMid},
+      {depth: 1.4, wide: 8, y0: -2.9, y1: -.55, sway: .006, px: [2048, 512], draw: drawNear},
+    ],
+  },
+  terrace: {
+    home: [-6, -2.3, 8], aim: [.75, 0], sheen: 0, ground: {y: -5.8, deep: 3},
+    layers: [
+      {depth: 22, wide: 20, y0: -9.1, y1: -5.2, sway: 0, px: [2048, 256], draw: drawFar},
+      {depth: 9, wide: 12, y0: -8.0, y1: -4.5, sway: .0012, px: [2048, 512], draw: drawMid},
+      {depth: 3, wide: 16, y0: -5.8, y1: 1.2, sway: .0006, px: [2048, 1024], draw: drawTerrace},
+    ],
+  },
 };
 
 // A picture drawn in the layer's own units (x to the right, y up, 0 at the
@@ -166,6 +188,63 @@ function drawNear(g, wide, high) {
   g.globalCompositeOperation = 'source-atop'; g.fillStyle = shade; g.fillRect(0, -.1, wide, high * .5); g.globalCompositeOperation = 'source-over';
 }
 
+// The kitchen's terrace: a low limestone wall at the far edge of the
+// paving, and olive trees in terracotta pots standing in front of it.
+function drawTerrace(g, wide, high) {
+  const r = rng(74), WALL = .9;
+  for (let row = 0; row < 2; row++) for (let i = -1; i < wide / 1.1 + 1; i++) {
+    const x = i * 1.1 + row * .55, k = r();
+    g.fillStyle = ['#d9cbb0', '#d2c3a6', '#dfd2b8', '#cfbfa0'][Math.floor(k * 4)];
+    g.fillRect(x, row * .4, 1.1, .41);
+    g.fillStyle = 'rgba(120,100,70,.28)'; g.fillRect(x, row * .4, .025, .4); g.fillRect(x, row * .4, 1.1, .02);
+    g.fillStyle = 'rgba(255,250,235,.25)'; g.fillRect(x + .025, row * .4 + .37, 1.075, .03);
+  }
+  // The cap stone, sunlit on top, and the wall's foot in soft shade.
+  g.fillStyle = '#e9dec7'; g.fillRect(-.1, .8, wide + .2, WALL - .8);
+  g.fillStyle = 'rgba(110,92,66,.35)'; g.fillRect(-.1, .775, wide + .2, .03);
+  g.fillStyle = '#f6eedb'; g.fillRect(-.1, WALL - .025, wide + .2, .025);
+  const foot = g.createLinearGradient(0, 0, 0, .3);
+  foot.addColorStop(0, 'rgba(90,76,56,.35)'); foot.addColorStop(1, 'rgba(90,76,56,0)');
+  g.fillStyle = foot; g.fillRect(-.1, 0, wide + .2, .3);
+  for (const [x, s] of [[2.6, 1.3], [8.1, 1.05], [12.9, 1.36]]) {
+    const potH = .95 * s, top = .52 * s, base = .37 * s, trunkTop = potH + 2.0 * s;
+    // Its shadow on the paving, falling to the right.
+    g.save(); g.translate(x + .5 * s, .03); g.scale(1.1 * s, .09 * s);
+    const sh = g.createRadialGradient(0, 0, 0, 0, 0, 1); sh.addColorStop(0, 'rgba(70,58,44,.5)'); sh.addColorStop(1, 'rgba(70,58,44,0)');
+    g.fillStyle = sh; g.fillRect(-1, -1, 2, 2); g.restore();
+    // The trunk: slender and a little crooked, with a few boughs.
+    g.lineCap = 'round';
+    const bough = (x0, y0, x1, y1, wd) => { g.strokeStyle = '#7d7565'; g.lineWidth = wd; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x0 + (x1 - x0) * .2, y0 + (y1 - y0) * .7, x1, y1); g.stroke(); g.strokeStyle = 'rgba(214,206,186,.5)'; g.lineWidth = wd * .35; g.beginPath(); g.moveTo(x0 - wd * .25, y0); g.quadraticCurveTo(x0 + (x1 - x0) * .2 - wd * .25, y0 + (y1 - y0) * .7, x1 - wd * .2, y1); g.stroke(); };
+    bough(x, potH - .05, x + .08 * s, trunkTop, .11 * s);
+    const cx = x + .1 * s, cy = trunkTop + .75 * s, rx = 1.3 * s, ry = 1.0 * s;
+    for (let i = 0; i < 6; i++) { const a = -1.2 + i * .48 + (r() - .5) * .2; bough(x + .08 * s, trunkTop - .25 * s, cx + Math.sin(a) * rx * .7, cy + Math.cos(a) * ry * .45 - .1 * s, .045 * s); }
+    // The crown: leaf by leaf in loose clumps with sky between them, dark
+    // inside and underneath, silvery where the sun catches it.
+    const clumps = []; for (let i = 0; i < 20; i++) { const a = r() * TAU, d = Math.sqrt(r()) * .88; clumps.push([cx + Math.cos(a) * d * rx, cy + Math.sin(a) * d * ry]); }
+    const leaves = [];
+    for (let i = 0; i < 2400; i++) {
+      const [bx, by] = clumps[Math.floor(r() * clumps.length)], a = r() * TAU, d = r() * .36 * s;
+      const lx = bx + Math.cos(a) * d, ly = by + Math.sin(a) * d * .8;
+      // (Lit from the upper left.)
+      const lit = .5 + .5 * ((ly - cy) / ry * .7 - (lx - cx) / rx * .45) + (Math.sin(a) * .25) + (r() - .5) * .5;
+      leaves.push([lx, ly, lit, r() * 3.14]);
+    }
+    leaves.sort((p, q) => p[2] - q[2]);
+    for (const [lx, ly, lit, rot] of leaves) {
+      g.fillStyle = ['#4c5a3a', '#5d6b45', '#75835a', '#8f9b72', '#aab38c', '#c3c9a8'][Math.max(0, Math.min(5, Math.floor(lit * 6)))];
+      g.beginPath(); g.ellipse(lx, ly, .075 * s, .02 * s, rot, 0, TAU); g.fill();
+    }
+    // The pot: terracotta, round (lighter on the sunny side), with a rim.
+    const clay = g.createLinearGradient(x - top, 0, x + top, 0);
+    clay.addColorStop(0, '#d0895c'); clay.addColorStop(.35, '#c67d52'); clay.addColorStop(1, '#96583a');
+    g.fillStyle = clay;
+    g.beginPath(); g.moveTo(x - top, potH); g.lineTo(x + top, potH); g.lineTo(x + base, 0); g.lineTo(x - base, 0); g.closePath(); g.fill();
+    g.fillRect(x - top * 1.07, potH - .13 * s, top * 2.14, .13 * s);
+    g.fillStyle = 'rgba(80,44,26,.3)'; g.fillRect(x - top * 1.04, potH - .16 * s, top * 2.08, .03 * s);
+    g.fillStyle = 'rgba(255,226,196,.3)'; g.fillRect(x - top * 1.07, potH - .03 * s, top * 2.14, .03 * s);
+  }
+}
+
 const VERT = /* glsl */`
 varying vec2 vP;
 varying vec3 vEye;
@@ -181,7 +260,9 @@ precision highp float;
 uniform float uTime, uNight, uDusk;
 uniform sampler2D uFar, uMid, uNear;
 uniform vec4 uFarL, uMidL, uNearL;   // depth, width, bottom, top
-uniform vec2 uHalf;                  // half the glass's width and height
+uniform vec3 uSway, uHome, uPave;    // each layer's sway; where it is seen from; the paving now
+uniform vec2 uHalf, uAim, uGround;   // half the sheet's size; sun and moon shift; paving height and reach
+uniform float uSheen;
 varying vec2 vP;
 varying vec3 vEye;
 
@@ -208,7 +289,7 @@ void main() {
   // view is set up for someone standing in the room's middle; the real
   // camera moves it by part of the true amount (the app's camera goes high
   // and far, and true perspective would then show nothing but sand).
-  vec2 home = (vP - vec2(0., -.25)) / 6.5;
+  vec2 home = (vP - uHome.xy) / uHome.z;
   vec2 d = (vP - vEye.xy) / max(vEye.z, .6) - home;
   vec2 e = home + .7 * d / (1. + abs(d) * 1.4);
 
@@ -221,7 +302,7 @@ void main() {
   vec2 sg = e * 70., sc = floor(sg);
   float sr = hash(sc), star = step(.972, sr) * smoothstep(.16, 0., length(fract(sg) - .5 - (vec2(hash(sc + 3.), hash(sc + 7.)) - .5) * .6));
   col += star * (.55 + .45 * sin(uTime * 2. + sr * 90.)) * (uNight * .9 + uDusk * .25) * step(0., e.y);
-  vec2 moon = mix(vec2(.13, .2), vec2(.1, .15), uDusk);
+  vec2 moon = mix(vec2(.13, .2), vec2(.1, .15), uDusk) + uAim;
   float md = length(e - moon), moonUp = clamp(uNight + uDusk, 0., 1.);
   col += moonUp * (vec3(1., .97, .88) * smoothstep(.021, .017, md) + vec3(.5, .55, .7) * .35 * exp(-md * 14.));
   // Clouds: a flat layer high up, so they crowd together towards the
@@ -240,7 +321,7 @@ void main() {
     // Swell, white streaks, and glitter under the sun (or the moon).
     sea *= .94 + .12 * noise(vec2(e.x * z * 1.3 + uTime * .05, z * 1.2 + uTime * .22)) * near;
     sea += mood(vec3(.16), vec3(.05), vec3(.08)) * smoothstep(.64, .72, noise(vec2(e.x * z * .5, z * 3.2 - uTime * .35))) * near;
-    float lx = mix(-.14, moon.x, moonUp);
+    float lx = mix(-.14 + uAim.x, moon.x, moonUp);
     float glit = exp(-pow((e.x - lx) / (.035 + dn * 1.1), 2.)) * smoothstep(.5, .8, noise(vec2(e.x * z * 2.2, z * 7. + uTime * 1.2))) * smoothstep(.004, .03, dn);
     sea += mood(vec3(1., .96, .84) * .5, vec3(.75, .8, 1.) * .55, vec3(1., .9, .8) * .3) * glit;
     // The beach: a wave line washing up and back, wet sand, dry sand.
@@ -257,40 +338,53 @@ void main() {
   // The dunes, far to near. By night they are dark and blue; at dusk, dim
   // and warm. The far one fades a little into the haze.
   vec3 tint = mood(vec3(1.), vec3(.16, .2, .33), vec3(.5, .4, .45));
-  vec4 a = layer(uFar, uFarL, e, 0.);
+  vec4 a = layer(uFar, uFarL, e, uSway.x);
   a.rgb = mix(a.rgb * tint, horizon * a.a, .12);
   col = col * (1. - a.a) + a.rgb;
-  vec4 b = layer(uMid, uMidL, e, .0012);
+  vec4 b = layer(uMid, uMidL, e, uSway.y);
   col = col * (1. - b.a) + b.rgb * tint;
-  vec4 c = layer(uNear, uNearL, e, .006);
+  vec4 c = layer(uNear, uNearL, e, uSway.z);
   col = col * (1. - c.a) + c.rgb * tint * mood(vec3(1.), vec3(.8), vec3(.85));
+  // Paving, from the foot of the sheet out to the wall (the kitchen): the
+  // line of sight meets the ground before it gets as far as the wall.
+  if (uGround.y > 0. && e.y < 0.) {
+    float reach = (uGround.x - vP.y) / e.y;
+    if (reach < uGround.y) col = uPave * (.97 + .05 * noise((vP + e * reach).xx * vec2(3., 0.) + vec2(0., reach * 6.)));
+  }
 
   // The glass itself: a faint slanting sheen, a touch darker in the corners.
   vec2 g = vP / uHalf;
-  col += .035 * smoothstep(.18, 0., abs(g.x * .6 + g.y * .5 - .25)) * (1. - uNight * .6);
-  col *= 1. - .1 * pow(max(abs(g.x), abs(g.y)), 6.);
+  col += uSheen * .035 * smoothstep(.18, 0., abs(g.x * .6 + g.y * .5 - .25)) * (1. - uNight * .6);
+  col *= 1. - uSheen * .1 * pow(max(abs(g.x), abs(g.y)), 6.);
 
   gl_FragColor = vec4(pow(max(col, 0.), vec3(2.2)), 1.);
   #include <colorspace_fragment>
 }`;
 
-// The sheet of glass with the view on it. `wide` and `high` are the glass's
-// size; the layers are placed for the study's window.
-export function windowView(wide, high, {anisotropy = 4} = {}) {
-  const tex = {far: layerTexture(LAYERS.far, drawFar, anisotropy), mid: layerTexture(LAYERS.mid, drawMid, anisotropy), near: layerTexture(LAYERS.near, drawNear, anisotropy)};
-  const L = k => new THREE.Vector4(LAYERS[k].depth, LAYERS[k].wide, LAYERS[k].y0, LAYERS[k].y1);
+// Paving by day (#e2d6c0) and by night (#2a2724).
+const PAVE_DAY = [.886, .839, .753], PAVE_NIGHT = [.165, .153, .141];
+
+// The sheet with the view on it: `scene` is 'study' or 'terrace', `wide`
+// and `high` the sheet's size. `pave` (kept up to date) is the colour of
+// the paving just now, for the real paving in front of the sheet.
+export function windowView(wide, high, scene = 'study', {anisotropy = 4} = {}) {
+  const S = SCENES[scene], [far, mid, near] = S.layers;
+  const L = l => new THREE.Vector4(l.depth, l.wide, l.y0, l.y1), T = l => ({value: layerTexture(l, l.draw, anisotropy)});
+  const pave = new THREE.Color();
   const material = new THREE.ShaderMaterial({
     vertexShader: VERT, fragmentShader: FRAG, toneMapped: false,
     uniforms: {
       uTime: {value: 0}, uNight: {value: 0}, uDusk: {value: 0}, uHalf: {value: new THREE.Vector2(wide / 2, high / 2)},
-      uFar: {value: tex.far}, uMid: {value: tex.mid}, uNear: {value: tex.near}, uFarL: {value: L('far')}, uMidL: {value: L('mid')}, uNearL: {value: L('near')},
+      uFar: T(far), uMid: T(mid), uNear: T(near), uFarL: {value: L(far)}, uMidL: {value: L(mid)}, uNearL: {value: L(near)},
+      uSway: {value: new THREE.Vector3(far.sway, mid.sway, near.sway)}, uHome: {value: new THREE.Vector3(...S.home)}, uAim: {value: new THREE.Vector2(...S.aim)},
+      uGround: {value: new THREE.Vector2(S.ground?.y ?? 0, S.ground?.deep ?? 0)}, uPave: {value: new THREE.Vector3()}, uSheen: {value: S.sheen},
     },
   });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(wide, high), material);
   const u = material.uniforms;
   let want = 0, first = true;
   return {
-    mesh, material,
+    mesh, material, pave,
     setMood(m) { want = m; },
     // (The first frame shows the mood outright, so a launch at night does
     // not open on a sunset.)
@@ -299,6 +393,10 @@ export function windowView(wide, high, {anisotropy = 4} = {}) {
       u.uTime.value = t;
       u.uNight.value += ((want === 1 ? 1 : 0) - u.uNight.value) * k;
       u.uDusk.value += ((want === 2 ? 1 : 0) - u.uDusk.value) * k;
+      // (Mixed as the shader mixes: by the painted values, not by light.)
+      const n = u.uNight.value;
+      u.uPave.value.set(...PAVE_DAY.map((d, i) => d + (PAVE_NIGHT[i] - d) * n));
+      pave.setRGB(u.uPave.value.x, u.uPave.value.y, u.uPave.value.z, THREE.SRGBColorSpace);
     },
   };
 }

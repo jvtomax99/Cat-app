@@ -14,6 +14,7 @@
 // as separate objects with their home positions, apart from the room itself.
 // Same scale as the study: about 2.4 scene units per metre.
 import * as THREE from 'three';
+import {windowView} from './window-view.js';
 import {Room, MOONLIGHT, DAYLIGHT, rng, canvasTexture, drawNoise, drawLinen, drawWood, roundedBox, lathe} from './room.js';
 
 const {damp} = THREE.MathUtils;
@@ -180,13 +181,13 @@ export class Kitchen {
   // the sea. The bird visits here too.
   buildWindows() {
     const M = this.materials, {z0, z1, y0, y1} = this.windowRect, x = K.left + .02;
-    this.view = {day: canvasTexture(600, 640, (g, w, h) => drawTerrace(g, w, h, false)), night: canvasTexture(600, 640, (g, w, h) => drawTerrace(g, w, h, true))};
-    // The view is painted a little way out, past a strip of real terrace
-    // paving, so there's room outside the doors for a visitor to walk by
-    // (and, seen at an angle, it has some depth). It's made larger than the
-    // glazing so it fills it from anywhere in the kitchen.
+    // The view (window-view.js) stands a little way out, past a strip of
+    // real terrace paving, so there's room outside the doors for a visitor
+    // to walk by. It's larger than the glazing so it fills it from anywhere
+    // in the kitchen.
     const out = 1.4, sc = 1.45;
-    this.glass = this.mesh(new THREE.PlaneGeometry((z1 - z0) * sc, (y1 - y0) * sc), new THREE.MeshBasicMaterial({map: this.view.day, toneMapped: false}), this.group, {cast: false, receive: false});
+    this.terraceView = windowView((z1 - z0) * sc, (y1 - y0) * sc, 'terrace', {anisotropy: this.room?.outside?.material.uniforms.uFar.value.anisotropy ?? 4});
+    this.glass = this.terraceView.mesh; this.group.add(this.glass);
     this.glass.position.set(K.left - out, y0 + (y1 - y0) * sc / 2, (z0 + z1) / 2); this.glass.rotation.y = Math.PI / 2;
     this.paving = this.mesh(new THREE.PlaneGeometry(out + .05, (z1 - z0) * sc), new THREE.MeshBasicMaterial({color: '#e2d6c0', toneMapped: false}), this.group, {cast: false, receive: false});
     this.paving.rotation.x = -Math.PI / 2; this.paving.position.set(K.left - out / 2, -.001, (z0 + z1) / 2);
@@ -1219,9 +1220,9 @@ export class Kitchen {
     }
     this.updatePaperBats?.(t);
     this.updateChristmas?.(dt, t, night);
-    const sky = night ? this.view.night : this.view.day;
-    for (const gl of [this.glass]) if (gl.material.map !== sky) { gl.material.map = sky; gl.material.needsUpdate = true; }
-    this.paving.material.color.set(night ? '#2a2724' : '#e2d6c0');
+    this.terraceView.setMood(night ? 1 : 0);
+    this.terraceView.update(dt, t);
+    this.paving.material.color.copy(this.terraceView.pave);
     this.updateDog(t);
     const R = this.room;
     if (!away && this.scene.environment && R.envNight) {
@@ -1401,47 +1402,6 @@ function drawCreamStone(g, w, h) {
 // Out of the window: a stone terrace with olive trees in terracotta pots,
 // a low wall, then dune grass and the sea under a soft sky; at night, a blue
 // dusk with the moon on the water.
-function drawTerrace(g, w, h, night) {
-  const r = rng(night ? 231 : 233);
-  const sky = g.createLinearGradient(0, 0, 0, h * .42);
-  if (night) { sky.addColorStop(0, '#16203a'); sky.addColorStop(1, '#3a4766'); }
-  else { sky.addColorStop(0, '#c9d6dd'); sky.addColorStop(1, '#efe9db'); }
-  g.fillStyle = sky; g.fillRect(0, 0, w, h * .42);
-  g.filter = 'blur(8px)';
-  for (let i = 0; i < 14; i++) { g.fillStyle = night ? 'rgba(70,80,110,.35)' : 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(r() * w, r() * h * .3, 40 + r() * 60, 8 + r() * 12, 0, 0, 7); g.fill(); }
-  g.filter = 'none';
-  if (night) { const m = g.createRadialGradient(w * .7, h * .14, 0, w * .7, h * .14, 26); m.addColorStop(0, 'rgba(255,248,226,1)'); m.addColorStop(.35, 'rgba(255,244,215,.9)'); m.addColorStop(.42, 'rgba(255,240,210,.2)'); m.addColorStop(1, 'rgba(255,240,210,0)'); g.fillStyle = m; g.fillRect(0, 0, w, h * .4); }
-  // The sea, with a glint.
-  const sea = g.createLinearGradient(0, h * .4, 0, h * .48);
-  if (night) { sea.addColorStop(0, '#1d2a44'); sea.addColorStop(1, '#162034'); } else { sea.addColorStop(0, '#7890a0'); sea.addColorStop(1, '#5e7481'); }
-  g.fillStyle = sea; g.fillRect(0, h * .4, w, h * .09);
-  g.fillStyle = night ? 'rgba(220,228,250,.45)' : 'rgba(240,244,244,.5)';
-  for (let i = 0; i < 30; i++) g.fillRect(r() * w, h * (.41 + r() * .06), 8 + r() * 22, 1.2);
-  // Dunes and grass.
-  g.fillStyle = night ? '#2b2a27' : '#cfb47e';
-  g.beginPath(); g.moveTo(0, h * .5); for (let x = 0; x <= w; x += 20) g.lineTo(x, h * (.48 + Math.sin(x * .02) * .012 + r() * .008)); g.lineTo(w, h * .62); g.lineTo(0, h * .62); g.closePath(); g.fill();
-  g.strokeStyle = night ? 'rgba(40,40,36,.8)' : 'rgba(160,130,70,.7)'; g.lineWidth = 1.2;
-  for (let i = 0; i < 160; i++) { const x = r() * w, y = h * (.5 + r() * .1); g.beginPath(); g.moveTo(x, y); g.lineTo(x + (r() - .5) * 8, y - 8 - r() * 10); g.stroke(); }
-  // The terrace: a low limestone wall, then pale paving.
-  g.fillStyle = night ? '#35322e' : '#d8c9ad'; g.fillRect(0, h * .6, w, h * .06);
-  g.fillStyle = night ? 'rgba(20,20,20,.25)' : 'rgba(150,130,100,.25)';
-  for (let x = 0; x < w; x += 46) g.fillRect(x, h * .6, 2, h * .06);
-  g.fillStyle = night ? '#2a2724' : '#e2d6c0'; g.fillRect(0, h * .66, w, h * .34);
-  g.strokeStyle = night ? 'rgba(10,10,10,.2)' : 'rgba(160,140,110,.25)'; g.lineWidth = 1.5;
-  for (let y = h * .72; y < h; y += h * .07) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
-  // Olive trees in terracotta pots, either side.
-  for (const [x, s] of [[.12, 1], [.88, .9], [.42, .6]]) {
-    const px = w * x, base = h * (.86 - (1 - s) * .12), ph = 70 * s, pw = 54 * s;
-    g.fillStyle = night ? '#6b6a62' : '#7b7464'; g.fillRect(px - 3 * s, base - ph - 150 * s, 6 * s, 150 * s);
-    g.filter = 'blur(3px)';
-    for (let k = 0; k < 16; k++) { g.fillStyle = night ? `rgba(36,44,46,${.8 + r() * .2})` : ['rgba(118,132,98,.8)', 'rgba(150,160,128,.75)', 'rgba(96,110,82,.8)'][k % 3]; g.beginPath(); g.ellipse(px + (r() - .5) * 120 * s, base - ph - 150 * s - r() * 70 * s, (28 + r() * 26) * s, (18 + r() * 14) * s, 0, 0, 7); g.fill(); }
-    g.filter = 'none';
-    g.fillStyle = night ? '#4a3329' : '#c27b52';
-    g.beginPath(); g.moveTo(px - pw, base - ph); g.lineTo(px + pw, base - ph); g.lineTo(px + pw * .75, base); g.lineTo(px - pw * .75, base); g.closePath(); g.fill();
-    g.fillStyle = night ? 'rgba(0,0,0,.2)' : 'rgba(255,230,200,.2)'; g.fillRect(px - pw, base - ph, pw * 2, 6 * s);
-  }
-  if (night) for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(255,205,130,.85)'; g.beginPath(); g.arc(w * (.2 + r() * .6), h * .63, 2.5, 0, 7); g.fill(); }
-}
 
 function drawOrchidFlower(g, w, h) {
   g.clearRect(0, 0, w, h);
