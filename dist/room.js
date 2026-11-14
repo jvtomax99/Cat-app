@@ -8,6 +8,7 @@
 //
 // Scale: about 2.4 scene units per metre, matching Mochi.
 import * as THREE from 'three';
+import {windowView} from './window-view.js';
 
 const {damp} = THREE.MathUtils;
 const V2 = (x, y) => new THREE.Vector2(x, y);
@@ -291,57 +292,6 @@ function paintSignature(g, right, baseline, size, r) {
       else paint(path, wd);
     }
     x += (L.w + .05) * size;
-  }
-}
-
-// The view: grey-blue sky, the sea, and golden dune grass with a few
-// russet shrubs. At night, a deep blue dusk with a sliver of moonlight.
-export function drawHamptons(g, w, h, night) {
-  const r = rng(night ? 51 : 53), dusk = night === 'dusk';
-  const sky = g.createLinearGradient(0, 0, 0, h * .45);
-  // Halloween's evening: blue dusk with a last pink glow and the moon up.
-  if (dusk) { sky.addColorStop(0, '#2c3c5e'); sky.addColorStop(.55, '#455d7a'); sky.addColorStop(.85, '#8e7491'); sky.addColorStop(1, '#d69c86'); }
-  else if (night) { sky.addColorStop(0, '#121a30'); sky.addColorStop(1, '#2b3654'); }
-  else { sky.addColorStop(0, '#b9c2c7'); sky.addColorStop(1, '#e6e2d8'); }
-  g.fillStyle = sky; g.fillRect(0, 0, w, h * .46);
-  g.filter = 'blur(8px)';
-  for (let i = 0; i < 18; i++) {
-    g.fillStyle = night ? 'rgba(60,70,100,.35)' : (r() < .5 ? 'rgba(255,255,255,.5)' : 'rgba(150,160,168,.35)');
-    g.beginPath(); g.ellipse(r() * w, r() * h * .32, 30 + r() * 50, 8 + r() * 14, 0, 0, 7); g.fill();
-  }
-  g.filter = 'none';
-  if (dusk) {
-    // Low over the sea, clear of the name card on a phone.
-    const moon = g.createRadialGradient(w * .6, h * .32, 0, w * .6, h * .32, 22);
-    moon.addColorStop(0, 'rgba(255,248,226,1)'); moon.addColorStop(.3, 'rgba(255,244,215,.95)'); moon.addColorStop(.36, 'rgba(255,240,210,.25)'); moon.addColorStop(1, 'rgba(255,240,210,0)');
-    g.fillStyle = moon; g.fillRect(0, 0, w, h * .44);
-  }
-  // Sea.
-  const sea = g.createLinearGradient(0, h * .44, 0, h * .53);
-  if (night) { sea.addColorStop(0, '#1b2840'); sea.addColorStop(1, '#141d2e'); }
-  else { sea.addColorStop(0, '#6f8593'); sea.addColorStop(1, '#5a6f7b'); }
-  g.fillStyle = sea; g.fillRect(0, h * .44, w, h * .1);
-  g.fillStyle = night ? 'rgba(200,210,235,.35)' : 'rgba(235,240,240,.45)';
-  for (let i = 0; i < 26; i++) g.fillRect(r() * w, h * (.45 + r() * .07), 6 + r() * 18, 1);
-  if (night) { g.fillStyle = 'rgba(230,235,255,.5)'; g.fillRect(w * .62, h * .455, 14, 2); g.fillRect(w * .6, h * .475, 22, 1.5); }
-  // Dunes.
-  const dune = g.createLinearGradient(0, h * .52, 0, h);
-  if (night) { dune.addColorStop(0, '#2c2c2a'); dune.addColorStop(1, '#1a1814'); }
-  else { dune.addColorStop(0, '#cdb27a'); dune.addColorStop(1, '#a8834a'); }
-  g.fillStyle = dune;
-  g.beginPath(); g.moveTo(0, h * .56);
-  for (let x = 0; x <= w; x += 16) g.lineTo(x, h * (.53 + Math.sin(x * .03) * .015 + r() * .01));
-  g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.fill();
-  // Shrubs and grass.
-  for (let i = 0; i < 12; i++) {
-    g.fillStyle = night ? 'rgba(40,34,26,.9)' : ['#b8733a', '#c98f4a', '#8e6a3a'][i % 3];
-    g.beginPath(); g.ellipse(r() * w, h * (.6 + r() * .3), 14 + r() * 22, 8 + r() * 10, 0, 0, 7); g.fill();
-  }
-  for (let i = 0; i < 700; i++) {
-    const x = r() * w, y = h * (.55 + r() * .45), len = 8 + r() * 22;
-    g.strokeStyle = night ? 'rgba(70,64,50,.6)' : (r() < .5 ? 'rgba(232,206,140,.7)' : 'rgba(150,115,60,.6)');
-    g.lineWidth = 1;
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + (r() - .5) * 8, y - len); g.stroke();
   }
 }
 
@@ -638,9 +588,12 @@ export class Room {
     this.group.add(g);
     // Tall, beach-house proportions, looking out over the dunes to the sea.
     const W = 2.3, bottom = 1.62, top = 5.3, cy = (bottom + top) / 2, h = top - bottom;
-    this.view = {day: canvasTexture(256, 400, (c, w, hh) => drawHamptons(c, w, hh, false)), night: canvasTexture(256, 400, (c, w, hh) => drawHamptons(c, w, hh, true))};
+    // The view (window-view.js): what is shown by day and by night (0 day,
+    // 1 night, 2 dusk; a seasonal look may change the pair).
+    this.view = {day: 0, night: 1};
     this.glassBottom = bottom; this.glassH = h;
-    this.glass = this.mesh(new THREE.PlaneGeometry(W, h), new THREE.MeshBasicMaterial({map: this.view.day, toneMapped: false}), g, {cast: false, receive: false});
+    this.outside = windowView(W, h, {anisotropy: maxAniso});
+    this.glass = this.outside.mesh; g.add(this.glass);
     this.glass.position.set(0, cy, .01);
     // Frame, sashes and muntins.
     const bar = (w, hh, x, y, d = .1, mat = M.window) => { const b = this.mesh(new THREE.BoxGeometry(w, hh, d), mat, g); b.position.set(x, y, .06); return b; };
@@ -1586,8 +1539,8 @@ export class Room {
     this.sunPatch.material.opacity = damp(this.sunPatch.material.opacity, night ? .2 : .32, 3, dt);
     this.sunPatch.material.color.lerp(night ? MOONLIGHT : DAYLIGHT, 1 - Math.exp(-3 * dt));
     this.updateFire(dt, t, night);
-    const sky = night ? this.view.night : this.view.day;
-    if (this.glass.material.map !== sky) { this.glass.material.map = sky; this.glass.material.needsUpdate = true; }
+    this.outside.setMood(night ? this.view.night : this.view.day);
+    this.outside.update(dt, t);
     if (!away && this.scene.environment && this.envNight) {
       const env = night ? this.envNight : this.envDay;
       if (this.scene.environment !== env) this.scene.environment = env;

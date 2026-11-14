@@ -11,7 +11,7 @@
 // branches, an oak-leaf garland on the curtain rod, the knit throw, the
 // linen cushion, a brass lantern with a candle and a pinecone basket.
 import * as THREE from 'three';
-import {rng, canvasTexture, drawLinen, drawNoise, roundedBox, lathe, drawHamptons, pillowGeometry, pillowPiping} from './room.js';
+import {rng, canvasTexture, drawLinen, drawNoise, roundedBox, lathe, pillowGeometry, pillowPiping} from './room.js';
 
 export const DECORS = {
   classic: {name: 'Classic', note: 'Plaid, leather and greenery'},
@@ -80,11 +80,10 @@ export function applyDecor(room, name) {
     if (halloween) {
       T.ghost ??= canvasTexture(1024, 1024, drawGhostCushion);
       T.ghost.offset.set(0, 0);
-      T.viewDusk ??= canvasTexture(256, 400, (g, w, h) => drawHamptons(g, w, h, 'dusk'));
     }
     M.pillow.map = halloween ? T.ghost : T.cushion;
     if (M.piping) M.piping.color.set(halloween ? '#e6dcc7' : '#6b7040');
-    room.view = {day: O.view.day, night: halloween ? T.viewDusk : O.view.night};
+    room.view = {day: O.view.day, night: halloween ? 2 : O.view.night};
     room.sillSprigs.visible = false;
     room.decorProps ??= {};
     if (!room.decorProps.shared) Object.assign(room.decorProps, buildAutumn(room, T));

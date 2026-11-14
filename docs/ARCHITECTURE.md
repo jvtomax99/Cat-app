@@ -16,6 +16,7 @@ preview branch.
 | `cat-rig.js` | Builds the skeleton and skin weights from the Meshy model at load. |
 | `real-cat.js` | Fur, eyes, face, ears, jaw; also the classic movement (`?motion=classic`). |
 | `room.js` | `Room`: the study, bowl, fountain, window visitors (bird, moths, monarch). Shared methods live on `Room.prototype` (the kitchen uses them too). |
+| `window-view.js` | The view out of the study window (`room.outside`): one sheet at the glass whose shader draws sky, clouds, sea and surf and lays three painted dune pictures at different distances, so the view shifts as the camera moves. `room.view = {day, night}` picks the mood (0 day, 1 night, 2 dusk; `decor.js` sets dusk for Halloween). No canvas `filter` in the paintings: iPhones ignore it. The kitchen's terrace view is still a flat picture (`drawTerrace`). |
 | `kitchen.js` | `Kitchen`: island, shelves, sink and faucet, pendant lamp, robot vacuum, terrace, dog (`?dog`). Layout constants in `K`; spots in `layout()`. |
 | `decor.js` | Seasonal decor for both rooms; `pillowGeometry`. Seasonal looks have `months` and are stored away out of season (`inSeason`, `decorNow`; `?decor=halloween` shows one anyway). Christmas (`kitchenChristmas`) dresses the kitchen only; the study stays classic under it. Its evening lights run from `kitchen.updateChristmas`. |
 | `pet-state.js`, `save.js` | Care meters, saves, offline progress. |
