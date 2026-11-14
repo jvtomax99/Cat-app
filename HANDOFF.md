@@ -1,15 +1,19 @@
-# Handoff: 2026-11-14, App Store groundwork is on the preview
+# Handoff: 2026-11-14, opening film fixed on the preview, waiting for Go live
+## Opening film fixed (preview, build 407, Merlin: "It works", 2026-11-14)
+On his iPhone the Runway film never showed: Mochi was asleep (put to bed)
+or the room was in a seasonal look, and both skipped the film by design.
+Now (Merlin's picks): opening the app wakes a sleeping Mochi where the
+film plays, and the film plays in every look. Also: the film loads behind
+the Enter screen and gets 8 s, not 3, to start. On the preview the footer
+says "film: played" or why not (`noteFilm` in `dist/app.js`). Waiting on
+his "Go live". Not run since: the full `tools/qa/title.mjs` (only the film
+cases); run it before going live if time allows.
 
-
-## Auto-update (live, build 400, waiting for Merlin's phone try)
+## Auto-update (live, build 400; seen working on Merlin's phone, 401 to 402)
 An app left open looks for a new build on coming back to the front and
-every half hour, and switches on the next return, with no title
-(`watch` at the foot of `dist/index.html`; SPEC.md, phase 18 entry).
-Checked: `tools/qa/load.mjs` 22 of 22. Not checked: a real phone, the
-iPhone home-screen icon above all. Merlin is trying it on the preview
-(build 401 to 402, 2026-11-14). Not built: the offline copy's off switch
-(`"sw": false` needs a line in `tools/build-site.sh`).
-
+every half hour, and switches on the next return, with no title (`watch`
+at the foot of `dist/index.html`). Not built: the offline copy's off
+switch (`"sw": false` needs a line in `tools/build-site.sh`).
 ## Next step
 Ask Merlin. Phase 19 (privacy page and `docs/app-store.md`) is built and on
 the preview. Waiting on him: a contact address for the privacy page (he
