@@ -1,13 +1,33 @@
-# Handoff: 2026-11-14, opening film fixed on the preview, opening film fixed and live
-## Opening film fixed (live, build 408, Merlin: "It works", 2026-11-14)
-On his iPhone the Runway film never showed: Mochi was asleep (put to bed)
-or the room was in a seasonal look, and both skipped the film by design.
-Now (Merlin's picks): opening the app wakes a sleeping Mochi where the
-film plays, and the film plays in every look. Also: the film loads behind
-the Enter screen and gets 8 s, not 3, to start. On the preview the footer
-says "film: played" or why not (`noteFilm` in `dist/app.js`). Live since build
-408. Not run since: the full `tools/qa/title.mjs` (only the film
-cases); run it before going live if time allows.
+# Handoff: 2026-11-14, outside views and the sparrow are live (build 413)
+## Outside views and the bird (live, build 413, `d71d447`, 2026-11-14)
+Merlin asked for better graphics outside the windows, then for the kitchen
+outside in 3D and a better bird. Live after two "Go live"s (411, 413):
+- Study window: `dist/window-view.js`, a shader sheet (sky, clouds, sea,
+  surf) with three painted dune pictures at different distances.
+- Kitchen: `dist/terrace.js`, real 3D paving, wall, olive trees in pots and
+  dunes with grass; the sheet stands far behind for sky and sea.
+- Bird: `dist/bird.js`, a painted sparrow on thin cards.
+Checked: `npm run check`; stills from `tools/qa/window.mjs` (also
+`ROOM=kitchen`) and `tools/qa/bird.mjs`, day and night, no page errors.
+Not checked: how smoothly the kitchen runs on a phone (three trees, about
+760 grass tufts; thin them in `buildTerrace` if it stutters; Merlin went
+live without reporting back), the Christmas kitchen, the kitchen seen
+through the study's doorway. Dropped: the four warm lights on the terrace
+wall at night (offer to put them back). Merlin's first words on research:
+Meshy and Remotion were judged wrong for this (a Meshy model cannot flap;
+Remotion makes video files).
+
+## This session's branch trouble
+The chat was started on `claude/ecstatic-pascal-qbivw0`, and the session
+blocked commits and pushes to the preview branch until Merlin approved each
+one. What worked: commit on the session branch, then
+`git push origin <sha>:refs/heads/claude/expressive-cat-modern-ui-65z6r5`
+after his OK. Both branches are at the same commit. Better: start the next
+chat on the preview branch.
+
+## Opening film (live, build 408)
+Plays in every look and when she was put to bed. Not run since: the full
+`tools/qa/title.mjs`.
 
 ## Auto-update (live, build 400; seen working on Merlin's phone, 401 to 402)
 An app left open looks for a new build on coming back to the front and

@@ -143,6 +143,12 @@ the phone's browser and can be added to the home screen.
   (`tools/qa/vacuum.mjs`).
 - **Night.** Done when: the sun/moon button switches lighting and she does
   night-owl things.
+- **Outside the windows** (live, build 413; Merlin, 2026-11-14). Done
+  when: the study window and the kitchen's glazing show a sky with drifting
+  clouds, a sea with surf and dunes with grass that shift as the camera
+  moves (the kitchen's outside is built in 3D), by day and by night, and
+  the bird at the window is a recognisable sparrow that flies and perches
+  (`tools/qa/window.mjs`, `tools/qa/bird.mjs`).
 - **Seasonal decor.** Done when: decor shows in its season only (Halloween
   in October, Thanksgiving, Christmas in December), stays put day and
   night, and her routes stay open.
