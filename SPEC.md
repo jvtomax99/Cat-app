@@ -57,7 +57,7 @@ the phone's browser and can be added to the home screen.
   every third pat; a single tap on the floor calls her there unless she is
   busy or asleep (in Mochi mode; in Explore the floor is for looking) (`tools/qa/camera.mjs`).
 - **Opening film** (live, phase 15). Done when: on every launch (Merlin,
-  2026-11-13; before: only the first of the day), by day or night, in every look (Merlin 2026-11-14, preview; before: the
+  2026-11-13; before: only the first of the day), by day or night, in every look (Merlin 2026-11-14, live build 408; before: the
   plain study only), with the long-haired Mochi and an
   upright screen, Enter plays the film "Mochi and the yarn ball" (20 s,
   its music only with "Enter with sound"); a tap skips it; it fades into
@@ -67,7 +67,7 @@ the phone's browser and can be added to the home screen.
   room); if she was put to bed, opening the app
   wakes her and the film plays (Merlin, 2026-11-14: put to bed every
   night, she was asleep at every open and the film was never seen;
-  preview); with the first Mochi or on a wide screen the zoomies
+  live build 408); with the first Mochi or on a wide screen the zoomies
   sequence plays instead, and a sleeping Mochi sleeps on behind the short
   title; a film that cannot load never leaves a black or
   stuck screen (`tools/qa/title.mjs`).

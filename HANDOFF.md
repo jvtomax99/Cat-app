@@ -1,12 +1,12 @@
-# Handoff: 2026-11-14, opening film fixed on the preview, waiting for Go live
-## Opening film fixed (preview, build 407, Merlin: "It works", 2026-11-14)
+# Handoff: 2026-11-14, opening film fixed on the preview, opening film fixed and live
+## Opening film fixed (live, build 408, Merlin: "It works", 2026-11-14)
 On his iPhone the Runway film never showed: Mochi was asleep (put to bed)
 or the room was in a seasonal look, and both skipped the film by design.
 Now (Merlin's picks): opening the app wakes a sleeping Mochi where the
 film plays, and the film plays in every look. Also: the film loads behind
 the Enter screen and gets 8 s, not 3, to start. On the preview the footer
-says "film: played" or why not (`noteFilm` in `dist/app.js`). Waiting on
-his "Go live". Not run since: the full `tools/qa/title.mjs` (only the film
+says "film: played" or why not (`noteFilm` in `dist/app.js`). Live since build
+408. Not run since: the full `tools/qa/title.mjs` (only the film
 cases); run it before going live if time allows.
 
 ## Auto-update (live, build 400; seen working on Merlin's phone, 401 to 402)
