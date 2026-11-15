@@ -3406,6 +3406,16 @@ $('#decor-options').addEventListener('click', e => {
 });
 
 // Backup codes (save.js): copy one out, or bring a kitten in from one.
+// The install line in the name sheet: iPhone never offers to install, and Safari clears a
+// site's saved data after seven days of Safari use without a visit. Shown only in Safari on
+// an iPhone or iPad, and only when the app is not already on the Home Screen.
+try {
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const safari = !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  const installed = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  $('#install-line').hidden = !(ios && safari && !installed);
+} catch {}
 $('#open-backup').onclick = () => {
   $('#name-dialog').close();
   $('#backup-code').value = toCode(pet);

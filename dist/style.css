@@ -364,6 +364,10 @@ textarea:focus { outline: none; border-color: var(--accent); }
 .secondary { flex: 1; border: 1.5px solid var(--line); border-radius: 14px; padding: 11px; font-size: 14px; font-weight: 700; background: var(--bg); }
 .secondary:active { transform: scale(.97); }
 label.spaced { margin-top: 22px; }
+/* Install line (name sheet): iPhone Safari only, when the app is not on the Home Screen */
+.install-line { margin: 14px 0 0; font-size: 14px; font-weight: 500; line-height: 1.4; color: var(--ink-2); text-align: center; }
+.install-line b { color: var(--ink); }
+.install-line svg { width: 16px; height: 16px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .link-btn { display: block; margin: 14px auto 0; border: 0; background: none; font-size: 14px; font-weight: 700; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .link-btn.small { display: flex; align-items: center; width: fit-content; min-height: 44px; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 

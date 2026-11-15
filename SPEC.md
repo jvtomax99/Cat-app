@@ -137,6 +137,10 @@ the phone's browser and can be added to the home screen.
 - **Saves.** Done when: closing and reopening keeps her name, meters and
   journal, time away counts, an update never loses a save, and the player
   can copy a backup code and restore from it.
+- **Install line (2026-11-15, the fork's owner).** In the name sheet, on an iPhone in
+  Safari when the app is not on the Home Screen: "On iPhone: tap Share, then Add to Home
+  Screen so she stays safe." Done when: it shows there and nowhere else (not on
+  Android, a computer, or the installed app).
 - **Her own life.** Done when: left alone she roams, climbs shelves and the
   bed, eats and drinks with her mouth at the bowl, fountain, salmon or
   faucet, rides the vacuum, and never goes through furniture
