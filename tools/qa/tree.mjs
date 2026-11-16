@@ -45,7 +45,10 @@ await step(120);
 const s = await state();
 ok('the bauble stays in the room', s.fallen.every(([x, y, z]) => { const wx = x + 4.0, wz = z - 2.72; return wx > -4.6 && wx < 4.6 && wz > -3.4 && wz < 3.7 && y > 0; }), JSON.stringify(s.fallen));
 await shot('6-after');
-// A tap on the fallen bauble: back on the tree.
+// A tap on the fallen bauble: back on the tree. (She's moved off it first:
+// a tap on her is a stroke.)
+await page.evaluate(() => { kitten.brain.target = null; kitten.brain.pos.set(0, 0, .3); });
+await step(2);
 const tapped = await page.evaluate(() => {
   const T = kitten.room.xmasTree, L = T.fallen()[0], p = L.down.g.getWorldPosition(L.down.g.position.clone()).project(kitten.camera);
   const c = kitten.renderer.domElement.getBoundingClientRect();
