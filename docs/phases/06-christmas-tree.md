@@ -8,32 +8,40 @@ different location for the tree. I want the tree to be huge! ... Lots of
 ornaments and the cat gets very curious about it." He picked the kitchen by
 the glass wall and all four kinds of play offered.
 
+Then, the same day, his picture of the kitchen with the tree in the back
+corner by the doorway, the tent in front of it, gold and champagne baubles,
+burgundy velvet bows, a gold star and a cream skirt: built to match.
+
 ## What it does (for Lettuce, in December)
-- Christmas look: a fir about 8.7 high (the study one was 5.5) at the front
-  of the kitchen where the glass wall ends; about 330 baubles, 70 drops, 50
-  twists, 80 icicles, 50 little figures, 1000 lights; presents and an open
-  box under it. The study is as it was (olive tree, armchair in place).
+- Christmas look: a tall full fir (about 7.5 high) in the kitchen's back
+  corner by the doorway; about 230 baubles and 45 teardrops in gold,
+  champagne, bronze, mercury silver and deep red, about 15 velvet bows, a
+  gold star, about 900 lights; a cream knitted skirt with a few baubles on
+  it and an open box by the wall. The study is as it was.
 - First look, once a visit: stares up it, creeps up crouched, sits and looks
   again, sniffs and paws a low bauble, hops back when it swings, chirps.
-- Climbs in stages (low, middle, high) and lies across it half out of the
-  needles; sometimes on to the very top, stuck, mewing ("Tap her to help her
-  down" once a visit); a touch brings her down, with thanks and a little joy.
+- Climbs in stages (low, middle, high) and lies across its front half out
+  of the needles, head to the wall; sometimes on to the very top, stuck,
+  mewing ("Tap her to help her down" once a visit); a touch brings her down,
+  with thanks and a little joy.
 - Bats the baubles under her paws; now and then knocks one off. It tumbles
   down the outside of the tree, rolls and stops in reach; she goes down and
   pats it along. A tap on it hangs it back.
-- Hides under the low boughs looking out, patting the baubles over her.
+- Hides under the low boughs on the tree's left, looking out, patting the
+  baubles over her.
 - Sits in the open box (also when you tap it).
 
 ## Not in it
-Decorating the tree, opening presents, broken baubles, anything saved, a
-tree in the study.
+Decorating the tree, presents, broken baubles, anything saved, a tree in
+the study.
 
 ## As built
 `dist/xmas-tree.js` (`TREE` places everything), `kitchen.js` (`setTree`:
-obstacles and her floor), `decor.js` (built in the Christmas look),
-`app.js` (`withTree`, the behaviours). Test: `tools/qa/tree.mjs`.
+obstacles; solids for rolling baubles), `decor.js` (built in the Christmas
+look; the bow geometry), `app.js` (`withTree`, the behaviours). Test:
+`tools/qa/tree.mjs`.
 
-Seen and left: the tree stands where the glass wall ends, so the glass is
-behind and beside it, not straight behind (further back it would stand in
-the island). Not verified: a real phone (about 6000 needle cards, ~1000
-lights, ~40 draws).
+Seen and left: from the usual view the tent hides the foot of the tree (as
+in Merlin's picture), so her hiding place shows when the view is turned or
+in Mochi mode. Not verified: a real phone (about 5000 needle cards, ~900
+lights, ~45 draws).

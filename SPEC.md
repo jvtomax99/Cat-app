@@ -167,23 +167,24 @@ the phone's browser and can be added to the home screen.
   and a brass lantern on the mantel and a plaid cushion on the armchair
   (seen through the doorway).
 - **Christmas tree** (preview, phase 06; Merlin 2026-11-16, from a photo of a
-  cat lying in a decorated tree; first by the study fireplace, then "huge", in
-  the kitchen). Done when: in the Christmas look a fir about 8.7 high (the
-  study's was 5.5) stands at the front of the kitchen where the glass wall
-  ends, full of warm white lights, glass baubles, red-and-white twists,
-  icicles and little figures, a glass spire on top, wrapped presents and an
-  open box under it; the first time she sees it in a visit she stares up it,
-  creeps up crouched, sits, then sniffs and paws a low bauble and hops back;
-  on her own (often) and when the tree is tapped she climbs it in stages and
-  lies across it half out of the needles; up there she bats baubles and
+  cat lying in a decorated tree, then a picture of the kitchen with the tree
+  in it). Done when: in the Christmas look a tall full fir (about 7.5 high)
+  stands in the kitchen's back corner by the doorway, the tent in front of
+  it, with warm white lights all through it, baubles in gold, champagne,
+  bronze, mercury silver and deep red, big burgundy velvet bows, a gold star
+  on top, a cream knitted skirt with a few baubles on it, and an open box by
+  the wall; the first time she sees it in a visit she stares up it, creeps
+  up crouched, sits, then sniffs and paws a low bauble and hops back; on her
+  own (often) and when the tree is tapped she climbs it in stages and lies
+  across its front half out of the needles; up there she bats baubles and
   sometimes knocks one off, which tumbles down the outside, rolls and stops
   in reach, and she goes down and pats it along; a tap on it hangs it back;
   sometimes she climbs to the very top, is stuck, mews, and a tap on her
   helps her down; she hides under the low boughs looking out and pats the
   baubles over her; she sits in the open box (also when it's tapped); out
-  of the Christmas look none of it is there and her floor is as before
-  (`tools/qa/tree.mjs`). Not in it: decorating the tree yourself, opening
-  presents, broken baubles, anything kept in the save.
+  of the Christmas look none of it is there (`tools/qa/tree.mjs`). Not in
+  it: decorating the tree yourself, presents, broken baubles, anything kept
+  in the save.
 - **Quick on a phone, and there without signal** (phase 18, live, build 392).
   Done when: the first open on a phone downloads under 6 MB before she is
   on screen; after one open with signal the app opens and plays with no

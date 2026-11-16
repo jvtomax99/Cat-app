@@ -713,8 +713,8 @@ function cullThroughDoor(other) {
     o.layers.set(portal.intersectsObject(o) ? SEEN : UNSEEN);
   });
 }
-// The kitchen at Christmas: her places in the tree and the open box, the
-// camera kept out of the tree, and room to follow her round the front of it.
+// The kitchen at Christmas: her places in the tree and the open box, and the
+// camera kept out of the tree.
 function withTree(L) {
   if (kitchen?.decor !== 'christmas' || !kitchen.xmasTree) return L;
   const at = ([x, z]) => new THREE.Vector3(x, 0, z), T = TREE.perches;
@@ -725,8 +725,7 @@ function withTree(L) {
     treeTop: {spot: at(T.treeTop.spot), top: T.treeTop.top, via: 'treeHigh', face: T.treeTop.face},
     xmasBox: {spot: at(TREE.box.spot), top: .05, base: at(TREE.boxFrom), face: .3},
   });
-  L.camSolids = L.camSolids.concat([[TREE.x, TREE.z, 2.25, 8.9]]);
-  L.limits = {...L.limits, z: [L.limits.z[0], 7.6], y: [L.limits.y[0], 6.8]};
+  L.camSolids = L.camSolids.concat([[TREE.x, TREE.z, 1.45, 7.8]]);
   return L;
 }
 function usePlace(p) {
@@ -1732,8 +1731,8 @@ function knockVase() {
   }, d * 1000));
 }
 
-// The Christmas tree (xmas-tree.js): a huge fir at the front of the kitchen
-// by the glass wall, in the Christmas look. The first time she sees it, a
+// The Christmas tree (xmas-tree.js): a tall fir in the kitchen's back
+// corner by the doorway, in the Christmas look. The first time she sees it, a
 // long curious look. Then: up it in stages (lying across it, half out;
 // sometimes on up to the top, where she's stuck and mews till you tap her),
 // pats at its baubles from the floor and from up there (now and then one
@@ -1910,7 +1909,7 @@ function curiousLook() {
   const T = xmasTree();
   if (!T || brain.perch) return false;
   brain.mode = 'idle';
-  const top = T.world(0, TREE.top - 1.2, 0), mid = T.world(.6, 3.2, 1.2);
+  const top = T.world(0, TREE.top - 1.2, 0), mid = T.world(-.5, 3.0, .8);
   glanceAt(top, 2.8); express('surprised', 1.6); twitchEar(0, 1.5); twitchEar(1, 1.5);
   later(2.2, () => {
     if (!treeUp() || brain.mode !== 'idle') return;
@@ -3702,8 +3701,6 @@ $('#decor-options').addEventListener('click', e => {
     if (id !== 'christmas') {
       if (treePlace(brain.perch) || treePlace(brain.jump?.perch)) { Object.assign(brain, {perch: null, jump: null, climbGoal: null, treeStuck: false}); brain.elevation = 0; brain.pos.set(TREE.climbFrom[0], 0, TREE.climbFrom[1]); setActivity('sit'); }
       else if (treePlace(brain.climbGoal)) { brain.climbGoal = null; brain.target = null; setActivity('sit'); }
-      // (Out round the front of the tree, past where her floor ends now: back on it.)
-      if (place === kitchen && !brain.perch && !brain.jump) { const v = kitchen.clampFloor(brain.pos.clone()); if (v.distanceTo(brain.pos) > .01) { brain.target = null; brain.pos.copy(v); setActivity('sit'); } }
       brain.treeStuck = false;
     }
     if (room.altToy) (place === room ? room.group : place.group).add(room.altToy);
@@ -4713,7 +4710,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });

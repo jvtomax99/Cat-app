@@ -48,10 +48,8 @@ const TENT = {x: K.tent.x, z: K.tent.z, r: 1.55};
 // (The vacuum's moves with it.)
 const VAC = {x: 3.15, z: -2.0, r: .7};
 const OBSTACLES = [{x: 3.0, z: 1.55, r: .9}, {x: 4.55, z: 2.6, r: .7}, TENT, VAC];
-// At Christmas: the tree's foot with its ring of presents, and the open box
-// (setTree). Her floor then reaches on round the front of the tree.
-const TREE_FOOT = {x: TREE.x, z: TREE.z, r: TREE.ring}, TREE_BOX = {x: TREE.box.spot[0], z: TREE.box.spot[1], r: .78};
-const FLOOR_Z1 = FLOOR.z1, FLOOR_XMAS = 7.8;
+// At Christmas: the tree's foot and the open box (setTree).
+const TREE_FOOT = {x: TREE.x, z: TREE.z, r: TREE.ring}, TREE_BOX = {x: TREE.box.spot[0], z: TREE.box.spot[1], r: .65};
 const VAC_HOME = V(3.15, 0, -2.0);
 // The dock, for the vacuum with her aboard: her rear hangs .8 behind it.
 const DOCK = {x: 3.15, z: -2.62, r: .55};
@@ -1044,15 +1042,16 @@ export class Kitchen {
     };
   }
 
-  // The Christmas tree up (or put away): its foot and the box are in her way,
-  // and her floor reaches round the front of it.
+  // The Christmas tree up (or put away): its foot and the box are in her way.
   setTree(on) {
     for (const o of [TREE_FOOT, TREE_BOX]) { const i = OBSTACLES.indexOf(o); if (on && i < 0) OBSTACLES.push(o); if (!on && i >= 0) OBSTACLES.splice(i, 1); }
-    FLOOR.z1 = on ? FLOOR_XMAS : FLOOR_Z1;
     this.layoutCache = null;
   }
-  // The island as a solid box (for things that roll).
+  // Solids for things that roll: the island, the back counter, and the
+  // round things on the floor (tent, fountain, bowl, the vacuum's dock).
   get islandSolid() { const I = K.island; return {x0: I.x0, x1: I.x1, z0: I.z0, z1: I.z1, top: I.top}; }
+  get counterSolid() { return {x0: K.left, x1: 3.6, z0: K.back, z1: K.counterFront, top: K.counter}; }
+  get roundSolids() { return [{x: TENT.x, z: TENT.z, r: 1.2, top: 1.9}, {x: 3.0, z: 1.55, r: .5, top: .4}, {x: 4.55, z: 2.6, r: .37, top: .16}, {x: DOCK.x, z: DOCK.z, r: .4, top: .35}]; }
 
   // Walking: the open floor, kept clear of the island; a walk that would
   // cross the island goes round it, by the nearest corner(s).

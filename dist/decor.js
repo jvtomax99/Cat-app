@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import {rng, canvasTexture, drawLinen, drawNoise, roundedBox, lathe, pillowGeometry, pillowPiping} from './room.js';
 import {buildChristmasTree} from './xmas-tree.js';
+import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 
 export const DECORS = {
   classic: {name: 'Classic', note: 'Plaid, leather and greenery'},
@@ -611,9 +612,9 @@ export function applyKitchenDecor(kitchen, name) {
     parts[name] ??= name === 'halloween' ? kitchenHalloween(kitchen, T) : kitchenThanksgiving(kitchen, T);
   }
   if (christmas) parts.christmas ??= kitchenChristmas(kitchen, T);
-  // The Christmas tree, by the glass wall (xmas-tree.js); her floor reaches
-  // round the front of it while it stands.
-  if (christmas) kitchen.xmasTree ??= buildChristmasTree(kitchen.group, {solids: [kitchen.islandSolid]});
+  // The Christmas tree, in the back corner by the doorway (xmas-tree.js),
+  // with velvet bows like the shelves'.
+  if (christmas) kitchen.xmasTree ??= buildChristmasTree(kitchen.group, {solids: [kitchen.islandSolid, kitchen.counterSolid], circles: kitchen.roundSolids, bow: bowGeometry(kitchen)});
   if (kitchen.xmasTree) kitchen.xmasTree.root.visible = christmas;
   kitchen.setTree?.(christmas);
   for (const [part, g] of Object.entries(parts)) g.visible = part === 'shared' ? autumn : part === name;
@@ -989,6 +990,21 @@ function velvetBow(kitchen, parent, mat, size = .3, tail = 1.6) {
 }
 
 const pineTexture = room => room.pineTex ??= canvasTexture(512, 512, drawPineSprig);
+
+// A velvet bow as one geometry (for the tree's many bows: one draw for all).
+function bowGeometry(kitchen) {
+  const g = new THREE.Group();
+  velvetBow(kitchen, g, new THREE.MeshBasicMaterial(), .34, 1.5);
+  g.updateMatrixWorld(true);
+  const parts = [];
+  g.traverse(o => {
+    if (!o.isMesh) return;
+    const c = o.geometry.clone().applyMatrix4(o.matrixWorld);
+    for (const k of Object.keys(c.attributes)) if (k !== 'position' && k !== 'normal') c.deleteAttribute(k);
+    parts.push(c.index ? c.toNonIndexed() : c);
+  });
+  return mergeGeometries(parts);
+}
 
 function buildStudyChristmas(room) {
   const f = room.fireplace, y = room.mantelTop, g = new THREE.Group(), r = rng(301);

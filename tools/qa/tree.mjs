@@ -1,4 +1,4 @@
-// The Christmas tree in the kitchen: her first curious look, up it in
+// The Christmas tree in the kitchen's back corner: her first curious look, up it in
 // stages, a bauble batted, one knocked off and chased, stuck at the top and
 // helped down, hiding under it, sitting in the open box; a tap hangs a
 // fallen bauble back. Stills of each step, and checks.
@@ -11,10 +11,10 @@ const errors = []; page.on('pageerror', e => errors.push(e.message));
 await page.evaluate(() => { document.querySelector('#decor-btn').click(); document.querySelector('#decor-options [data-decor="christmas"]')?.click(); });
 await page.waitForTimeout(800);
 await step(10);
-const wide = {focus: [-2.4, 3.2, 5.0], yaw: .25, pitch: .12, dist: 12};
+const wide = {focus: [1.5, 3.2, -1.2], yaw: .15, pitch: .1, dist: 15};
 // (Close shots look at her, from the front right of the tree.)
 const shot = async (name, cam = null) => {
-  if (!cam) { const [x, y, z] = await page.evaluate(() => [kitten.brain.pos.x, kitten.brain.elevation, kitten.brain.pos.z]); cam = {focus: [x + .3, y + .4, z], yaw: .2, pitch: .12, dist: 9}; }
+  if (!cam) { const [x, y, z] = await page.evaluate(() => [kitten.brain.pos.x, kitten.brain.elevation, kitten.brain.pos.z]); cam = {focus: [x - .3, y + .4, z], yaw: -.1, pitch: .12, dist: 9}; }
   await look(cam); await page.locator('canvas').first().screenshot({path: `${OUT}/${name}.png`});
 };
 const state = () => page.evaluate(() => ({perch: kitten.brain.perch, act: kitten.brain.activity, y: +kitten.brain.elevation.toFixed(2), at: kitten.brain.pos.toArray().map(v => +v.toFixed(2)), stuck: !!kitten.brain.treeStuck, fallen: kitten.xmasTree().fallen().map(L => L.down.g.getWorldPosition(L.down.g.position.clone()).toArray().map(v => +v.toFixed(2)).concat(L.down.rest))}));
@@ -61,7 +61,7 @@ await step(6);
 await shot('4-chase');
 await step(140);
 const s = await state();
-ok('the bauble stays in the kitchen', s.fallen.every(([x, y, z]) => x > -6 && x < 7 && z > -2.7 && z < 9.1 && y > 0), JSON.stringify(s.fallen));
+ok('the bauble stays in the kitchen', s.fallen.every(([x, y, z]) => x > -6 && x < 7 && z > -4.2 && z < 9.1 && y > 0), JSON.stringify(s.fallen));
 // A tap on the fallen bauble (she's moved off it first: a tap on her is a stroke).
 await page.evaluate(() => { kitten.brain.target = null; kitten.brain.pos.set(1, 0, 4.2); });
 await look(wide); await step(2);
@@ -88,7 +88,7 @@ await step(60);
 // Hiding under the low boughs.
 await idle();
 await page.evaluate(() => kitten.treeHide());
-ok('hides under the tree', await until(() => kitten.brain.activity === 'loaf' && Math.hypot(kitten.brain.pos.x + 3.57, kitten.brain.pos.z - 7.6) < .4, 500), JSON.stringify(await state()));
+ok('hides under the tree', await until(() => kitten.brain.activity === 'loaf' && Math.hypot(kitten.brain.pos.x - kitten.TREE.hide[0], kitten.brain.pos.z - kitten.TREE.hide[1]) < .4, 500), JSON.stringify(await state()));
 await step(20);
 await shot('6-hide');
 await step(260);
