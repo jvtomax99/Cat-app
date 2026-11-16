@@ -1,62 +1,95 @@
-// The Christmas tree in the study: she climbs it, lies in its top half, bats
-// a bauble, knocks one off, goes down after it; a tap hangs it back up.
-// Stills of each step, and checks.
+// The Christmas tree in the kitchen: her first curious look, up it in
+// stages, a bauble batted, one knocked off and chased, stuck at the top and
+// helped down, hiding under it, sitting in the open box; a tap hangs a
+// fallen bauble back. Stills of each step, and checks.
 //   node tools/qa/tree.mjs            (OUT, NIGHT=0|1, W, H)
 import {open} from './lib.mjs'; import fs from 'node:fs';
 const OUT = process.env.OUT || 'qa-out/tree', W = +(process.env.W || 900), H = +(process.env.H || 760);
 fs.mkdirSync(OUT, {recursive: true});
-const {page, step, look, close} = await open({seed: 3, night: +(process.env.NIGHT ?? 1), flags: '&decor=christmas', width: W, height: H});
+const {page, step, look, close} = await open({seed: 3, kitchen: true, night: +(process.env.NIGHT ?? 1), flags: '&decor=christmas', width: W, height: H});
 const errors = []; page.on('pageerror', e => errors.push(e.message));
 await page.evaluate(() => { document.querySelector('#decor-btn').click(); document.querySelector('#decor-options [data-decor="christmas"]')?.click(); });
 await page.waitForTimeout(800);
 await step(10);
-const cam = {focus: [3.1, 2.4, -1.9], yaw: -0.45, pitch: 0.1, dist: 7.2};
-const shot = async name => { await look(cam); await page.locator('canvas').first().screenshot({path: `${OUT}/${name}.png`}); };
-const state = () => page.evaluate(() => ({perch: kitten.brain.perch, act: kitten.brain.activity, y: +kitten.brain.elevation.toFixed(2), at: kitten.brain.pos.toArray().map(v => +v.toFixed(2)), fallen: kitten.room.xmasTree.fallen().map(L => L.down.g.position.toArray().map(v => +v.toFixed(2)).concat(L.down.rest))}));
+const wide = {focus: [-2.4, 3.2, 5.0], yaw: .25, pitch: .12, dist: 12};
+const close_ = {focus: [-2.9, 3.0, 6.2], yaw: .45, pitch: .1, dist: 8};
+const shot = async (name, cam = close_) => { await look(cam); await page.locator('canvas').first().screenshot({path: `${OUT}/${name}.png`}); };
+const state = () => page.evaluate(() => ({perch: kitten.brain.perch, act: kitten.brain.activity, y: +kitten.brain.elevation.toFixed(2), at: kitten.brain.pos.toArray().map(v => +v.toFixed(2)), stuck: !!kitten.brain.treeStuck, fallen: kitten.xmasTree().fallen().map(L => L.down.g.getWorldPosition(L.down.g.position.clone()).toArray().map(v => +v.toFixed(2)).concat(L.down.rest))}));
 const until = async (test, max = 400) => { for (let i = 0; i < max; i += 10) { await step(10); if (await page.evaluate(test)) return true; } return false; };
 const checks = [];
 const ok = (name, pass, info = '') => { checks.push(pass); console.log(pass ? 'ok  ' : 'FAIL', name, info); };
+const idle = () => page.evaluate(() => { const b = kitten.brain; b.mode = 'idle'; b.perchUntil = 1e9; });
 
-ok('the tree is up, the olive tree put away', await page.evaluate(() => kitten.room.xmasTree?.root.visible && !kitten.room.oliveTree.visible));
-await shot('0-tree');
-await page.evaluate(() => kitten.climbTree());
-ok('into the low branches', await until(() => kitten.brain.perch === 'treeLow'), JSON.stringify(await state()));
-await shot('1-low');
-ok('up to the top half', await until(() => kitten.brain.perch === 'treeHigh' && !kitten.brain.jump, 300), JSON.stringify(await state()));
+ok('the tree is up in the kitchen', await page.evaluate(() => kitten.place === kitten.kitchen && kitten.xmasTree()?.root.visible && kitten.xmasTree().foliage.count > 1000), await page.evaluate(() => kitten.xmasTree()?.foliage.count));
+await shot('0-tree', wide);
+// The first look: stares, creeps up, sits, sniffs and paws a low bauble.
+await page.evaluate(() => kitten.curiousLook());
+ok('first look: she creeps up (crouched)', await until(() => kitten.brain.activity === 'stalk', 400), JSON.stringify(await state()));
+await shot('1-creep', wide);
+ok('first look: a careful paw at a low bauble', await until(() => kitten.brain.activity === 'swat', 500), JSON.stringify(await state()));
+await step(6);
+const lowSwing = await page.evaluate(() => Math.max(...kitten.xmasTree().loose.filter(L => L.group === 'low').map(L => Math.hypot(L.pivot.rotation.x, L.pivot.rotation.z))));
+ok('the low bauble swings', lowSwing > .03, lowSwing.toFixed(3));
+await shot('2-paw');
+await step(80);
+// Up in stages.
+await idle();
+await page.evaluate(() => kitten.climbTree('treeHigh'));
+for (const p of ['treeLow', 'treeMid']) ok(`climbs: ${p}`, await until(`kitten.brain.perch === '${p}'`, 400), JSON.stringify(await state()));
+ok('climbs: treeHigh', await until(() => kitten.brain.perch === 'treeHigh' && !kitten.brain.jump, 400), JSON.stringify(await state()));
 await step(30);
-await shot('2-high');
-await page.evaluate(() => { kitten.brain.perchUntil = 1e9; kitten.batBauble(); });
+await shot('3-high');
+await idle();
+await page.evaluate(() => kitten.batBauble());
 await step(14);
-const swing = await page.evaluate(() => Math.max(...kitten.room.xmasTree.loose.map(L => Math.hypot(L.pivot.rotation.x, L.pivot.rotation.z))));
-ok('a pat sets a bauble swinging', swing > .05, swing.toFixed(3));
-await shot('3-bat');
+const swing = await page.evaluate(() => Math.max(...kitten.xmasTree().loose.filter(L => L.group === 'high').map(L => Math.hypot(L.pivot.rotation.x, L.pivot.rotation.z))));
+ok('a pat up there sets a bauble swinging', swing > .05, swing.toFixed(3));
 await step(60);
 await page.evaluate(() => { kitten.brain.nextKnock = 0; kitten.knockBauble(); });
-ok('one comes off', await until(() => kitten.room.xmasTree.fallen().length === 1, 120));
-await step(8);
-await shot('4-falling');
-ok('it lands and rolls to a stop on the floor', await until(() => kitten.room.xmasTree.fallen().every(L => L.down.rest), 400), JSON.stringify((await state()).fallen));
-ok('she goes down after it', await until(() => !kitten.brain.perch && !kitten.brain.jump, 500), JSON.stringify(await state()));
+ok('one comes off', await until(() => kitten.xmasTree().fallen().length === 1, 120));
+ok('it lands and rolls to a stop', await until(() => kitten.xmasTree().fallen().every(L => L.down.rest), 400), JSON.stringify((await state()).fallen));
+ok('she goes down after it', await until(() => !kitten.brain.perch && !kitten.brain.jump, 600), JSON.stringify(await state()));
 ok('and gives it a pat', await until(() => kitten.brain.activity === 'swat', 400), JSON.stringify(await state()));
-ok('standing clear of the chair, the tree and the hearth', await page.evaluate(() => kitten.room.xmasTree.freeFloor(kitten.brain.pos.x, kitten.brain.pos.z, kitten.brain.heading)));
+ok('standing clear of the island, the tree and the box', await page.evaluate(() => { const b = kitten.brain, v = b.pos.clone(); return kitten.kitchen.pushOut(kitten.kitchen.clampFloor(v.clone())).distanceTo(v) < .05; }), JSON.stringify(await state()));
 await step(6);
-await shot('5-chase');
-await step(120);
+await shot('4-chase');
+await step(140);
 const s = await state();
-ok('the bauble stays in the room', s.fallen.every(([x, y, z]) => { const wx = x + 4.0, wz = z - 2.72; return wx > -4.6 && wx < 4.6 && wz > -3.4 && wz < 3.7 && y > 0; }), JSON.stringify(s.fallen));
-await shot('6-after');
-// A tap on the fallen bauble: back on the tree. (She's moved off it first:
-// a tap on her is a stroke.)
-await page.evaluate(() => { kitten.brain.target = null; kitten.brain.pos.set(0, 0, .3); });
-await step(2);
+ok('the bauble stays in the kitchen', s.fallen.every(([x, y, z]) => x > -6 && x < 7 && z > -2.7 && z < 9.1 && y > 0), JSON.stringify(s.fallen));
+// A tap on the fallen bauble (she's moved off it first: a tap on her is a stroke).
+await page.evaluate(() => { kitten.brain.target = null; kitten.brain.pos.set(1, 0, 4.2); });
+await look(wide); await step(2);
 const tapped = await page.evaluate(() => {
-  const T = kitten.room.xmasTree, L = T.fallen()[0], p = L.down.g.getWorldPosition(L.down.g.position.clone()).project(kitten.camera);
+  const L = kitten.xmasTree().fallen()[0], p = L.down.g.getWorldPosition(L.down.g.position.clone()).project(kitten.camera);
   const c = kitten.renderer.domElement.getBoundingClientRect();
   return {x: c.left + (p.x + 1) / 2 * c.width, y: c.top + (1 - p.y) / 2 * c.height};
 });
 await page.mouse.click(tapped.x, tapped.y);
 await step(12);
-ok('a tap hangs it back up', await page.evaluate(() => kitten.room.xmasTree.fallen().length === 0));
+ok('a tap hangs it back up', await page.evaluate(() => kitten.xmasTree().fallen().length === 0));
+// Stuck at the top, and helped down by a touch.
+await idle();
+await page.evaluate(() => kitten.climbTree('treeTop'));
+ok('all the way to the top', await until(() => kitten.brain.perch === 'treeTop' && !kitten.brain.jump, 800), JSON.stringify(await state()));
+ok('stuck there', await until(() => kitten.brain.treeStuck, 100));
+await step(80);
+await shot('5-stuck', {focus: [-3.4, 5.6, 6.2], yaw: .45, pitch: .05, dist: 8});
+await page.evaluate(() => kitten.touchCat('back'));
+ok('a touch helps her down to the floor', await until(() => !kitten.brain.perch && !kitten.brain.jump, 800), JSON.stringify(await state()));
+await step(60);
+// Hiding under the low boughs.
+await idle();
+await page.evaluate(() => kitten.treeHide());
+ok('hides under the tree', await until(() => kitten.brain.activity === 'loaf' && Math.hypot(kitten.brain.pos.x + 3.57, kitten.brain.pos.z - 7.6) < .4, 500), JSON.stringify(await state()));
+await step(20);
+await shot('6-hide');
+await step(260);
+// Into the open box.
+await idle();
+await page.evaluate(() => kitten.boxSit());
+ok('sits in the open box', await until(() => kitten.brain.perch === 'xmasBox' && kitten.brain.activity === 'loaf', 500), JSON.stringify(await state()));
+await step(10);
+await shot('7-box');
 ok('no page errors', errors.length === 0, errors.join(' | '));
 console.log(`${checks.filter(Boolean).length} of ${checks.length}`);
 await close();

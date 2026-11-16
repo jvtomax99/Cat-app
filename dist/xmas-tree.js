@@ -1,45 +1,60 @@
-// Mochi's Christmas tree, in the study's corner by the fireplace (in place
-// of the olive tree, in the Christmas look). From Merlin's picture: a full,
-// dense fir, warm white fairy lights all through it, old glass baubles in
-// reds, golds, silvers and greens, red-and-white twists, glass icicles, and
-// little figures (snowmen, Santas, soldiers, red owls); lights along the top
-// of the wall. All built in code; one draw per kind of thing, so it stays
-// light on a phone.
+// Mochi's Christmas tree: a huge fir in the kitchen, at the front by the
+// tall glass wall (Merlin, 2026-11-16, from a photo of a cat lying in a
+// decorated tree). Dense boughs, warm white fairy lights all through it, old
+// glass baubles in reds, golds, silvers and greens, red-and-white twists,
+// glass icicles and little figures (snowmen, Santas, soldiers, red owls), a
+// glass spire on top; wrapped presents under it and one open box. All built
+// in code, one draw per kind of thing, so it stays light on a phone.
 //
-// She climbs it: a leap into the lower branches, a scramble to the upper
-// ones, and there she lies half in the tree, as in the picture. The tree
-// sways when she lands, she bats at the baubles hanging under her paws, and
-// now and then one comes off, drops to the floor and rolls. A tap on a
-// fallen bauble hangs it back up.
+// What she does with it is in app.js (the "Christmas tree" block): a long
+// curious first look, climbing up in stages (sometimes too far: stuck at
+// the top, mewing), batting and knocking off baubles, hiding under the low
+// boughs, sitting in the open box.
 import * as THREE from 'three';
 import {rng, canvasTexture, lathe} from './room.js';
 
-// Where it stands (the study's frame) and where she goes in it. Plain
-// numbers, so the study's layout can name her perches before the tree is built.
+// Where it stands and where she goes in it, in the kitchen's frame (plain
+// numbers, so the kitchen's layout can name her perches before it's built).
+// The camera looks from the open front (+z), so everything of hers is on
+// the tree's front-right, the side you see.
+const TX = -4.1, TZ = 5.9, at = (a, d) => [TX + Math.sin(a) * d, TZ + Math.cos(a) * d];
 export const TREE = {
-  x: 4.0, z: -2.72, base: .42, top: 5.55, radius: 1.5,
-  // Her perches: low in the branches on the fireplace side (from the
-  // floor), then up to the top half, lying across the tree with her front
-  // half out of it.
-  low: {spot: [4.12, -1.78], top: 1.7, face: .15},
-  high: {spot: [3.58, -2.3], top: 3.25, face: -Math.PI / 2 + .35},
-  floor: [3.3, -.72],
+  x: TX, z: TZ, base: 1.0, top: 8.7, radius: 2.35,
+  glass: -5.9, // (the window wall: no bough goes through it)
+  // Up the tree in stages, lying across it with her front half out.
+  perches: {
+    treeLow: {spot: at(.85, 1.35), top: 2.0, face: Math.PI / 2 - .15},
+    treeMid: {spot: at(.65, .95), top: 3.6, face: Math.PI / 2 + .25},
+    treeHigh: {spot: at(.6, .62), top: 5.1, face: Math.PI / 2 - .1},
+    treeTop: {spot: at(.5, .32), top: 6.5, face: Math.PI / 2 + .35},
+  },
+  climbFrom: at(1.25, 2.85),
+  // Under the low boughs at the front, looking out.
+  hide: at(.3, 1.78), hideFace: .3,
+  // The open box she sits in, and where she hops in from.
+  box: {spot: at(1.0, 3.05), ry: .3}, boxFrom: at(1.42, 3.9),
+  // The first look: from back there, then up close to sniff.
+  look: [-.4, 5.2], sniff: at(1.0, 3.0),
+  // Kept clear for her to walk round: the presents' ring under the tree.
+  ring: 1.62,
 };
+// (The way to the open floor in front of it, as an angle round the tree:
+// where a fallen bauble ends up, in reach.)
+const FRONT = 1.0;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
-const WALL = {x: 4.52, z: -3.32};
-// (The way to the open floor in front of the tree, as an angle round it.)
-const FRONT = Math.atan2(1, -.42);
+const P = n => TREE.perches[n];
 
 // The fir's radius at height y (measured up from the floor).
-const radiusAt = y => TREE.radius * Math.pow(Math.max(0, (TREE.top - y) / (TREE.top - TREE.base)), .92) * (1 + .05 * Math.sin(y * 2.3));
+export const radiusAt = y => TREE.radius * Math.pow(Math.max(0, (TREE.top - y) / (TREE.top - TREE.base)), .92) * (1 + .04 * Math.sin(y * 1.7));
 
-// Her body on each perch, as a line from head to tail base (the tree's
-// frame): nothing hard hangs there.
+// Her body on each perch and under the tree, as a line from head to tail
+// base (the tree's frame): nothing hard hangs there.
 function bodyLines() {
-  return [TREE.low, TREE.high].map(P => {
-    const f = V(Math.sin(P.face), 0, Math.cos(P.face)), at = V(P.spot[0] - TREE.x, P.top + .3, P.spot[1] - TREE.z);
-    return [at.clone().addScaledVector(f, .55).add(V(0, .15, 0)), at.clone().addScaledVector(f, -.8)];
-  });
+  const line = (x, z, y, face) => {
+    const f = V(Math.sin(face), 0, Math.cos(face)), p = V(x - TREE.x, y, z - TREE.z);
+    return [p.clone().addScaledVector(f, .6).add(V(0, .15, 0)), p.clone().addScaledVector(f, -.85)];
+  };
+  return Object.values(TREE.perches).map(Q => line(Q.spot[0], Q.spot[1], Q.top + .3, Q.face)).concat([line(TREE.hide[0], TREE.hide[1], .35, TREE.hideFace)]);
 }
 const segDist = (p, [a, b]) => {
   const ab = b.clone().sub(a), t = Math.max(0, Math.min(1, p.clone().sub(a).dot(ab) / ab.lengthSq()));
@@ -116,50 +131,37 @@ function batcher() {
 // ---------------------------------------------------------------------------
 // The tree
 // ---------------------------------------------------------------------------
-export function buildChristmasTree(room) {
+// solids: boxes a fallen bauble can't roll through, in the kitchen's frame
+// ({x0, x1, z0, z1, top}: the island).
+export function buildChristmasTree(parent, {solids = []} = {}) {
   const r = rng(2412);
-  const root = new THREE.Group(); root.position.set(TREE.x, 0, TREE.z); room.group.add(root);
-  // (The sway turns the whole tree about its foot; fallen baubles stay out of it.)
+  const root = new THREE.Group(); root.position.set(TREE.x, 0, TREE.z); parent.add(root);
+  // (The sway turns the whole tree about its foot; fallen baubles and the
+  // presents stay out of it.)
   const sway = new THREE.Group(); root.add(sway);
   const floorItems = new THREE.Group(); root.add(floorItems);
   const Y = V(0, 1, 0), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
 
-  // Keep-outs: the two walls, and the armchair's back (the chair stands
-  // where it always does; the branches on that side are shorter).
-  const chair = room.chair, chairInv = new THREE.Matrix4(), chairFwd = new THREE.Matrix4(), chairQ = new THREE.Quaternion(), chairBox = new THREE.Box3();
-  {
-    // (Measured in the chair's own frame, so it's right wherever the study
-    // stands: seen from the kitchen it's moved and turned.)
-    const p = chair.position.clone(), ry = chair.rotation.y, inv = new THREE.Matrix4(), mm = new THREE.Matrix4();
-    chair.updateMatrixWorld(true); inv.copy(chair.matrixWorld).invert();
-    chair.traverse(o => { if (!o.isMesh) return; o.geometry.boundingBox || o.geometry.computeBoundingBox(); chairBox.union(o.geometry.boundingBox.clone().applyMatrix4(mm.multiplyMatrices(inv, o.matrixWorld))); });
-    chairBox.expandByScalar(.06);
-    chairQ.setFromAxisAngle(Y, ry); chairFwd.compose(p, chairQ, V(1, 1, 1)); chairInv.copy(chairFwd).invert();
-  }
-  const local = V(0, 0, 0), world = V(0, 0, 0);
-  const blocked = p => {
-    world.set(p.x + TREE.x, p.y, p.z + TREE.z);
-    if (world.x > WALL.x || world.z < WALL.z) return true;
-    return chairBox.containsPoint(local.copy(world).applyMatrix4(chairInv));
-  };
+  // Keep-out: the glass wall (the boughs on that side are shorter).
+  const blocked = p => p.x + TREE.x < TREE.glass;
   const bodies = bodyLines();
   const nearHer = (p, pad) => bodies.some(b => segDist(p, b) < pad);
 
-  // Foot: a rattan collar round the stand, and the trunk.
+  // Foot: a big rattan collar round the stand, and the trunk.
   const rattan = new THREE.MeshStandardMaterial({map: canvasTexture(256, 64, (g, w, h) => {
     g.fillStyle = '#b58e56'; g.fillRect(0, 0, w, h);
     for (let x = 0; x < w; x += 8) for (let y = 0; y < h; y += 8) { g.fillStyle = (x + y) % 16 ? '#9c7742' : '#caa46a'; g.fillRect(x + 1, y + 1, 6, 6); }
-  }, {repeat: [4, 1]}), roughness: .9});
-  const collar = new THREE.Mesh(new THREE.CylinderGeometry(.44, .5, .42, 28, 1, true), rattan); collar.position.y = .21; collar.castShadow = true; collar.receiveShadow = true; sway.add(collar);
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(.44, .025, 6, 32), rattan); rim.rotation.x = Math.PI / 2; rim.position.y = .42; sway.add(rim);
+  }, {repeat: [6, 1]}), roughness: .9});
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(.62, .7, .55, 32, 1, true), rattan); collar.position.y = .275; collar.castShadow = true; collar.receiveShadow = true; sway.add(collar);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.62, .03, 6, 36), rattan); rim.rotation.x = Math.PI / 2; rim.position.y = .55; sway.add(rim);
   const bark = new THREE.MeshStandardMaterial({color: '#4b3624', roughness: 1});
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.025, .085, TREE.top - .2, 8), bark); trunk.position.y = (TREE.top - .2) / 2 + .1; sway.add(trunk);
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.04, .14, TREE.top - .2, 8), bark); trunk.position.y = (TREE.top - .2) / 2 + .1; sway.add(trunk);
 
   // A dark heart: the tree is solid, not see-through, as a full fir is.
   const heartMat = new THREE.MeshStandardMaterial({color: '#0f2214', roughness: 1});
   const hp = [];
-  for (let i = 0; i <= 12; i++) { const y = TREE.base + .1 + (TREE.top - .25 - TREE.base) * i / 12; hp.push(new THREE.Vector2(Math.max(.02, radiusAt(y) * .72), y)); }
-  hp.unshift(new THREE.Vector2(0, TREE.base + .1)); hp.push(new THREE.Vector2(0, TREE.top - .15));
+  for (let i = 0; i <= 14; i++) { const y = TREE.base + .25 + (TREE.top - .4 - TREE.base) * i / 14; hp.push(new THREE.Vector2(Math.max(.02, radiusAt(y) * .7), y)); }
+  hp.unshift(new THREE.Vector2(0, TREE.base + .25)); hp.push(new THREE.Vector2(0, TREE.top - .2));
   const heart = new THREE.Mesh(new THREE.LatheGeometry(hp, 20), heartMat); heart.castShadow = true; heart.receiveShadow = true; sway.add(heart);
 
   // Branches: whorls up the trunk, each bough reaching out and a little down,
@@ -167,7 +169,6 @@ export function buildChristmasTree(room) {
   const sprigTex = canvasTexture(256, 512, drawFirSprig);
   const sprigMat = new THREE.MeshStandardMaterial({map: sprigTex, alphaTest: .45, side: THREE.DoubleSide, roughness: .75, emissive: '#6b4a1c', emissiveMap: sprigTex, emissiveIntensity: 0});
   const cards = [];
-  const tips = []; // (bough tips: where baubles hang)
   const spray = (pts, count, size, depthOf) => {
     const curve = new THREE.CatmullRomCurve3(pts);
     for (let i = 0; i < count; i++) {
@@ -185,42 +186,39 @@ export function buildChristmasTree(room) {
       cards.push([m4.clone(), depthOf(p)]);
     }
   };
-  const whorls = 26;
+  const depth = p => Math.min(1, Math.hypot(p.x, p.z) / Math.max(.15, radiusAt(p.y)));
+  const whorls = 30;
   for (let w = 0; w < whorls; w++) {
-    const y = TREE.base + .08 + (TREE.top - .45 - TREE.base) * Math.pow(w / (whorls - 1), .95), R = radiusAt(y), n = Math.max(5, Math.round(5 + 9 * R / TREE.radius));
+    const y = TREE.base + .06 + (TREE.top - .6 - TREE.base) * Math.pow(w / (whorls - 1), .95), R = radiusAt(y), n = Math.max(5, Math.round(5 + 10 * R / TREE.radius));
     for (let j = 0; j < n; j++) {
       const a = (j + r() * .6 + w * .37) / n * Math.PI * 2, L = R * (.88 + r() * .2), dir = V(Math.cos(a), 0, Math.sin(a));
-      const at = (u, drop) => V(0, y, 0).addScaledVector(dir, L * u).add(V(0, -drop, 0));
-      const pts = [at(.05, 0), at(.4, L * .1), at(.75, L * .16), at(1, L * .12)];
-      // (Shortened against the walls and the chair.)
+      const pt = (u, drop) => V(0, y, 0).addScaledVector(dir, L * u).add(V(0, -drop, 0));
+      const pts = [pt(.05, 0), pt(.4, L * .08), pt(.75, L * .13), pt(1, L * .1)];
       while (pts.length > 2 && blocked(pts[pts.length - 1])) pts.pop();
-      const depth = p => Math.min(1, Math.hypot(p.x, p.z) / Math.max(.15, radiusAt(p.y)));
-      spray(pts, Math.round(L * 12) + 2, .4 + .2 * R / TREE.radius, depth);
-      if (pts.length === 4) tips.push(pts[3]);
-      // Side shoots from the outer half of the bough.
-      for (const u of [.45, .7]) {
-        const base = new THREE.CatmullRomCurve3(pts).getPointAt(Math.min(1, u)), side = V(-dir.z, 0, dir.x).multiplyScalar(r() < .5 ? 1 : -1);
-        const sd = dir.clone().multiplyScalar(.6).addScaledVector(side, .8).normalize(), sl = L * (.32 + r() * .14);
-        const sp = [base, base.clone().addScaledVector(sd, sl * .6).add(V(0, -.02, 0)), base.clone().addScaledVector(sd, sl)];
-        if (!blocked(sp[2])) { spray(sp, Math.round(sl * 10) + 1, .3 + .12 * R / TREE.radius, depth); tips.push(sp[2]); }
+      spray(pts, Math.round(L * 8) + 2, .55 + .3 * R / TREE.radius, depth);
+      for (const u of [.45, .72]) {
+        const b0 = new THREE.CatmullRomCurve3(pts).getPointAt(Math.min(1, u)), side = V(-dir.z, 0, dir.x).multiplyScalar(r() < .5 ? 1 : -1);
+        const sd = dir.clone().multiplyScalar(.6).addScaledVector(side, .8).normalize(), sl = L * (.3 + r() * .14);
+        const sp = [b0, b0.clone().addScaledVector(sd, sl * .6).add(V(0, -.03, 0)), b0.clone().addScaledVector(sd, sl)];
+        if (!blocked(sp[2])) spray(sp, Math.round(sl * 7) + 1, .42 + .18 * R / TREE.radius, depth);
       }
     }
   }
-  // A full coat over it all: short sprays all over the outside, so no gaps
-  // show between the boughs (a well-shaped, dense fir, as in the picture).
-  for (let i = 0; i < 1300; i++) {
-    const y = TREE.base + .1 + (TREE.top - .35 - TREE.base) * (1 - Math.sqrt(r())), R = radiusAt(y), a = r() * Math.PI * 2;
-    const rad = R * (.72 + r() * .3), p = V(Math.cos(a) * rad, y, Math.sin(a) * rad);
+  // A full coat over it all: sprays all over the outside, so no gaps show
+  // between the boughs (a well-shaped, dense fir, as in the picture).
+  for (let i = 0; i < 1700; i++) {
+    const y = TREE.base + .1 + (TREE.top - .5 - TREE.base) * (1 - Math.sqrt(r())), R = radiusAt(y), a = r() * Math.PI * 2;
+    const rad = R * (.74 + r() * .28), p = V(Math.cos(a) * rad, y, Math.sin(a) * rad);
     if (blocked(p)) continue;
     const d = V(Math.cos(a), -.25 - r() * .3, Math.sin(a)).add(V((r() - .5) * 1.1, (r() - .5) * .3, (r() - .5) * 1.1)).normalize();
     let up = Y.clone().addScaledVector(d, -d.y).normalize();
     if (r() < .3) up.applyAxisAngle(d, (r() - .5) * 2);
-    const x = new THREE.Vector3().crossVectors(d, up).normalize(), k = (.36 + .22 * R / TREE.radius) * (.75 + r() * .5);
+    const x = new THREE.Vector3().crossVectors(d, up).normalize(), k = (.5 + .3 * R / TREE.radius) * (.75 + r() * .5);
     m4.makeBasis(x, d, new THREE.Vector3().crossVectors(x, d)); m4.scale(s.set(k * .7, k, k)); m4.setPosition(p);
     cards.push([m4.clone(), Math.min(1, rad / Math.max(.15, R))]);
   }
   // The leader: a straight spire of fresh growth at the top.
-  spray([V(0, TREE.top - .5, 0), V(0, TREE.top - .2, 0), V(0, TREE.top + .02, 0)], 10, .24, () => 1);
+  spray([V(0, TREE.top - .7, 0), V(0, TREE.top - .3, 0), V(0, TREE.top + .02, 0)], 12, .32, () => 1);
   const foliage = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).translate(0, .5, 0), sprigMat, cards.length);
   const deep = new THREE.Color('#5e7c5c'), light = new THREE.Color('#d9e6cf'), c = new THREE.Color();
   cards.forEach(([mm, d], i) => { foliage.setMatrixAt(i, mm); foliage.setColorAt(i, c.copy(deep).lerp(light, Math.pow(d, 1.6) * (.75 + r() * .25))); });
@@ -229,19 +227,19 @@ export function buildChristmasTree(room) {
 
   // ---- Fairy lights: warm white, all through the tree, more at the foot.
   const lights = [];
-  for (let tries = 0; lights.length < 640 && tries < 8000; tries++) {
-    const y = TREE.base + .15 + (TREE.top - .3 - TREE.base) * (1 - Math.sqrt(r()));
-    const R = radiusAt(y), a = r() * Math.PI * 2, rad = R * (r() < .2 ? .75 + r() * .2 : .98 + r() * .1) + .02;
+  for (let tries = 0; lights.length < 1000 && tries < 12000; tries++) {
+    const y = TREE.base + .15 + (TREE.top - .4 - TREE.base) * (1 - Math.sqrt(r()));
+    const R = radiusAt(y), a = r() * Math.PI * 2, rad = R * (r() < .2 ? .75 + r() * .2 : .98 + r() * .1) + .03;
     const p = V(Math.cos(a) * rad, y, Math.sin(a) * rad);
     if (!blocked(p)) lights.push(p);
   }
   const bulbMat = new THREE.MeshBasicMaterial({color: '#fff1cf'});
-  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(.026, 6, 4), bulbMat, lights.length);
+  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(.034, 6, 4), bulbMat, lights.length);
   lights.forEach((p, i) => bulbs.setMatrixAt(i, m4.makeTranslation(p.x, p.y, p.z)));
   sway.add(bulbs);
   const glowTex = glowTexture();
   // (Two sets, breathing out of step: a gentle twinkle.)
-  const glowMats = [0, 1].map(() => new THREE.PointsMaterial({map: glowTex, size: .4, sizeAttenuation: true, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false}));
+  const glowMats = [0, 1].map(() => new THREE.PointsMaterial({map: glowTex, size: .5, sizeAttenuation: true, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false}));
   [0, 1].forEach(k => {
     const pts = new THREE.Points(new THREE.BufferGeometry().setFromPoints(lights.filter((_, i) => i % 2 === k)), glowMats[k]);
     pts.frustumCulled = false; sway.add(pts);
@@ -265,7 +263,7 @@ export function buildChristmasTree(room) {
   // not crowding each other.
   const hung = [];
   const free = (p, gap) => !nearHer(p, .42) && !blocked(p) && hung.every(h => h.distanceTo(p) > gap);
-  const spot = (gap, yMin = TREE.base + .3, yMax = TREE.top - .5) => {
+  const spot = (gap, yMin = TREE.base + .15, yMax = TREE.top - .7) => {
     for (let k = 0; k < 80; k++) {
       const y = yMin + (yMax - yMin) * (1 - Math.sqrt(r())), a = r() * Math.PI * 2, R = radiusAt(y) * (.97 + r() * .09) + .02;
       const p = V(Math.cos(a) * R, y, Math.sin(a) * R);
@@ -274,26 +272,26 @@ export function buildChristmasTree(room) {
     return null;
   };
   const BAUBLES = ['#9d121b', '#c21d27', '#7c0f18', '#c9a043', '#d9b968', '#c9ccd2', '#2f6b3a', '#1f4f5f', '#e9e1d2', '#b8462c', '#c21d27', '#9d121b', '#c9a043'];
-  for (let i = 0; i < 170; i++) {
-    const p = spot(.17); if (!p) break;
-    const rad = .06 + r() * .06;
+  for (let i = 0; i < 330; i++) {
+    const p = spot(.21); if (!p) break;
+    const rad = .075 + r() * .08;
     put(sphere, glass, p.clone().add(V(0, -rad, 0)), rad, BAUBLES[Math.floor(r() * BAUBLES.length)]);
     put(cap, brass, p.clone().add(V(0, .01, 0)), rad * .9);
   }
-  for (let i = 0; i < 36; i++) {
-    const p = spot(.2); if (!p) break;
-    const k = .09 + r() * .04;
+  for (let i = 0; i < 70; i++) {
+    const p = spot(.25); if (!p) break;
+    const k = .12 + r() * .05;
     put(drop, glass, p.clone().add(V(0, -k * .62, 0)), V(k, k * 1.25, k), ['#c21d27', '#c9a043', '#2f6b3a', '#d9d4ca', '#b03a5a'][i % 5], r() * 6);
     put(cap, brass, p, k * .6);
   }
-  for (let i = 0; i < 26; i++) {
-    const p = spot(.22); if (!p) break;
-    const k = .13 + r() * .04;
+  for (let i = 0; i < 50; i++) {
+    const p = spot(.27); if (!p) break;
+    const k = .17 + r() * .05;
     put(twist, twistMat, p.clone().add(V(0, -k * .75, 0)), V(k * .9, k * 1.6, k * .9), null, r() * 6);
   }
-  for (let i = 0; i < 40; i++) {
-    const p = spot(.15); if (!p) break;
-    put(icicle, silverGlass, p, 1 + r() * .5, null, r() * 6);
+  for (let i = 0; i < 80; i++) {
+    const p = spot(.18); if (!p) break;
+    put(icicle, silverGlass, p, 1.3 + r() * .6, null, r() * 6);
   }
   // Little figures, hanging upright on their loops.
   const white = '#f3efe6', red = '#b8171f', black = '#1c1a1a', skin = '#e8b9a0', gold = '#c9a043';
@@ -323,94 +321,121 @@ export function buildChristmasTree(room) {
     }
   };
   const KINDS = ['snowman', 'santa', 'soldier', 'owl'];
-  for (let i = 0; i < 26; i++) { const p = spot(.28, TREE.base + .5); if (p) figure(p, KINDS[i % 4], .17 + r() * .05); }
+  for (let i = 0; i < 52; i++) { const p = spot(.34, TREE.base + .4); if (p) figure(p, KINDS[i % 4], .22 + r() * .07); }
   // A glass spire on top.
   const topAt = V(0, TREE.top, 0);
-  put(lathe([[0, -.05], [.05, -.03], [.06, .04], [.13, .16], [.14, .24], [.1, .33], [.05, .4], [.035, .48], [.06, .52], [.03, .58], [.015, .8], [0, .86]], 18), glass, topAt, 1, '#b8141e');
-  put(cyl, brass, topAt.clone().add(V(0, .04, 0)), V(.065, .06, .065));
+  put(lathe([[0, -.05], [.05, -.03], [.06, .04], [.13, .16], [.14, .24], [.1, .33], [.05, .4], [.035, .48], [.06, .52], [.03, .58], [.015, .8], [0, .86]], 18), glass, topAt, 1.6, '#b8141e');
+  put(cyl, brass, topAt.clone().add(V(0, .06, 0)), V(.1, .09, .1));
   const ornaments = B.build(sway);
 
-  // ---- The baubles under her paws on the top perch: each on its own, to
-  // swing when batted and to come off.
-  const her = TREE.high, paw = V(her.spot[0] - TREE.x + Math.sin(her.face) * .36, her.top - .36, her.spot[1] - TREE.z + Math.cos(her.face) * .36 + .12);
+  // ---- Baubles of her own: each on its own string, to swing when batted
+  // and to come off. Under her paws at the high perch; low on the front
+  // boughs (where she meets the tree from the floor); over where she hides.
   const loose = [];
-  [[0, 0, '#c21d27', .085], [-.42, .08, '#c9a043', .075], [-.2, .2, '#2f6b3a', .07]].forEach(([dx, dy, color, rad], i) => {
-    const out = V(paw.x, 0, paw.z).normalize(), side = V(-out.z, 0, out.x);
-    const hang = paw.clone().addScaledVector(side, dx).add(V(0, -dy, 0)).addScaledVector(out, .05);
-    const pivot = new THREE.Group(); pivot.position.copy(hang); sway.add(pivot);
+  const hangLoose = (p, color, rad, group) => {
+    const pivot = new THREE.Group(); pivot.position.copy(p); sway.add(pivot);
     const b = new THREE.Group(); pivot.add(b);
-    const ball = new THREE.Mesh(sphere, glass.clone()); ball.material.color.set(color); ball.scale.setScalar(rad); ball.position.y = -.06 - rad;
-    const top = new THREE.Mesh(cap, brass); top.scale.setScalar(rad * .9); top.position.y = -.05;
-    const loop = new THREE.Mesh(new THREE.CylinderGeometry(.003, .003, .06, 3), brass); loop.position.y = -.025;
+    const ball = new THREE.Mesh(sphere, glass.clone()); ball.material.color.set(color); ball.scale.setScalar(rad); ball.position.y = -.07 - rad;
+    const top = new THREE.Mesh(cap, brass); top.scale.setScalar(rad * .9); top.position.y = -.06;
+    const loop = new THREE.Mesh(new THREE.CylinderGeometry(.004, .004, .07, 3), brass); loop.position.y = -.03;
     b.add(ball, top, loop);
-    loose.push({i, pivot, b, rad, home: hang.clone(), swing: V(0, 0, 0), spin: V(0, 0, 0), down: null});
-  });
-
-  // ---- Lights along the top of the walls (the back wall and the right
-  // wall over the tree), in shallow swags between hooks.
-  const wallLights = [], wire = [];
-  const swag = (a, b, hooks, sag) => {
-    for (let h = 0; h < hooks; h++) {
-      const n = 14;
-      for (let i = 0; i <= n; i++) {
-        const u = (h + i / n) / hooks, p = a.clone().lerp(b, u); p.y -= sag * Math.sin(i / n * Math.PI);
-        wire.push(p);
-        if (i < n && i % 1 === 0) wallLights.push(p.clone().add(V(0, -.03, 0)));
-      }
-    }
+    loose.push({i: loose.length, group, pivot, b, rad, swing: V(0, 0, 0), spin: V(0, 0, 0), down: null});
   };
-  const Y0 = 6.05;
-  swag(V(-4.5 - TREE.x, Y0, -3.36 - TREE.z), V(4.56 - TREE.x, Y0, -3.36 - TREE.z), 7, .32);
-  swag(V(4.56 - TREE.x, Y0, -3.36 - TREE.z), V(4.56 - TREE.x, Y0, -.3 - TREE.z), 2, .3);
-  const wireMesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(wire), 400, .008, 4), new THREE.MeshStandardMaterial({color: '#2b3a26', roughness: .8}));
-  root.add(wireMesh);
-  const wallBulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(.026, 6, 4), bulbMat, wallLights.length);
-  wallLights.forEach((p, i) => wallBulbs.setMatrixAt(i, m4.makeTranslation(p.x, p.y, p.z)));
-  root.add(wallBulbs);
-  const wallGlow = new THREE.Points(new THREE.BufferGeometry().setFromPoints(wallLights), glowMats[0]); wallGlow.frustumCulled = false; root.add(wallGlow);
+  {
+    const H = P('treeHigh'), f = V(Math.sin(H.face), 0, Math.cos(H.face)), paw = V(H.spot[0] - TREE.x, H.top - .38, H.spot[1] - TREE.z).addScaledVector(f, .4);
+    const side = V(f.z, 0, -f.x);
+    [[0, 0, '#c21d27', .1], [.32, .1, '#c9a043', .09], [-.3, .16, '#2f6b3a', .085]].forEach(([dx, dy, color, rad]) => hangLoose(paw.clone().addScaledVector(side, dx).add(V(0, -dy, 0)).add(V(0, 0, .12)), color, rad, 'high'));
+  }
+  [[1.12, 1.32, '#c9a043', .1], [1.3, 1.18, '#c21d27', .11], [1.48, 1.28, '#c9ccd2', .095]].forEach(([a, y, color, rad]) => {
+    const d = radiusAt(y) + .04; hangLoose(V(Math.sin(a) * d, y, Math.cos(a) * d), color, rad, 'low');
+  });
+  {
+    const hx = TREE.hide[0] - TREE.x, hz = TREE.hide[1] - TREE.z, f = V(Math.sin(TREE.hideFace), 0, Math.cos(TREE.hideFace));
+    [[.2, '#9d121b', .09], [-.25, '#2f6b3a', .085]].forEach(([dx, color, rad]) => hangLoose(V(hx, 1.02, hz).addScaledVector(f, .45).add(V(f.z * dx, 0, -f.x * dx)), color, rad, 'hide'));
+  }
 
-  // ---- In the evening: a warm wash on the walls behind and the floor under it.
+  // ---- Presents under the tree: wrapped boxes with ribbons, round the
+  // stand, leaving her hiding place clear; and the open box.
+  const P2 = batcher();
+  const paper = new THREE.MeshStandardMaterial({color: '#ffffff', roughness: .6});
+  const ribbon = new THREE.MeshStandardMaterial({color: '#ffffff', roughness: .35, metalness: .2});
+  const cube = new THREE.BoxGeometry(1, 1, 1);
+  const WRAP = [['#8e1622', '#d9b968'], ['#1f4a33', '#c21d27'], ['#e9e1d2', '#9d121b'], ['#c9a043', '#7c0f18'], ['#23384f', '#e9e1d2'], ['#b8462c', '#2f6b3a']];
+  const presents = [];
+  for (let k = 0, n = 0; n < 13 && k < 200; k++) {
+    const a = r() * Math.PI * 2, d = .8 + r() * .75, w = .38 + r() * .4, h = .28 + r() * .34, dp = .34 + r() * .36;
+    const x = Math.sin(a) * d, z = Math.cos(a) * d;
+    if (blocked(V(x - w, 0, z)) || Math.hypot(x + TREE.x - TREE.hide[0], z + TREE.z - TREE.hide[1]) < 1.05) continue;
+    if (presents.some(o => Math.hypot(o.x - x, o.z - z) < (o.w + w) * .55)) continue;
+    presents.push({x, z, w}); n++;
+    const [col, rib] = WRAP[n % WRAP.length], ry = r() * Math.PI;
+    q.setFromAxisAngle(Y, ry);
+    P2.add(cube, paper, m4.compose(V(x, h / 2, z), q, s.set(w, h, dp)), col);
+    P2.add(cube, ribbon, m4.compose(V(x, h / 2, z), q, s.set(w + .01, h + .01, .06)), rib);
+    P2.add(cube, ribbon, m4.compose(V(x, h / 2, z), q, s.set(.06, h + .012, dp + .01)), rib);
+    // (A bow on top: two loops.)
+    for (const sd of [-1, 1]) {
+      const bq = q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), sd * .7));
+      P2.add(sphere, ribbon, m4.compose(V(x, h + .04, z).add(V(Math.cos(ry) * sd * .06, 0, -Math.sin(ry) * sd * .06)), bq, s.set(.07, .035, .05)), rib);
+    }
+  }
+  P2.build(root, {cast: true});
+  // The open box: kraft card, its flaps folded out, red tissue in it.
+  const kraft = new THREE.MeshStandardMaterial({color: '#b98f5c', roughness: .95, side: THREE.DoubleSide});
+  const box = new THREE.Group(); box.position.set(TREE.box.spot[0] - TREE.x, 0, TREE.box.spot[1] - TREE.z); box.rotation.y = TREE.box.ry; root.add(box);
+  const BW = 1.2, BD = .95, BH = .34;
+  const wall = (w, x, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, BH), kraft); m.position.set(x, BH / 2, z); m.rotation.y = ry; m.castShadow = true; m.receiveShadow = true; box.add(m); return m; };
+  wall(BW, 0, BD / 2, 0); wall(BW, 0, -BD / 2, 0); wall(BD, BW / 2, 0, Math.PI / 2); wall(BD, -BW / 2, 0, Math.PI / 2);
+  const floorB = new THREE.Mesh(new THREE.PlaneGeometry(BW, BD), kraft); floorB.rotation.x = -Math.PI / 2; floorB.position.y = .012; box.add(floorB);
+  for (const [w, x, z, ry, out] of [[BW, 0, BD / 2, 0, 1], [BW, 0, -BD / 2, 0, -1], [BD, BW / 2, 0, Math.PI / 2, 1], [BD, -BW / 2, 0, Math.PI / 2, -1]]) {
+    const hinge = new THREE.Group(); hinge.position.set(x, BH, z); hinge.rotation.y = ry; box.add(hinge);
+    const flap = new THREE.Mesh(new THREE.PlaneGeometry(w * .96, .3).translate(0, .15, 0), kraft); flap.rotation.x = out * 1.15; hinge.add(flap);
+  }
+  const tissue = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 6), new THREE.MeshStandardMaterial({color: '#b3141f', roughness: .8}));
+  tissue.scale.set(.18, .14, .14); tissue.position.set(-BW / 2 + .12, BH - .02, BD / 2 - .15); box.add(tissue);
+
+  // A tap on the tree hits this: a plain cone round it, never drawn.
+  const hit = new THREE.Mesh(new THREE.ConeGeometry(TREE.radius * .95, TREE.top - TREE.base, 12).translate(0, (TREE.top + TREE.base) / 2, 0), new THREE.MeshBasicMaterial({visible: false}));
+  root.add(hit);
+  const boxHit = new THREE.Mesh(new THREE.BoxGeometry(BW + .1, BH + .3, BD + .1).translate(0, (BH + .3) / 2, 0), new THREE.MeshBasicMaterial({visible: false}));
+  box.add(boxHit);
+
+  // ---- In the evening: a warm pool of light on the floor round it.
   const washTex = canvasTexture(128, 128, (g, w, h) => {
     const grd = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
     grd.addColorStop(0, 'rgba(255,190,110,.9)'); grd.addColorStop(.5, 'rgba(255,160,80,.35)'); grd.addColorStop(1, 'rgba(255,140,60,0)');
     g.fillStyle = grd; g.fillRect(0, 0, w, h);
   });
   const washMat = new THREE.MeshBasicMaterial({map: washTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false});
-  const washBack = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 5.4), washMat); washBack.position.set(-.35, 2.5, WALL.z - TREE.z - .05); root.add(washBack);
-  const washSide = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 5.4), washMat); washSide.rotation.y = -Math.PI / 2; washSide.position.set(WALL.x - TREE.x + .06, 2.5, .5); root.add(washSide);
-  const washFloor = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), washMat); washFloor.rotation.x = -Math.PI / 2; washFloor.position.set(-.3, .012, .3); root.add(washFloor);
-
-  // A plain cone round it all, never drawn: what a tap on the tree hits.
-  const hit = new THREE.Mesh(new THREE.ConeGeometry(TREE.radius * .95, TREE.top - TREE.base, 12).translate(0, (TREE.top + TREE.base) / 2, 0), new THREE.MeshBasicMaterial({visible: false}));
-  root.add(hit);
+  const washFloor = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 6.5), washMat); washFloor.rotation.x = -Math.PI / 2; washFloor.position.set(.4, .012, .3); root.add(washFloor);
 
   // ---- Movement: the sway (a damped spring about the foot) and the
   // baubles' swing and fall.
   const sw = {ang: V(0, 0, 0), vel: V(0, 0, 0)};
-  let glowSize = .3, night = 0;
+  let glowSize = .4, night = 0;
+  const tmp = V(0, 0, 0);
   const tree = {
-    root, sway, foliage, ornaments, loose, hit, onLand: null,
-    // A push at the tree: `dir` (the room's frame) is the way the top goes.
+    root, sway, foliage, ornaments, loose, hit, boxHit, onLand: null,
+    // A push at the tree: `dir` (the kitchen's frame) is the way the top goes.
     shake(amount = .5, dir = null) {
       const d = dir ? V(dir.x, 0, dir.z).normalize() : V(r() - .5, 0, r() - .5).normalize();
-      sw.vel.x += d.z * amount * .12; sw.vel.z += -d.x * amount * .12;
+      sw.vel.x += d.z * amount * .07; sw.vel.z += -d.x * amount * .07;
     },
     // A pat: the bauble swings away from her paw.
-    bat(i, dir) {
+    bat(i, dir, k = 1) {
       const L = loose[i]; if (!L || L.down) return false;
-      L.swing.x += dir.z * 3.2; L.swing.z += -dir.x * 3.2; L.spin.y += (r() - .5) * 6;
+      L.swing.x += dir.z * 3.2 * k; L.swing.z += -dir.x * 3.2 * k; L.spin.y += (r() - .5) * 6 * k;
       return true;
     },
     // Off it comes: from where it hangs, falling, bouncing and rolling.
-    drop(i, dir) {
+    drop(i) {
       const L = loose[i]; if (!L || L.down) return false;
-      const p = L.b.getWorldPosition(V(0, 0, 0)); root.worldToLocal(p);
+      const p = L.b.children[0].getWorldPosition(V(0, 0, 0)); root.worldToLocal(p);
       L.pivot.visible = false;
       const g = new THREE.Group(); g.add(L.b.children[0].clone()); g.children[0].position.set(0, 0, 0);
-      g.position.copy(p).add(V(0, -.06 - L.rad, 0)); floorItems.add(g);
-      // (Out from the tree, towards the room rather than along her paw.)
-      const out = V(p.x, 0, p.z).normalize().multiplyScalar(.3).add(V(0, 0, 1)).normalize();
-      L.down = {g, vel: V(out.x * .7, .6, out.z * .7), landed: 0, rest: false};
+      g.position.copy(p); floorItems.add(g);
+      const out = V(p.x, 0, p.z).normalize();
+      L.down = {g, vel: V(out.x * .6, .5, out.z * .6), landed: 0, rest: false};
       return true;
     },
     // A tap on a fallen bauble: back on its branch.
@@ -419,26 +444,17 @@ export function buildChristmasTree(room) {
       floorItems.remove(L.down.g); L.down = null; L.pivot.visible = true; L.swing.set(.6, 0, .4);
       return true;
     },
-    // Nudged along the floor (a paw, or a walk past).
+    // Nudged along the floor.
     kick(i, dir, speed = 2) {
       const D = loose[i]?.down; if (!D) return false;
       D.vel.x += dir.x * speed; D.vel.z += dir.z * speed; D.vel.y = Math.max(D.vel.y, .6); D.rest = false;
       return true;
     },
     fallen() { return loose.filter(L => L.down); },
-    // Room for her to stand at (x, z) in the study, facing `heading`: clear
-    // of the armchair, the tree, the hearth and the walls (her head and hips too).
-    freeFloor(x, z, heading) {
-      for (const k of [-.5, 0, .45]) {
-        const px = x + Math.sin(heading) * k, pz = z + Math.cos(heading) * k;
-        if (px > 4.25 || px < -4.25 || pz < -3.1 || pz > 3.4) return false;
-        if (Math.hypot(px - TREE.x, pz - TREE.z) < TREE.radius * .9) return false;
-        if (px > 3.4 && pz > -.85 && pz < 3.0) return false;
-        if (chairBox.clone().expandByScalar(.22).containsPoint(local.set(px, .5, pz).applyMatrix4(chairInv))) return false;
-      }
-      return true;
-    },
+    hanging(group) { return loose.filter(L => !L.down && (!group || L.group === group)); },
     ballWorld(i, v = V(0, 0, 0)) { const L = loose[i]; return L.down ? L.down.g.getWorldPosition(v) : L.b.children[0].getWorldPosition(v); },
+    // Points on the tree in the world (its frame's x, y, z): for her eyes.
+    world(x, y, z, v = V(0, 0, 0)) { return root.localToWorld(v.set(x, y, z)); },
     hitFallen(ray) {
       let best = null;
       for (const L of loose) if (L.down) { const p = L.down.g.getWorldPosition(V(0, 0, 0)); const d = ray.ray.distanceToPoint(p); if (d < .3 && (!best || d < best.d)) best = {i: L.i, d, dist: ray.ray.origin.distanceTo(p)}; }
@@ -448,8 +464,8 @@ export function buildChristmasTree(room) {
       if (!root.visible) return;
       dt = Math.min(dt, .05);
       night += ((isNight ? 1 : 0) - night) * (1 - Math.exp(-3 * dt));
-      // Sway: stiff and quick to settle.
-      sw.vel.addScaledVector(sw.ang, -38 * dt).multiplyScalar(Math.exp(-3.2 * dt)); sw.ang.addScaledVector(sw.vel, dt);
+      // Sway: a big tree, slower to swing and slower to settle.
+      sw.vel.addScaledVector(sw.ang, -20 * dt).multiplyScalar(Math.exp(-2.4 * dt)); sw.ang.addScaledVector(sw.vel, dt);
       sway.rotation.set(sw.ang.x, 0, sw.ang.z);
       for (const L of loose) {
         if (L.down) continue;
@@ -463,14 +479,13 @@ export function buildChristmasTree(room) {
         const g = D.g;
         D.vel.y -= 22 * dt; g.position.addScaledVector(D.vel, dt);
         // Tumbling down the outside of the boughs: never into the tree, and
-        // drifting round to its front, onto the open floor between the
-        // armchair and the hearth.
+        // drifting round to its front, onto the open floor in her reach.
         const fr0 = Math.hypot(g.position.x, g.position.z), Rb = radiusAt(Math.max(g.position.y, TREE.base)) + L.rad;
         if (g.position.y > TREE.base - .1 && fr0 < Rb) {
-          let a = Math.atan2(g.position.z, g.position.x);
+          let a = Math.atan2(g.position.x, g.position.z);
           a += Math.atan2(Math.sin(FRONT - a), Math.cos(FRONT - a)) * Math.min(1, 4 * dt);
-          g.position.x = Math.cos(a) * Rb; g.position.z = Math.sin(a) * Rb;
-          const n = V(Math.cos(a), 0, Math.sin(a)), vn = D.vel.dot(n);
+          g.position.x = Math.sin(a) * Rb; g.position.z = Math.cos(a) * Rb;
+          const n = V(Math.sin(a), 0, Math.cos(a)), vn = D.vel.dot(n);
           if (vn < .6) D.vel.addScaledVector(n, .6 - vn);
           D.vel.y = Math.max(D.vel.y, -3.5);
         }
@@ -483,34 +498,33 @@ export function buildChristmasTree(room) {
           g.rotation.z -= D.vel.x / L.rad * dt; g.rotation.x += D.vel.z / L.rad * dt;
           if (Math.hypot(D.vel.x, D.vel.z) < .03 && D.vel.y === 0) D.rest = true;
         }
-        // (The room's walls, and the tree's own collar.)
-        const wx = g.position.x + TREE.x, wz = g.position.z + TREE.z;
-        if (wx > 4.5 - L.rad) { g.position.x = 4.5 - L.rad - TREE.x; D.vel.x = -Math.abs(D.vel.x) * .5; }
-        if (wx < -4.5 + L.rad) { g.position.x = -4.5 + L.rad - TREE.x; D.vel.x = Math.abs(D.vel.x) * .5; }
-        if (wz < -3.3 + L.rad) { g.position.z = -3.3 + L.rad - TREE.z; D.vel.z = Math.abs(D.vel.z) * .5; }
-        if (wz > 3.6) { g.position.z = 3.6 - TREE.z; D.vel.z = -Math.abs(D.vel.z) * .5; }
-        // (The armchair is solid to it: it never rolls in under, out of her reach.)
-        local.set(wx, g.position.y, wz).applyMatrix4(chairInv);
-        const cb = chairBox, pad = L.rad + .05;
-        if (local.y < cb.max.y + L.rad && local.x > cb.min.x - pad && local.x < cb.max.x + pad && local.z > cb.min.z - pad && local.z < cb.max.z + pad) {
-          const outs = [[cb.min.x - pad - local.x, 'x'], [cb.max.x + pad - local.x, 'x'], [cb.min.z - pad - local.z, 'z'], [cb.max.z + pad - local.z, 'z']];
-          const [d, ax] = outs.reduce((a, b) => Math.abs(b[0]) < Math.abs(a[0]) ? b : a);
-          local[ax] += d;
-          const back = local.clone().applyMatrix4(chairFwd);
-          g.position.x = back.x - TREE.x; g.position.z = back.z - TREE.z;
-          const n = V(ax === 'x' ? Math.sign(d) : 0, 0, ax === 'z' ? Math.sign(d) : 0).applyQuaternion(chairQ), vn = D.vel.dot(n);
-          if (vn < 0) D.vel.addScaledVector(n, -1.5 * vn);
+        // (The kitchen's walls and counter, the island, the presents' ring
+        // under the tree and the open box.)
+        const wx = g.position.x + TREE.x, wz = g.position.z + TREE.z, rad = L.rad;
+        if (wx < -5.9 + rad) { g.position.x = -5.9 + rad - TREE.x; D.vel.x = Math.abs(D.vel.x) * .5; }
+        if (wx > 6.9 - rad) { g.position.x = 6.9 - rad - TREE.x; D.vel.x = -Math.abs(D.vel.x) * .5; }
+        if (wz < -2.6 + rad) { g.position.z = -2.6 + rad - TREE.z; D.vel.z = Math.abs(D.vel.z) * .5; }
+        if (wz > 9) { g.position.z = 9 - TREE.z; D.vel.z = -Math.abs(D.vel.z) * .5; }
+        for (const S of solids) {
+          if (g.position.y > S.top + rad) continue;
+          const x0 = S.x0 - rad, x1 = S.x1 + rad, z0 = S.z0 - rad, z1 = S.z1 + rad, X = g.position.x + TREE.x, Z = g.position.z + TREE.z;
+          if (X > x0 && X < x1 && Z > z0 && Z < z1) {
+            const opts = [[x0 - X, 'x'], [x1 - X, 'x'], [z0 - Z, 'z'], [z1 - Z, 'z']].reduce((a, b) => Math.abs(b[0]) < Math.abs(a[0]) ? b : a);
+            g.position[opts[1]] += opts[0]; if (Math.sign(D.vel[opts[1]]) !== Math.sign(opts[0])) D.vel[opts[1]] *= -.5;
+          }
         }
-        // (Nor in under the lowest boughs: it bounces back out where she can get it.)
-        const fr = Math.hypot(g.position.x, g.position.z), R0 = TREE.radius * .85 + L.rad;
-        if (fr < R0 && g.position.y < .5) { g.position.x *= R0 / fr; g.position.z *= R0 / fr; const n = V(g.position.x / fr, 0, g.position.z / fr), vn = D.vel.dot(n); if (vn < 0) D.vel.addScaledVector(n, -1.5 * vn); }
+        const fr = Math.hypot(g.position.x, g.position.z), R0 = TREE.ring + rad;
+        if (fr < R0 && g.position.y < .8) { g.position.x *= R0 / fr; g.position.z *= R0 / fr; const n = V(g.position.x / fr, 0, g.position.z / fr), vn = D.vel.dot(n); if (vn < 0) D.vel.addScaledVector(n, -1.5 * vn); }
+        tmp.set(g.position.x - box.position.x, 0, g.position.z - box.position.z);
+        const bd = tmp.length(), BR = .72 + rad;
+        if (bd < BR && g.position.y < BH + rad) { tmp.normalize(); g.position.x = box.position.x + tmp.x * BR; g.position.z = box.position.z + tmp.z * BR; const vn = D.vel.dot(tmp); if (vn < 0) D.vel.addScaledVector(tmp, -1.5 * vn); }
       }
       // Lights: on by day too (as in the picture), brighter in the evening.
       const twinkle = Math.sin(t * 1.7) * .06;
-      glowSize += ((isNight ? .62 : .42) - glowSize) * (1 - Math.exp(-3 * dt));
+      glowSize += ((isNight ? .75 : .5) - glowSize) * (1 - Math.exp(-3 * dt));
       glowMats[0].size = glowSize * (1 + twinkle); glowMats[1].size = glowSize * (1 - twinkle);
       for (const m of glowMats) m.opacity = .7 + .3 * night;
-      washMat.opacity = .05 + .3 * night;
+      washMat.opacity = .04 + .3 * night;
       // (The branches catch the lights' warmth in the evening.)
       sprigMat.emissiveIntensity = .12 + .5 * night;
     },
