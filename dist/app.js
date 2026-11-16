@@ -446,7 +446,7 @@ sounds.enabled = pet.sound;
 sounds.volume = {cat: pet.catVolume, music: pet.musicVolume};
 // Music: the piece the player picked, only with sound on, once the opening
 // is over and while the app is in front. Called wherever one of those changes.
-const syncMusic = () => sounds.setMusic(pet.sound && !titleOn && !document.hidden ? TUNES[pet.music]?.file ?? null : null);
+const syncMusic = () => sounds.setMusic(pet.sound && !titleOn && !document.hidden ? TUNES[pet.music]?.files ?? TUNES[pet.music]?.file ?? null : null);
 function meow(kind = 'meow', priority = 'reply') {
   const m = sounds.meow(kind, priority);
   if (!m) return false;

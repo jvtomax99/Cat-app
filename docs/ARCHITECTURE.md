@@ -24,7 +24,7 @@ preview branch.
 | `pet-state.js`, `save.js` | Care meters, saves, offline progress. |
 | `away.js` | The "While you were away" story: lines by part of the day, `awayStory(from, to, {asleep, decor})`, seeded by when the player left. No three.js, tested in node. |
 | `rewards.js` | Gifts of friendship: `GIFTS` (level to gift), `TOYS`, what a level owns. Owning is worked out from the level every time; the save keeps only `pet.gifts` (shown) and `pet.toy` (picked). |
-| `sound.js`, `meows.js` | Short sounds and meows (no ambient loops); the player's pick of music (`TUNES`, `setMusic`; `syncMusic` in `app.js` decides when it may play). |
+| `sound.js`, `meows.js` | Short sounds and meows (no ambient loops); the player's pick of music (`TUNES`, one piece or the Mix of all three in turn, `setMusic`; `syncMusic` in `app.js` decides when it may play). |
 
 ## Title screen (app.js, "Title screen" block; markup `#title`; styles at the end of style.css; picture in `title-fx.js`)
 A script in the head of `index.html` puts the class `title` on `<html>`

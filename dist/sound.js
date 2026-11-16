@@ -9,7 +9,8 @@
 //
 // Music (Merlin, 2026-11-14) is the player's choice and off until they pick
 // a piece: one of TUNES, on its own volume, played through with a quiet
-// pause before it comes round again so it never drones.
+// pause before it comes round again so it never drones. "Mix" (Merlin,
+// 2026-11-16) plays the three in turn, with the same pause between them.
 //
 // Meows never overlap and leave quiet gaps between them. Each recording's
 // loudness envelope is measured when it loads, so the mouth can open and
@@ -29,8 +30,9 @@ export const TUNES = Object.assign(Object.create(null), {
   box: {name: 'Music box', file: 'music-box.mp3'},
   piano: {name: 'Piano', file: 'music-piano.mp3'},
   guitar: {name: 'Guitar', file: 'music-guitar.mp3'},
+  mix: {name: 'Mix', files: ['music-box.mp3', 'music-piano.mp3', 'music-guitar.mp3']},
 });
-// Seconds of quiet between one play of a piece and the next.
+// Seconds of quiet between one play of a piece and the next (in a mix too).
 const MUSIC_PAUSE = 12;
 
 export class Sounds {
@@ -39,7 +41,8 @@ export class Sounds {
     this.ctx = null;
     this.enabled = false;
     this.volume = {cat: .8, music: .3};
-    this.tune = null; // the music file playing (or being fetched)
+    this.tune = null; // the music playing (or being fetched): its file, or a mix's files joined by spaces
+    this.tuneNow = null; // in it, the file playing now
     this.tuneTurn = 0;
     this.clips = [];
     this.credits = [];
@@ -106,13 +109,16 @@ export class Sounds {
     if (this.ctx) this.bus[kind].gain.setTargetAtTime(v, this.ctx.currentTime, .08);
   }
 
-  // The music to play now: a file from this folder, or nothing. Safe to call
-  // often (the same file again changes nothing). A piece fades in, plays
-  // through, and comes round again after a quiet pause.
-  setMusic(file = null) {
-    if (!this.ctx || !this.enabled) file = null;
-    if (file === this.tune) return;
-    this.tune = file;
+  // The music to play now: a file from this folder, a list of them (a mix,
+  // played in turn), or nothing. Safe to call often (the same music again
+  // changes nothing). A piece fades in, plays through, and after a quiet
+  // pause comes round again, or the next piece of the mix does.
+  setMusic(files = null) {
+    if (!this.ctx || !this.enabled) files = null;
+    const list = files ? [files].flat() : [];
+    const key = list.join(' ') || null;
+    if (key === this.tune) return;
+    this.tune = key;
     const turn = ++this.tuneTurn, ctx = this.ctx;
     clearTimeout(this.tuneTimer);
     if (this.tuneSrc) {
@@ -125,28 +131,42 @@ export class Sounds {
       if (document.hidden) this.tuneGain.disconnect();
       this.tuneSrc = null;
     }
-    if (!file) return;
-    (async () => {
+    this.tuneNow = null;
+    if (!list.length) return;
+    // (Only the piece playing is kept decoded: a minute of music takes about
+    // 20 MB that way, too much to hold three on a phone. The next is fetched
+    // and decoded during the pause.)
+    const load = async file => {
+      if (this.tuneKept?.file === file) return this.tuneKept.buffer;
+      const buffer = await ctx.decodeAudioData(await (await fetch(this.base + file)).arrayBuffer());
+      if (turn === this.tuneTurn) this.tuneKept = {file, buffer};
+      return buffer;
+    };
+    const round = async i => {
+      const file = list[i % list.length];
       try {
-        if (this.tuneKept?.file !== file) this.tuneKept = {file, buffer: await ctx.decodeAudioData(await (await fetch(this.base + file)).arrayBuffer())};
-        const buffer = this.tuneKept.buffer;
-        const round = () => {
+        const buffer = await load(file);
+        if (turn !== this.tuneTurn) return;
+        const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime + .05;
+        src.buffer = buffer;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + 1.5);
+        src.connect(g).connect(this.bus.music);
+        src.onended = () => {
           if (turn !== this.tuneTurn) return;
-          const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime + .05;
-          src.buffer = buffer;
-          g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + 1.5);
-          src.connect(g).connect(this.bus.music);
-          src.onended = () => { if (turn === this.tuneTurn) this.tuneTimer = setTimeout(round, MUSIC_PAUSE * 1000); };
-          src.start(t);
-          this.tuneSrc = src; this.tuneGain = g;
+          const next = list[(i + 1) % list.length];
+          // (Fetch the next piece now, so the pause is no longer for it.)
+          const ready = load(next).catch(() => {});
+          this.tuneTimer = setTimeout(async () => { await ready; if (turn === this.tuneTurn) round(i + 1); }, MUSIC_PAUSE * 1000);
         };
-        round();
+        src.start(t);
+        this.tuneSrc = src; this.tuneGain = g; this.tuneNow = file;
       } catch (e) {
         // (Weak signal: the next tap after a short while tries again.)
         console.warn('Music unavailable:', e);
         setTimeout(() => { if (turn === this.tuneTurn) this.tune = null; }, 20000);
       }
-    })();
+    };
+    round(0);
   }
 
   // A one-off sound file from this folder (the title screen's wake-up

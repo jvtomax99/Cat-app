@@ -193,11 +193,13 @@ the phone's browser and can be added to the home screen.
   volume for her and the music.
 - **Music** (preview; Merlin, 2026-11-14, who liked all three takes and
   wanted the player to choose). Done when: the sound panel offers Off,
-  Music box, Piano and Guitar with a volume of its own; a new player has
+  Music box, Piano, Guitar and Mix with a volume of its own; a new player has
   Off; a picked piece plays only with sound on, after the opening and
   while the app is in front, plays through, pauses 12 seconds and comes
-  round again; the choice is kept (`tools/qa/music.mjs`). Still to hear
-  from Lettuce: does it tire over a long sitting.
+  round again; the choice is kept (`tools/qa/music.mjs`). "Mix" (Merlin,
+  2026-11-16) plays the three in turn, the same 12-second pause between
+  them, and starts over. Still to hear from Lettuce: does it tire over a
+  long sitting.
 
 ## Phases
 Build order and status: `docs/ROADMAP.md` (a brief per phase in

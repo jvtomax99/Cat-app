@@ -1,8 +1,9 @@
 // Music in the sound panel (2026-11-14), on a phone (390 x 844): off for a
 // new player, a piece picked in the panel plays (measured on the music
 // volume), switching pieces, Off, the Sound switch, the choice survives a
-// reload, and a piece comes round again after its pause. Stills to OUT.
-// About 3 min (it listens to one piece all the way through).
+// reload, a piece comes round again after its pause, and Mix moves on to
+// the next piece. Stills to OUT.
+// About 5 min (it listens to two pieces all the way through).
 import {open} from './lib.mjs';
 const OUT = process.env.OUT || 'qa-out';
 (await import('node:fs')).mkdirSync(OUT, {recursive: true});
@@ -70,6 +71,25 @@ await page.reload();
 await page.waitForFunction(() => window.kitten && kitten.cat.ready, null, {timeout: 900000});
 s = await state();
 check(s.music === 'piano', 'the choice survives a reload');
+// Mix: the three in turn, the next one after the pause.
+if (!await page.isVisible('#tunes')) await page.click('#sound');
+await pick('Mix');
+const now = () => page.evaluate(() => ({file: kitten.sounds.tuneNow, playing: !!kitten.sounds.tuneSrc, checked: [...document.querySelectorAll('#tunes [aria-checked=true]')].map(b => b.textContent).join()}));
+let m = await now();
+await page.screenshot({path: `${OUT}/music-mix.png`});
+check(m.file === 'music-box.mp3' && m.playing && m.checked === 'Mix' && await level() > .001, 'Mix picked: the music box first');
+// (Timed on the audio clock, which can fall behind the wall clock on a busy
+// test machine.)
+const end = await page.evaluate(() => { const s = kitten.sounds; s.mixEnded = null; s.tuneSrc.addEventListener('ended', () => s.mixEnded = s.ctx.currentTime); return s.tuneKept.buffer.duration; });
+await page.waitForFunction(() => kitten.sounds.mixEnded !== null, null, {timeout: (end + 30) * 1000, polling: 500});
+await page.waitForTimeout(3000);
+check(await level() < .0005, 'Mix: a quiet pause after the first piece');
+await page.waitForFunction(() => kitten.sounds.tuneNow === 'music-piano.mp3', null, {timeout: 30000, polling: 250}).catch(() => {});
+const gap = await page.evaluate(() => kitten.sounds.ctx.currentTime - kitten.sounds.mixEnded);
+check(gap > 10 && gap < 16, `Mix: the pause is about 12 s (${gap.toFixed(1)} s)`);
+await page.waitForTimeout(2500);
+m = await now();
+check(m.file === 'music-piano.mp3' && await level() > .001, 'Mix: then the piano, not the music box again');
 await close();
 console.log(bad ? `${bad} FAILED` : 'ALL PASS');
 process.exit(bad ? 1 : 0);
