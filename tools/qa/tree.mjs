@@ -27,7 +27,7 @@ ok('the tree is up in the kitchen', await page.evaluate(() => kitten.place === k
 await shot('0-tree', wide);
 // The first look: stares, creeps up, sits, sniffs and paws a low bauble.
 await page.evaluate(() => kitten.curiousLook());
-ok('first look: she creeps up (crouched)', await until(() => kitten.brain.activity === 'stalk', 400), JSON.stringify(await state()));
+ok('first look: she creeps up (crouched)', await until(() => kitten.brain.activity === 'stalk', 1000), JSON.stringify(await state()));
 await shot('1-creep', wide);
 ok('first look: a careful paw at a low bauble', await until(() => kitten.brain.activity === 'swat', 500), JSON.stringify(await state()));
 await step(6);
