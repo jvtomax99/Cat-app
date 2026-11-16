@@ -648,7 +648,7 @@ function studyLayout() {
     // (Past the right wall the camera may step outside: that wall and its
     // fireplace hide, so the turn towards it sees the room, not the back of the armchair.)
     camBox: {x: [-4.3, 9.5], y: [.2, 6.5], z: [-3.1, 16]},
-    camSolids: [[c.position.x, c.position.z, 1.3, 2.3], [.55, -2.85, .75, 2.6], [4.0, -1.45, .6, 3.2], [4.2, 1.1, .7, 2.8], [-2.35, -1.75, 1.0, .55], [TREE.x, TREE.z, 1.25, 5.6]],
+    camSolids: [[c.position.x, c.position.z, 1.3, 2.3], [.55, -2.85, .75, 2.6], [4.0, -1.45, .6, 3.2], [4.2, 1.1, .7, 2.8], [-2.35, -1.75, 1.0, .55]].concat(room.decor === 'christmas' ? [[TREE.x, TREE.z, 1.25, 5.6]] : []),
   };
 }
 // The study and the kitchen are joined: the doorway in the study's left wall
@@ -870,6 +870,8 @@ function leap(to, toY, perch, then = null, out = 0) {
 function jumpTo(name, then = null, stay = 40, inner = false) {
   const P = PERCHES[name];
   if (!P || brain.perch === name) { then?.(); return; }
+  // (The Christmas tree only stands in the Christmas look.)
+  if (name.startsWith('tree') && !treeUp()) { brain.climbGoal = null; setActivity('sit'); return; }
   if (!inner) brain.climbGoal = name;
   // A perch reached by way of another (the kitchen's step, counter and
   // shelves): up from the one below; from higher up, come down to it first.
@@ -884,8 +886,11 @@ function jumpTo(name, then = null, stay = 40, inner = false) {
   // Only jump from the take-off spot (a walk can end early if it ran out of
   // time); otherwise keep walking there, or give up after a few tries.
   const go = tries => walkTo(P.base, () => {
-    if (Math.hypot(brain.pos.x - P.base.x, brain.pos.z - P.base.z) > .3) { if (tries < 3) go(tries + 1); else setActivity('sit'); return; }
-    leap(P.spot, P.top, name, () => { brain.perchUntil = clockNow + stay; then ? then() : setActivity('sit'); });
+    // (Where the perch is now: the look may have changed on the way.)
+    const Q = PERCHES[name];
+    if (!Q || (name.startsWith('tree') && !treeUp())) { brain.climbGoal = null; setActivity('sit'); return; }
+    if (Math.hypot(brain.pos.x - Q.base.x, brain.pos.z - Q.base.z) > .3) { if (tries < 3) go(tries + 1); else setActivity('sit'); return; }
+    leap(Q.spot, Q.top, name, () => { brain.perchUntil = clockNow + stay; then ? then() : setActivity('sit'); });
   }, false, true);
   go(0);
 }
@@ -1083,6 +1088,8 @@ function updateCat(dt, t) {
       brain.jump = null;
       brain.perch = J.perch;
       brain.elevation = J.toY;
+      // (The tree was put away while she was in the air: she's on the floor beside it.)
+      if (J.perch?.startsWith('tree') && !treeUp()) { brain.perch = null; brain.climbGoal = null; brain.elevation = 0; brain.pos.set(TREE.floor[0], 0, TREE.floor[1]); }
       // Landing on the pendant shade sets it swinging (on, and off it).
       if (place === kitchen && (J.perch === 'pendant' || J.fromPerch === 'pendant')) {
         const dx = J.to.x - J.from.x, dz = J.to.z - J.from.z, d = Math.hypot(dx, dz) || 1, s = J.perch === 'pendant' ? .45 : -.3;
@@ -1749,12 +1756,14 @@ function knockBauble() {
     brain.swatAt = T.ballWorld(L.i);
     setActivity('swat', SWAT, () => setActivity('sit'));
     setTimeout(() => {
+      if (brain.perch !== 'treeHigh' || brain.jump || !treeUp()) return;
       if (n < 2) { if (T.bat(L.i, ahead())) T.shake(.15, ahead()); return; }
       if (!T.drop(L.i, ahead())) return;
       T.shake(.35, ahead());
       setTimeout(() => {
         glanceAt(T.ballWorld(L.i), 2.2); express('surprised', 1.2);
         setTimeout(() => {
+          if (brain.perch !== 'treeHigh' || brain.mode !== 'idle') return;
           glanceAt(camera.position, 2.5); express('curious', 2);
           if (Math.random() < .6) say(pick(['…it fell.', 'It jumped. I saw it.', 'Shiny! Down there now.', 'I barely touched it.']), 2600);
           setTimeout(() => chaseBauble(L.i), 2600);
@@ -2706,8 +2715,8 @@ function perchAt() {
   }
   // The Christmas tree: a fallen bauble (to hang back up), or the tree itself.
   if (treeUp()) {
-    const T = room.xmasTree, i = T.hitFallen(ray);
-    if (i != null) return 'bauble:' + i;
+    const T = room.xmasTree, f = T.hitFallen(ray);
+    if (f && (!best || f.dist < best.d)) return 'bauble:' + f.i;
     const hit = ray.intersectObject(T.hit, false)[0];
     if (hit && (!best || hit.distance < best.d)) best = {name: 'treeHigh', d: hit.distance};
   }
@@ -3526,7 +3535,13 @@ $('#decor-options').addEventListener('click', e => {
     applyDecor(room, id);
     if (kitchen) applyKitchenDecor(kitchen, id);
     // (The armchair stands somewhere else at Christmas: her places in the study again.)
-    room.layoutCache = null; if (place === room) { usePlace(room); if (brain.perch === 'chair' && !brain.jump) brain.pos.copy(PERCHES.chair.spot); }
+    room.layoutCache = null;
+    if (place === room) {
+      usePlace(room);
+      if (brain.perch === 'chair' && !brain.jump) brain.pos.copy(PERCHES.chair.spot);
+      if (brain.jump?.perch === 'chair') brain.jump.to.copy(PERCHES.chair.spot);
+      if (id !== 'christmas' && brain.climbGoal?.startsWith?.('tree') && !brain.jump) { brain.climbGoal = null; brain.target = null; setActivity('sit'); }
+    }
     // (Up the Christmas tree as it's put away: she's on the floor beside it.)
     if (brain.perch?.startsWith('tree') && id !== 'christmas') { Object.assign(brain, {perch: null, jump: null, climbGoal: null}); brain.elevation = 0; brain.pos.set(TREE.floor[0], 0, TREE.floor[1]); setActivity('sit'); }
     if (room.altToy) (place === room ? room.group : place.group).add(room.altToy);

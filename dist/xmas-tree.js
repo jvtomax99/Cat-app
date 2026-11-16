@@ -128,10 +128,12 @@ export function buildChristmasTree(room) {
   // where it always does; the branches on that side are shorter).
   const chair = room.chair, chairInv = new THREE.Matrix4(), chairFwd = new THREE.Matrix4(), chairQ = new THREE.Quaternion(), chairBox = new THREE.Box3();
   {
-    const p = chair.position.clone(), ry = chair.rotation.y;
-    chair.position.set(0, 0, 0); chair.rotation.y = 0; chair.updateMatrixWorld(true);
-    chairBox.setFromObject(chair).expandByScalar(.06);
-    chair.position.copy(p); chair.rotation.y = ry; chair.updateMatrixWorld(true);
+    // (Measured in the chair's own frame, so it's right wherever the study
+    // stands: seen from the kitchen it's moved and turned.)
+    const p = chair.position.clone(), ry = chair.rotation.y, inv = new THREE.Matrix4(), mm = new THREE.Matrix4();
+    chair.updateMatrixWorld(true); inv.copy(chair.matrixWorld).invert();
+    chair.traverse(o => { if (!o.isMesh) return; o.geometry.boundingBox || o.geometry.computeBoundingBox(); chairBox.union(o.geometry.boundingBox.clone().applyMatrix4(mm.multiplyMatrices(inv, o.matrixWorld))); });
+    chairBox.expandByScalar(.06);
     chairQ.setFromAxisAngle(Y, ry); chairFwd.compose(p, chairQ, V(1, 1, 1)); chairInv.copy(chairFwd).invert();
   }
   const local = V(0, 0, 0), world = V(0, 0, 0);
@@ -193,27 +195,27 @@ export function buildChristmasTree(room) {
       // (Shortened against the walls and the chair.)
       while (pts.length > 2 && blocked(pts[pts.length - 1])) pts.pop();
       const depth = p => Math.min(1, Math.hypot(p.x, p.z) / Math.max(.15, radiusAt(p.y)));
-      spray(pts, Math.round(L * 17) + 3, .34 + .18 * R / TREE.radius, depth);
+      spray(pts, Math.round(L * 12) + 2, .4 + .2 * R / TREE.radius, depth);
       if (pts.length === 4) tips.push(pts[3]);
       // Side shoots from the outer half of the bough.
       for (const u of [.45, .7]) {
         const base = new THREE.CatmullRomCurve3(pts).getPointAt(Math.min(1, u)), side = V(-dir.z, 0, dir.x).multiplyScalar(r() < .5 ? 1 : -1);
         const sd = dir.clone().multiplyScalar(.6).addScaledVector(side, .8).normalize(), sl = L * (.32 + r() * .14);
         const sp = [base, base.clone().addScaledVector(sd, sl * .6).add(V(0, -.02, 0)), base.clone().addScaledVector(sd, sl)];
-        if (!blocked(sp[2])) { spray(sp, Math.round(sl * 13) + 1, .26 + .1 * R / TREE.radius, depth); tips.push(sp[2]); }
+        if (!blocked(sp[2])) { spray(sp, Math.round(sl * 10) + 1, .3 + .12 * R / TREE.radius, depth); tips.push(sp[2]); }
       }
     }
   }
   // A full coat over it all: short sprays all over the outside, so no gaps
   // show between the boughs (a well-shaped, dense fir, as in the picture).
-  for (let i = 0; i < 1900; i++) {
+  for (let i = 0; i < 1300; i++) {
     const y = TREE.base + .1 + (TREE.top - .35 - TREE.base) * (1 - Math.sqrt(r())), R = radiusAt(y), a = r() * Math.PI * 2;
     const rad = R * (.72 + r() * .3), p = V(Math.cos(a) * rad, y, Math.sin(a) * rad);
     if (blocked(p)) continue;
     const d = V(Math.cos(a), -.25 - r() * .3, Math.sin(a)).add(V((r() - .5) * 1.1, (r() - .5) * .3, (r() - .5) * 1.1)).normalize();
     let up = Y.clone().addScaledVector(d, -d.y).normalize();
     if (r() < .3) up.applyAxisAngle(d, (r() - .5) * 2);
-    const x = new THREE.Vector3().crossVectors(d, up).normalize(), k = (.3 + .2 * R / TREE.radius) * (.75 + r() * .5);
+    const x = new THREE.Vector3().crossVectors(d, up).normalize(), k = (.36 + .22 * R / TREE.radius) * (.75 + r() * .5);
     m4.makeBasis(x, d, new THREE.Vector3().crossVectors(x, d)); m4.scale(s.set(k * .7, k, k)); m4.setPosition(p);
     cards.push([m4.clone(), Math.min(1, rad / Math.max(.15, R))]);
   }
@@ -227,7 +229,7 @@ export function buildChristmasTree(room) {
 
   // ---- Fairy lights: warm white, all through the tree, more at the foot.
   const lights = [];
-  for (let tries = 0; lights.length < 820 && tries < 9000; tries++) {
+  for (let tries = 0; lights.length < 640 && tries < 8000; tries++) {
     const y = TREE.base + .15 + (TREE.top - .3 - TREE.base) * (1 - Math.sqrt(r()));
     const R = radiusAt(y), a = r() * Math.PI * 2, rad = R * (r() < .2 ? .75 + r() * .2 : .98 + r() * .1) + .02;
     const p = V(Math.cos(a) * rad, y, Math.sin(a) * rad);
@@ -337,7 +339,7 @@ export function buildChristmasTree(room) {
     const hang = paw.clone().addScaledVector(side, dx).add(V(0, -dy, 0)).addScaledVector(out, .05);
     const pivot = new THREE.Group(); pivot.position.copy(hang); sway.add(pivot);
     const b = new THREE.Group(); pivot.add(b);
-    const ball = new THREE.Mesh(sphere, glass.clone()); ball.material.color.set(color); ball.scale.setScalar(rad); ball.position.y = -.06 - rad; ball.castShadow = true;
+    const ball = new THREE.Mesh(sphere, glass.clone()); ball.material.color.set(color); ball.scale.setScalar(rad); ball.position.y = -.06 - rad;
     const top = new THREE.Mesh(cap, brass); top.scale.setScalar(rad * .9); top.position.y = -.05;
     const loop = new THREE.Mesh(new THREE.CylinderGeometry(.003, .003, .06, 3), brass); loop.position.y = -.025;
     b.add(ball, top, loop);
@@ -439,8 +441,8 @@ export function buildChristmasTree(room) {
     ballWorld(i, v = V(0, 0, 0)) { const L = loose[i]; return L.down ? L.down.g.getWorldPosition(v) : L.b.children[0].getWorldPosition(v); },
     hitFallen(ray) {
       let best = null;
-      for (const L of loose) if (L.down) { const p = L.down.g.getWorldPosition(V(0, 0, 0)); const d = ray.ray.distanceToPoint(p); if (d < .3 && (!best || d < best.d)) best = {i: L.i, d}; }
-      return best?.i ?? null;
+      for (const L of loose) if (L.down) { const p = L.down.g.getWorldPosition(V(0, 0, 0)); const d = ray.ray.distanceToPoint(p); if (d < .3 && (!best || d < best.d)) best = {i: L.i, d, dist: ray.ray.origin.distanceTo(p)}; }
+      return best;
     },
     update(dt, t, isNight) {
       if (!root.visible) return;
