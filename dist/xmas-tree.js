@@ -27,6 +27,8 @@ export const TREE = {
 };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const WALL = {x: 4.52, z: -3.32};
+// (The way to the open floor in front of the tree, as an angle round it.)
+const FRONT = Math.atan2(1, -.42);
 
 // The fir's radius at height y (measured up from the floor).
 const radiusAt = y => TREE.radius * Math.pow(Math.max(0, (TREE.top - y) / (TREE.top - TREE.base)), .92) * (1 + .05 * Math.sin(y * 2.3));
@@ -458,13 +460,17 @@ export function buildChristmasTree(room) {
         const D = L.down; if (!D || D.rest) continue;
         const g = D.g;
         D.vel.y -= 22 * dt; g.position.addScaledVector(D.vel, dt);
-        // Tumbling down the boughs: anything inside the tree is knocked out of it.
-        const fr0 = Math.hypot(g.position.x, g.position.z), Rb = radiusAt(g.position.y) + L.rad;
-        if (g.position.y > TREE.base - .05 && fr0 < Rb && fr0 > .01) {
-          // (Out the front, towards the open floor between the chair and the hearth.)
-          const n = V(g.position.x / fr0 * .35, 0, g.position.z / fr0 * .35 + 1).normalize(), vn = D.vel.dot(n);
-          if (vn < .8) D.vel.addScaledVector(n, (.8 - vn) * Math.min(1, 9 * dt));
-          D.vel.y = Math.max(D.vel.y, -4.5);
+        // Tumbling down the outside of the boughs: never into the tree, and
+        // drifting round to its front, onto the open floor between the
+        // armchair and the hearth.
+        const fr0 = Math.hypot(g.position.x, g.position.z), Rb = radiusAt(Math.max(g.position.y, TREE.base)) + L.rad;
+        if (g.position.y > TREE.base - .1 && fr0 < Rb) {
+          let a = Math.atan2(g.position.z, g.position.x);
+          a += Math.atan2(Math.sin(FRONT - a), Math.cos(FRONT - a)) * Math.min(1, 4 * dt);
+          g.position.x = Math.cos(a) * Rb; g.position.z = Math.sin(a) * Rb;
+          const n = V(Math.cos(a), 0, Math.sin(a)), vn = D.vel.dot(n);
+          if (vn < .6) D.vel.addScaledVector(n, .6 - vn);
+          D.vel.y = Math.max(D.vel.y, -3.5);
         }
         const floorY = L.rad;
         if (g.position.y < floorY) {
