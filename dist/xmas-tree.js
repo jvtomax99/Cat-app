@@ -405,7 +405,7 @@ export function buildChristmasTree(room) {
       const g = new THREE.Group(); g.add(L.b.children[0].clone()); g.children[0].position.set(0, 0, 0);
       g.position.copy(p).add(V(0, -.06 - L.rad, 0)); floorItems.add(g);
       // (Out from the tree, towards the room rather than along her paw.)
-      const out = V(p.x, 0, p.z).normalize().add(V(-.2, 0, .9)).normalize();
+      const out = V(p.x, 0, p.z).normalize().multiplyScalar(.3).add(V(0, 0, 1)).normalize();
       L.down = {g, vel: V(out.x * .7, .6, out.z * .7), landed: 0, rest: false};
       return true;
     },
@@ -461,7 +461,8 @@ export function buildChristmasTree(room) {
         // Tumbling down the boughs: anything inside the tree is knocked out of it.
         const fr0 = Math.hypot(g.position.x, g.position.z), Rb = radiusAt(g.position.y) + L.rad;
         if (g.position.y > TREE.base - .05 && fr0 < Rb && fr0 > .01) {
-          const n = V(g.position.x / fr0, 0, g.position.z / fr0), vn = D.vel.dot(n);
+          // (Out the front, towards the open floor between the chair and the hearth.)
+          const n = V(g.position.x / fr0 * .35, 0, g.position.z / fr0 * .35 + 1).normalize(), vn = D.vel.dot(n);
           if (vn < .8) D.vel.addScaledVector(n, (.8 - vn) * Math.min(1, 9 * dt));
           D.vel.y = Math.max(D.vel.y, -4.5);
         }
