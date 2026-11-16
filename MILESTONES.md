@@ -38,3 +38,4 @@ Direction (Merlin and Orion): preserve her identity, not her imperfections.
 Her face, expressions, proportions, rig and movement may keep improving;
 the original geometry isn't untouchable, but she stays recognisably the same
 peculiar, endearing kitten. Paid Meshy is reserved for a second cat.
+| Live build 422 | `4dcccff` | 2026-11-16. "Go live" from the fork's owner (fork only), after the preview was up. The sound panel has a "Mix" music choice: the music box, piano and guitar in turn, 12 seconds of quiet between, then round again (`TUNES.mix`, `setMusic` in `dist/sound.js`). Checked: `npm run check`; `tools/qa/music.mjs` 19 of 19. Not checked on a real phone. |
