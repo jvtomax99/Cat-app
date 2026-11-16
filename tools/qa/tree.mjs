@@ -39,6 +39,9 @@ await step(80);
 await idle();
 await page.evaluate(() => kitten.climbTree('treeHigh'));
 for (const p of ['treeLow', 'treeMid']) ok(`climbs: ${p}`, await until(`kitten.brain.perch === '${p}'`, 400), JSON.stringify(await state()));
+// (A tap on the tree while she's in the air between branches: she carries on up.)
+await until(() => kitten.brain.perch === 'treeMid' && !!kitten.brain.jump, 300);
+await page.evaluate(() => { kitten.brain.mode = 'idle'; for (let i = 0; i < 5; i++) kitten.invite('treeHigh'); });
 ok('climbs: treeHigh', await until(() => kitten.brain.perch === 'treeHigh' && !kitten.brain.jump, 400), JSON.stringify(await state()));
 await step(30);
 await shot('3-high');
@@ -79,6 +82,8 @@ await step(80);
 await shot('5-stuck');
 await page.evaluate(() => kitten.touchCat('back'));
 ok('a touch helps her down to the floor', await until(() => !kitten.brain.perch && !kitten.brain.jump, 800), JSON.stringify(await state()));
+await step(120);
+ok('and stays down', await page.evaluate(() => !kitten.brain.perch), JSON.stringify(await state()));
 await step(60);
 // Hiding under the low boughs.
 await idle();
@@ -93,6 +98,10 @@ await page.evaluate(() => kitten.boxSit());
 ok('sits in the open box', await until(() => kitten.brain.perch === 'xmasBox' && kitten.brain.activity === 'loaf', 500), JSON.stringify(await state()));
 await step(10);
 await shot('7-box');
+// The look changed away from Christmas: no tree, she's back on her usual floor.
+await page.evaluate(() => { document.querySelector('#decor-btn').click(); document.querySelector('#decor-options [data-decor="classic"]')?.click(); });
+await page.waitForTimeout(800); await step(10);
+ok('put away: no tree, her usual floor', await page.evaluate(() => !kitten.xmasTree().root.visible && !kitten.brain.perch && kitten.brain.pos.z <= 4.31 && !kitten.PERCHES.treeHigh), JSON.stringify(await state()));
 ok('no page errors', errors.length === 0, errors.join(' | '));
 console.log(`${checks.filter(Boolean).length} of ${checks.length}`);
 await close();

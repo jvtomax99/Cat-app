@@ -880,6 +880,9 @@ function leap(to, toY, perch, then = null, out = 0) {
 }
 function jumpTo(name, then = null, stay = 40, inner = false) {
   const P = PERCHES[name];
+  // (In the air already: the new goal waits for the landing, else the climb
+  // by way of the perch she's leaving would go round and round.)
+  if (brain.jump) { brain.jump.then = () => jumpTo(name, then, stay, inner); return; }
   if (!P || brain.perch === name) { then?.(); return; }
   // (The Christmas tree only stands in the Christmas look.)
   if (treePlace(name) && !treeUp()) { brain.climbGoal = null; setActivity('sit'); return; }
@@ -1669,6 +1672,7 @@ function pendantLife() {
 function perchLife(t) {
   if (t > brain.perchUntil) { jumpDown(() => setActivity(restingActivity(), rand(2, 5))); return; }
   if (brain.perch === 'pendant') { pendantLife(); return; }
+  if (treePlace(brain.perch) && brain.climbGoal === 'floor') return;
   if (brain.perch === 'treeLow' || brain.perch === 'treeMid') { treeClimbLife(); return; }
   if (brain.perch === 'treeTop' && brain.treeStuck) { stuckLife(); return; }
   const options = ['glance', 'twitch', 'slowBlink', 'groom', 'lookBack', 'loaf'];
@@ -1764,7 +1768,7 @@ function climbTree(to = 'treeHigh') {
 function treeClimbLife() {
   const up = PERCHES[brain.perch === 'treeLow' ? 'treeMid' : 'treeHigh'];
   glanceAt(new THREE.Vector3(up.spot.x, up.top + .4, up.spot.z), 1.4);
-  if (Math.random() < .7) later(.8, () => { if (brain.perch === 'treeLow' || brain.perch === 'treeMid') climbTree(Math.random() < .3 ? 'treeTop' : 'treeHigh'); });
+  if (Math.random() < .7) later(.8, () => { if ((brain.perch === 'treeLow' || brain.perch === 'treeMid') && !brain.jump && brain.climbGoal !== 'floor' && brain.mode === 'idle') climbTree(Math.random() < .3 ? 'treeTop' : 'treeHigh'); });
 }
 // Down out of the tree, a branch at a time.
 function downFromTree(then) {
@@ -1777,10 +1781,10 @@ function stuckAtTop() {
   setActivity('sit');
   glanceAt(new THREE.Vector3(brain.pos.x + 1, 0, brain.pos.z + 1.5), 2.4);
   later(2.2, () => {
-    if (!brain.treeStuck) return;
+    if (!brain.treeStuck || brain.perch !== 'treeTop' || !treeUp()) return;
     express('surprised', 1.4); twitchEar(0, 1.2); twitchEar(1, 1.2);
-    later(1.2, () => { if (brain.treeStuck) stuckLife(); });
-    if (!stuckHinted) { stuckHinted = true; later(2.4, () => { if (brain.treeStuck) toast(`${pet.name || 'Mochi'} is stuck! Tap her to help her down.`); }); }
+    later(1.2, () => { if (brain.treeStuck && brain.perch === 'treeTop') stuckLife(); });
+    if (!stuckHinted) { stuckHinted = true; later(2.4, () => { if (brain.treeStuck && brain.perch === 'treeTop' && treeUp()) toast(`${pet.name || 'Mochi'} is stuck! Tap her to help her down.`); }); }
   });
 }
 // Stuck: mews down at you, looks down, shifts about.
@@ -1860,7 +1864,7 @@ function chaseBauble(i, pats = 2) {
     }
     if (!best) { glanceAt(ball, 2); return; }
     walkTo(best.at, () => {
-      if (!T.loose[i].down || brain.mode !== 'idle') return;
+      if (!T.loose[i].down || brain.mode !== 'idle' || !treeUp()) return;
       brain.heading = angleTo(brain.pos, from);
       brain.swatAt = T.ballWorld(i);
       setActivity('swat', SWAT, () => setActivity('sit', rand(1.5, 3)));
@@ -1887,6 +1891,7 @@ function treePaw(startle = false, then = null) {
   brain.mode = 'idle';
   const L = pick(hanging), at = floorAt(TREE.sniff);
   walkTo(at, () => {
+    if (!treeUp()) return;
     const ball = T.ballWorld(L.i);
     brain.heading = angleTo(brain.pos, ball);
     glanceAt(ball, 3); brain.swatAt = ball;
@@ -1911,6 +1916,7 @@ function curiousLook() {
     if (!treeUp() || brain.mode !== 'idle') return;
     express('curious', 4);
     walkTo(floorAt(TREE.look), () => {
+      if (!treeUp()) return;
       brain.swatAt = mid; brain.heading = angleTo(brain.pos, mid);
       setActivity('stalk', 2.2, () => {
         glanceAt(top, 2.2); setActivity('sit', 2, () => {
@@ -1933,7 +1939,8 @@ function treeHide() {
   brain.mode = 'idle';
   const f = new THREE.Vector3(Math.sin(TREE.hideFace), 0, Math.cos(TREE.hideFace)), spot = floorAt(TREE.hide);
   const stay = rand(14, 22);
-  walkTo(spot.clone().addScaledVector(f, -.35), () => walkTo(spot.clone().addScaledVector(f, .08), () => {
+  walkTo(spot.clone().addScaledVector(f, -.35), () => treeUp() && walkTo(spot.clone().addScaledVector(f, .08), () => {
+    if (!treeUp()) return;
     brain.nextIdle = clockNow + stay;
     setActivity('loaf', stay, () => setActivity('sit'));
     later(rand(2.5, 4), () => { if (brain.activity === 'loaf') { glanceAt(camera.position, 2.2); slowBlink(); } });
@@ -3630,6 +3637,7 @@ function renderPlaces() {
 // Take her (and the camera) to another room.
 function goTo(id) {
   if (id === 'kitchen' && !kitchen) buildKitchen();
+  brain.treeStuck = false;
   const target = id === 'kitchen' ? kitchen : room;
   if (target === place) return;
   if (brain.mode === 'play') endPlay(true);
@@ -3694,6 +3702,9 @@ $('#decor-options').addEventListener('click', e => {
     if (id !== 'christmas') {
       if (treePlace(brain.perch) || treePlace(brain.jump?.perch)) { Object.assign(brain, {perch: null, jump: null, climbGoal: null, treeStuck: false}); brain.elevation = 0; brain.pos.set(TREE.climbFrom[0], 0, TREE.climbFrom[1]); setActivity('sit'); }
       else if (treePlace(brain.climbGoal)) { brain.climbGoal = null; brain.target = null; setActivity('sit'); }
+      // (Out round the front of the tree, past where her floor ends now: back on it.)
+      if (place === kitchen && !brain.perch && !brain.jump) { const v = kitchen.clampFloor(brain.pos.clone()); if (v.distanceTo(brain.pos) > .01) { brain.target = null; brain.pos.copy(v); setActivity('sit'); } }
+      brain.treeStuck = false;
     }
     if (room.altToy) (place === room ? room.group : place.group).add(room.altToy);
     pet.decor = id;

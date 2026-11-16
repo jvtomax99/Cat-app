@@ -28,13 +28,13 @@ export const TREE = {
     treeHigh: {spot: at(.55, .8), top: 5.1, face: Math.PI / 2 - .1},
     treeTop: {spot: at(.45, .45), top: 6.5, face: Math.PI / 2 + .35},
   },
-  climbFrom: at(1.25, 2.85),
+  climbFrom: at(1.32, 2.8),
   // Under the low boughs at the front, looking out.
   hide: at(.3, 1.78), hideFace: .3,
   // The open box she sits in, and where she hops in from.
-  box: {spot: at(1.0, 3.05), ry: .3}, boxFrom: at(1.42, 3.9),
+  box: {spot: at(.92, 3.25), ry: .3}, boxFrom: at(1.2, 4.15),
   // The first look: from back there, then up close to sniff.
-  look: [-.4, 5.2], sniff: at(1.0, 3.0),
+  look: [-.4, 5.2], sniff: at(1.45, 2.98),
   // Kept clear for her to walk round: the presents' ring under the tree.
   ring: 1.62,
 };
