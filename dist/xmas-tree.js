@@ -124,13 +124,13 @@ export function buildChristmasTree(room) {
 
   // Keep-outs: the two walls, and the armchair's back (the chair stands
   // where it always does; the branches on that side are shorter).
-  const chair = room.chair, chairInv = new THREE.Matrix4(), chairBox = new THREE.Box3();
+  const chair = room.chair, chairInv = new THREE.Matrix4(), chairFwd = new THREE.Matrix4(), chairQ = new THREE.Quaternion(), chairBox = new THREE.Box3();
   {
     const p = chair.position.clone(), ry = chair.rotation.y;
     chair.position.set(0, 0, 0); chair.rotation.y = 0; chair.updateMatrixWorld(true);
     chairBox.setFromObject(chair).expandByScalar(.06);
     chair.position.copy(p); chair.rotation.y = ry; chair.updateMatrixWorld(true);
-    chairInv.compose(p, new THREE.Quaternion().setFromAxisAngle(Y, ry), V(1, 1, 1)).invert();
+    chairQ.setFromAxisAngle(Y, ry); chairFwd.compose(p, chairQ, V(1, 1, 1)); chairInv.copy(chairFwd).invert();
   }
   const local = V(0, 0, 0), world = V(0, 0, 0);
   const blocked = p => {
@@ -480,6 +480,18 @@ export function buildChristmasTree(room) {
         if (wx < -4.5 + L.rad) { g.position.x = -4.5 + L.rad - TREE.x; D.vel.x = Math.abs(D.vel.x) * .5; }
         if (wz < -3.3 + L.rad) { g.position.z = -3.3 + L.rad - TREE.z; D.vel.z = Math.abs(D.vel.z) * .5; }
         if (wz > 3.6) { g.position.z = 3.6 - TREE.z; D.vel.z = -Math.abs(D.vel.z) * .5; }
+        // (The armchair is solid to it: it never rolls in under, out of her reach.)
+        local.set(wx, .3, wz).applyMatrix4(chairInv);
+        const cb = chairBox, pad = L.rad + .05;
+        if (local.x > cb.min.x - pad && local.x < cb.max.x + pad && local.z > cb.min.z - pad && local.z < cb.max.z + pad) {
+          const outs = [[cb.min.x - pad - local.x, 'x'], [cb.max.x + pad - local.x, 'x'], [cb.min.z - pad - local.z, 'z'], [cb.max.z + pad - local.z, 'z']];
+          const [d, ax] = outs.reduce((a, b) => Math.abs(b[0]) < Math.abs(a[0]) ? b : a);
+          local[ax] += d;
+          const back = local.clone().applyMatrix4(chairFwd);
+          g.position.x = back.x - TREE.x; g.position.z = back.z - TREE.z;
+          const n = V(ax === 'x' ? Math.sign(d) : 0, 0, ax === 'z' ? Math.sign(d) : 0).applyQuaternion(chairQ), vn = D.vel.dot(n);
+          if (vn < 0) D.vel.addScaledVector(n, -1.5 * vn);
+        }
         const fr = Math.hypot(g.position.x, g.position.z), R0 = .52 + L.rad;
         if (fr < R0 && g.position.y < .5) { g.position.x *= R0 / fr; g.position.z *= R0 / fr; const n = V(g.position.x / fr, 0, g.position.z / fr), vn = D.vel.dot(n); if (vn < 0) D.vel.addScaledVector(n, -1.5 * vn); }
       }
