@@ -12,6 +12,7 @@
 // linen cushion, a brass lantern with a candle and a pinecone basket.
 import * as THREE from 'three';
 import {rng, canvasTexture, drawLinen, drawNoise, roundedBox, lathe, pillowGeometry, pillowPiping} from './room.js';
+import {buildChristmasTree} from './xmas-tree.js';
 
 export const DECORS = {
   classic: {name: 'Classic', note: 'Plaid, leather and greenery'},
@@ -20,7 +21,8 @@ export const DECORS = {
   // they're offered, `then` what a room dressed in one changes to.)
   halloween: {name: 'Halloween at the Beach House', note: 'Jack-o’-lanterns, paper bats and a felt bat', months: [10], then: 'thanksgiving'},
   // (Christmas dresses the kitchen; the study keeps its classic plaid,
-  // leather and greenery, with pine and a lantern on the mantel.)
+  // leather and greenery, with pine and a lantern on the mantel, and the
+  // Christmas tree in the olive tree's corner.)
   christmas: {name: 'Christmas at the Beach House', note: 'Pine garland, velvet bows and fairy lights', months: [11, 12], then: 'classic'},
 };
 // A look that's offered now (`force`: a decor named in the page's address,
@@ -48,6 +50,12 @@ export function applyDecor(room, name) {
   };
   const O = room.decorOriginal;
   for (const g of Object.values(room.decorProps || {})) g.forEach(o => o.visible = false);
+  if (room.oliveTree) room.oliveTree.visible = name !== 'christmas';
+  // At Christmas the armchair moves half a metre along, towards the lamp
+  // table, to give the tree its room (her jump onto it moves with it).
+  const chairHome = room.chair.userData.home ??= room.chair.position.clone();
+  room.chair.position.copy(chairHome); if (name === 'christmas') room.chair.position.x -= .5;
+  room.chair.updateMatrixWorld(true);
   room.candleLight = null; room.candleFlame = null; room.pumpkinGlow = null; room.pumpkinHalos = null; room.altToy = null;
   if (name === 'classic' || name === 'christmas') {
     if (M.piping) M.piping.color.set('#6b7040');
@@ -65,6 +73,8 @@ export function applyDecor(room, name) {
       M.pillow.map = O.bedMap;
       (room.decorProps ??= {}).christmas ??= buildStudyChristmas(room);
       room.decorProps.christmas.forEach(o => o.visible = true);
+      // The Christmas tree, in the olive tree's corner (xmas-tree.js).
+      if (!room.xmasTree) { room.xmasTree = buildChristmasTree(room); room.decorProps.christmas.push(room.xmasTree.root); }
       room.candleLight = room.xmasCandle; room.candleFlame = room.xmasFlame;
     }
   } else {

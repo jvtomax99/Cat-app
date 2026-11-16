@@ -1556,6 +1556,7 @@ export class Room {
     this.updatePaperBats?.(t);
     this.updateBook(t);
     this.updateVase(t);
+    this.xmasTree?.update(dt, t, night);
     return k;
   }
 }

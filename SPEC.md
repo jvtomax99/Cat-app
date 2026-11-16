@@ -166,6 +166,18 @@ the phone's browser and can be added to the home screen.
   (`tools/qa/vacuum.mjs`). The study keeps its classic look, with pine
   and a brass lantern on the mantel and a plaid cushion on the armchair
   (seen through the doorway).
+- **Christmas tree** (preview, phase 06; Merlin 2026-11-16, from a photo of a
+  cat lying in a decorated tree). Done when: in the Christmas look the study's
+  olive tree is replaced by a full fir by the fireplace with warm white lights
+  all through it, old-style glass baubles, red-and-white twists, icicles and
+  little figures, a glass spire on top, and lights along the top of the walls;
+  she climbs it on her own now and then (and when the tree is tapped), lies
+  half out of its top half, bats the baubles under her paws so they swing,
+  sometimes knocks one off; it tumbles down, rolls and stops in the room, and
+  she goes down and pats it along; a tap on a fallen bauble hangs it back up;
+  out of the Christmas look the olive tree is back (`tools/qa/tree.mjs`).
+  Not in it: decorating the tree yourself, presents, broken baubles, fallen
+  baubles kept between visits, a tree in the kitchen.
 - **Quick on a phone, and there without signal** (phase 18, live, build 392).
   Done when: the first open on a phone downloads under 6 MB before she is
   on screen; after one open with signal the app opens and plays with no
@@ -241,7 +253,6 @@ decor, Miso, phase 08 (app screens), phase 09 (test group).
   store wrapper.
 - Miso, the second cat (blue British Shorthair), and the cats playing together.
 - Adopting more cats by levelling up.
-- Christmas tree mischief (phase 06, December).
 - The dog visit at the French doors.
 - Friendly app screens (phase 08): "real app ready".
 - Sharing with the 1000-member group after the test group.

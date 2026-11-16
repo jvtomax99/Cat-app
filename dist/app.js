@@ -4,6 +4,7 @@ import {AWAY_MIN, awayStory} from './away.js';
 import {TOYS, RIBBONS, LATE, nextGift, newGifts, waitingGifts, owns, toysAt} from './rewards.js';
 import {todaysWish, grantWish, wishDone, WISH_WORTH} from './wish.js';
 import {DECORS, applyDecor, inSeason, decorNow, applyKitchenDecor} from './decor.js';
+import {TREE} from './xmas-tree.js';
 import {load as loadSave, store as storeSave, keepStorage, toCode, fromCode, keys as saveKeys} from './save.js';
 import {RealCat, EXPRESSIONS} from './real-cat.js';
 import {MotionCat} from './motion-cat.js';
@@ -634,6 +635,11 @@ function studyLayout() {
       // from the floor just in front of the hearth.
       mantel: {spot: f.localToWorld(new THREE.Vector3(-.3, 0, .36)).setY(0), top: room.mantelTop,
         base: f.localToWorld(new THREE.Vector3(-.3, 0, 1.5)).setY(0), face: -Math.PI / 2},
+      // The Christmas tree (only in the Christmas look): a leap into its
+      // lower branches by the fireplace, then up into the top half.
+      treeLow: {spot: new THREE.Vector3(TREE.low.spot[0], 0, TREE.low.spot[1]), top: TREE.low.top,
+        base: new THREE.Vector3(TREE.floor[0], 0, TREE.floor[1]), face: TREE.low.face},
+      treeHigh: {spot: new THREE.Vector3(TREE.high.spot[0], 0, TREE.high.spot[1]), top: TREE.high.top, via: 'treeLow', face: TREE.high.face},
     },
     perchTargets: [['sill', room.windowGroup], ['chair', room.chair], ['mantel', room.fireplace]],
     limits: {dist: [1.1, 13], pitch: [.04, 1.25], x: [-4.1, 4.1], z: [-2.9, 3.8], y: [.08, 2.4]},
@@ -642,7 +648,7 @@ function studyLayout() {
     // (Past the right wall the camera may step outside: that wall and its
     // fireplace hide, so the turn towards it sees the room, not the back of the armchair.)
     camBox: {x: [-4.3, 9.5], y: [.2, 6.5], z: [-3.1, 16]},
-    camSolids: [[2.45, -2.0, 1.3, 2.3], [.55, -2.85, .75, 2.6], [4.0, -1.45, .6, 3.2], [4.2, 1.1, .7, 2.8], [-2.35, -1.75, 1.0, .55]],
+    camSolids: [[c.position.x, c.position.z, 1.3, 2.3], [.55, -2.85, .75, 2.6], [4.0, -1.45, .6, 3.2], [4.2, 1.1, .7, 2.8], [-2.35, -1.75, 1.0, .55], [TREE.x, TREE.z, 1.25, 5.6]],
   };
 }
 // The study and the kitchen are joined: the doorway in the study's left wall
@@ -1082,6 +1088,8 @@ function updateCat(dt, t) {
         const dx = J.to.x - J.from.x, dz = J.to.z - J.from.z, d = Math.hypot(dx, dz) || 1, s = J.perch === 'pendant' ? .45 : -.3;
         kitchen.bumpPendant(-dz / d * s, dx / d * s, rand(-.8, .8));
       }
+      // Landing in the Christmas tree (or leaving it) shakes it.
+      if (place === room && room.xmasTree && (J.perch?.startsWith('tree') || J.fromPerch?.startsWith('tree'))) room.xmasTree.shake(J.perch?.startsWith('tree') ? .9 : .5, new THREE.Vector3(J.to.x - J.from.x, 0, J.to.z - J.from.z));
       if (brain.climbGoal != null && (J.perch === brain.climbGoal || (brain.climbGoal === 'floor' && !J.perch))) brain.climbGoal = null;
       // Partway along a climb: sometimes straight on, sometimes a moment
       // balancing on her feet, sometimes a brief sit, eyes on the next perch.
@@ -1394,7 +1402,7 @@ function idleLife(t) {
   brain.nextIdle = t + (night ? rand(2.5, 5) : rand(4, 8));
   if (brain.perch) { perchLife(t); return; }
   if (night && Math.random() < .75 && nightLife()) return;
-  const perchChoices = place === room ? ['window', 'window', 'chair'] : ['shelf', 'shelf', 'shelfHigh', 'shelfHigh', 'salmonRaid', 'faucet', 'faucet', 'pendant'].concat(pet.food < 75 ? ['salmonRaid'] : [], pet.water < 85 ? ['faucet', 'faucet'] : []);
+  const perchChoices = place === room ? ['window', 'window', 'chair'].concat(treeUp() ? ['tree', 'tree'] : []) : ['shelf', 'shelf', 'shelfHigh', 'shelfHigh', 'salmonRaid', 'faucet', 'faucet', 'pendant'].concat(pet.food < 75 ? ['salmonRaid'] : [], pet.water < 85 ? ['faucet', 'faucet'] : []);
   const options = ['glance', 'twitch', 'tilt', 'wander', 'wander', 'groom', ...perchChoices, 'sunbeam'];
   if (pet.energy > 35) options.push('solo', 'solo', 'dash');
   if (pet.happiness > 60) options.push('slowBlink', 'zoomies');
@@ -1412,7 +1420,7 @@ function idleLife(t) {
   // app, then every half a minute or so. A tired kitten picks the calm ones.
   if (t > brain.nextShow) {
     brain.nextShow = t + rand(25, 40);
-    const shows = place === room ? ['window', 'chair', 'sunbeam', 'mantel', 'mantel'] : ['counter', 'shelf', 'shelfHigh', 'pendant', 'pendant', 'sunbeam'];
+    const shows = place === room ? ['window', 'chair', 'sunbeam', 'mantel', 'mantel'].concat(treeUp() ? ['tree', 'tree', 'tree'] : []) : ['counter', 'shelf', 'shelfHigh', 'pendant', 'pendant', 'sunbeam'];
     if (pet.energy > 35) shows.push('solo', 'solo', 'zoomies');
     choice = pick(shows);
   }
@@ -1433,6 +1441,7 @@ function idleLife(t) {
   if (choice === 'dash') dash();
   if (choice === 'drink') act('drink', {auto: true});
   if (choice === 'garlandNap') garlandNap();
+  if (choice === 'tree') climbTree();
   if (choice === 'nap') walkTo(CUSHION_SPOT, () => { setActivity('loaf', rand(8, 14)); setTimeout(slowBlink, 1500); }, false, true);
   if (choice === 'bowl') {
     walkTo(EAT_SPOT, () => { setActivity('beg', 3.5); meow('mew'); say(pick(['Is it snack o’clock?', 'This bowl looks very empty…'])); }, false, true);
@@ -1633,7 +1642,12 @@ function pendantLife() {
 function perchLife(t) {
   if (t > brain.perchUntil) { jumpDown(() => setActivity(restingActivity(), rand(2, 5))); return; }
   if (brain.perch === 'pendant') { pendantLife(); return; }
+  if (brain.perch === 'treeLow') { treeLowLife(); return; }
   const options = ['glance', 'twitch', 'slowBlink', 'groom', 'lookBack', 'loaf'];
+  if (brain.perch === 'treeHigh' && treeUp() && t - brain.actStart > 2) {
+    options.push('bauble', 'bauble', 'bauble', 'loaf', 'loaf');
+    if (t > brain.nextKnock && t - brain.actStart > 4 && xmasTree().loose.some(L => !L.down)) options.push('treeDrop', 'treeDrop');
+  }
   if (brain.perch === 'sill' && t > brain.nextKnock && !room.bookFall && t - brain.actStart > 6) options.push('book');
   if (brain.perch === 'mantel' && t > brain.nextKnock && !room.vaseFall && t - brain.actStart > 4) options.push('vase', 'vase');
   if (PERCHES[brain.perch]?.lane && place === kitchen && t - brain.actStart > 2) options.push('stroll', 'stroll', 'stroll');
@@ -1651,6 +1665,8 @@ function perchLife(t) {
   if (choice === 'loaf') setActivity('loaf', rand(6, 12), () => setActivity('sit'));
   if (choice === 'book') knockBook();
   if (choice === 'vase') knockVase();
+  if (choice === 'bauble') batBauble();
+  if (choice === 'treeDrop') knockBauble();
   if (choice === 'knock') knockThing(kitchen.knockableNear(brain.perch, brain.pos.x));
   if (choice === 'stroll') stroll();
   if (choice === 'faucet') drinkFaucet();
@@ -1679,6 +1695,109 @@ function knockVase() {
       }, 900);
     }, 220);
   }, d * 1000));
+}
+
+// The Christmas tree (xmas-tree.js, the Christmas look in the study): up
+// she goes, a leap into the low branches and a scramble to the top half,
+// and lies there half out of it. Up there she bats at the baubles under her
+// paws; now and then one comes off, and she goes down after it.
+function xmasTree() { const T = room.xmasTree; if (T) T.onLand ??= () => onLand('cup'); return T; }
+function treeUp() { return place === room && room.decor === 'christmas' && !!room.xmasTree?.root.visible; }
+const ahead = () => new THREE.Vector3(Math.sin(brain.heading), 0, Math.cos(brain.heading));
+function climbTree() {
+  if (!treeUp() || !['idle', 'solo'].includes(brain.mode)) return false;
+  brain.mode = 'idle';
+  jumpTo('treeHigh', () => {
+    setActivity('loaf', rand(5, 9), () => setActivity('sit'));
+    if (Math.random() < .5) later(1.5, () => { glanceAt(camera.position, 2.2); meow('chirp', 'idle'); });
+  }, rand(35, 55));
+  return true;
+}
+// Stopped partway up: on up, mostly.
+function treeLowLife() {
+  if (Math.random() < .65) { climbTree(); return; }
+  glanceAt(new THREE.Vector3(TREE.high.spot[0], TREE.high.top + .4, TREE.high.spot[1]), 1.6);
+}
+// Down out of the tree, a branch at a time.
+function downFromTree(then) {
+  if (brain.perch === 'treeHigh' || brain.perch === 'treeLow') jumpDown(() => downFromTree(then)); else then?.();
+}
+// A pat or two at a bauble under her paws: it swings, the tree trembles.
+function batBauble() {
+  const T = xmasTree(), hanging = T?.loose.filter(L => !L.down);
+  if (!hanging?.length) return;
+  const L = pick(hanging), pats = Math.random() < .5 ? [0, .7] : [0, .6, 1.3];
+  glanceAt(T.ballWorld(L.i), 3);
+  pats.forEach(d => setTimeout(() => {
+    if (brain.perch !== 'treeHigh' || brain.jump) return;
+    brain.swatAt = T.ballWorld(L.i);
+    setActivity('swat', SWAT, () => setActivity('sit'));
+    setTimeout(() => { if (T.bat(L.i, ahead())) T.shake(.15, ahead()); }, 220);
+  }, d * 1000));
+  setTimeout(() => { if (brain.perch === 'treeHigh' && Math.random() < .4) { glanceAt(camera.position, 2); express('curious', 1.6); } }, (pats.at(-1) + 1.4) * 1000);
+}
+// Pat, pat, and the third one sends it down. A look at it, a look at you,
+// then down after it for a game across the floor.
+function knockBauble() {
+  const T = xmasTree(), hanging = T?.loose.filter(L => !L.down);
+  if (!hanging?.length) return;
+  brain.nextKnock = clockNow + rand(70, 120);
+  const L = pick(hanging);
+  glanceAt(T.ballWorld(L.i), 3.5);
+  [0, .9, 1.8].forEach((d, n) => setTimeout(() => {
+    if (brain.perch !== 'treeHigh' || brain.jump) return;
+    brain.swatAt = T.ballWorld(L.i);
+    setActivity('swat', SWAT, () => setActivity('sit'));
+    setTimeout(() => {
+      if (n < 2) { if (T.bat(L.i, ahead())) T.shake(.15, ahead()); return; }
+      if (!T.drop(L.i, ahead())) return;
+      T.shake(.35, ahead());
+      setTimeout(() => {
+        glanceAt(T.ballWorld(L.i), 2.2); express('surprised', 1.2);
+        setTimeout(() => {
+          glanceAt(camera.position, 2.5); express('curious', 2);
+          if (Math.random() < .6) say(pick(['…it fell.', 'It jumped. I saw it.', 'Shiny! Down there now.', 'I barely touched it.']), 2600);
+          setTimeout(() => chaseBauble(L.i), 2600);
+        }, 1500);
+      }, 500);
+    }, 220);
+  }, d * 1000));
+}
+// Down after a fallen bauble: up to it, and a pat or two to send it rolling.
+function chaseBauble(i, pats = 2) {
+  const T = xmasTree();
+  if (!T?.loose[i]?.down || brain.mode !== 'idle' || !treeUp()) return;
+  downFromTree(() => {
+    // (From the side nearest the middle of the room with room for her: she
+    // pats it on away from you, into the corner.)
+    const ball = T.ballWorld(i), from = new THREE.Vector3(ball.x, 0, ball.z);
+    let best = null;
+    for (let k = 0; k < 16; k++) {
+      const a = k / 16 * Math.PI * 2, at = from.clone().add(new THREE.Vector3(Math.sin(a) * .78, 0, Math.cos(a) * .78));
+      if (!T.freeFloor(at.x, at.z, angleTo(at, from))) continue;
+      const d = Math.hypot(at.x, at.z - .3);
+      if (!best || d < best.d) best = {at, d};
+    }
+    if (!best) { glanceAt(ball, 2); return; }
+    walkTo(best.at, () => {
+      if (!T.loose[i].down || brain.mode !== 'idle') return;
+      brain.heading = angleTo(brain.pos, from);
+      brain.swatAt = T.ballWorld(i);
+      setActivity('swat', SWAT, () => setActivity('sit', rand(1.5, 3)));
+      setTimeout(() => {
+        const dir = new THREE.Vector3().subVectors(from, brain.pos).setY(0).normalize();
+        T.kick(i, dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), rand(-.5, .5)), rand(1.6, 2.6));
+        later(1.4, () => { if (pats > 1 && Math.random() < .7) chaseBauble(i, pats - 1); else { glanceAt(camera.position, 2); express('excited', 1.8); } });
+      }, 220);
+    }, true, true);
+  });
+}
+// A tap on a fallen bauble: you hang it back on the tree.
+function rehangBauble(i) {
+  const T = xmasTree();
+  if (!T?.rehang(i)) return;
+  T.shake(.12);
+  if (!pet.sleeping && brain.mode === 'idle') { glanceAt(T.ballWorld(i), 1.8); express('curious', 1.4); }
 }
 
 // The top book on the sill: she pats at it, twice, and the third pat sends it
@@ -2585,6 +2704,13 @@ function perchAt() {
     const hit = ray.intersectObject(obj, true).find(h => h.object.visible && h.object.material?.blending !== THREE.AdditiveBlending);
     if (hit && (!best || hit.distance < best.d)) best = {name, d: hit.distance};
   }
+  // The Christmas tree: a fallen bauble (to hang back up), or the tree itself.
+  if (treeUp()) {
+    const T = room.xmasTree, i = T.hitFallen(ray);
+    if (i != null) return 'bauble:' + i;
+    const hit = ray.intersectObject(T.hit, false)[0];
+    if (hit && (!best || hit.distance < best.d)) best = {name: 'treeHigh', d: hit.distance};
+  }
   return best?.name || null;
 }
 // Tapping a perch invites her up. She's a cat: mostly she goes (with a
@@ -2593,6 +2719,7 @@ function perchAt() {
 let lastInvite = {name: null, at: -99};
 function invite(name) {
   if (name.startsWith('knock:')) { inviteKnock(kitchen.knockables[+name.slice(6)]); return; }
+  if (name.startsWith('bauble:')) { rehangBauble(+name.slice(7)); return; }
   if (name === 'faucet') { if (pet.sleeping) { toast('Shh… wake your kitten first.'); return; } if (!['idle', 'solo'].includes(brain.mode)) return; brain.mode = 'idle'; later(.35, () => meow('chirp', 'idle')); if (brain.perch && brain.perch !== 'counter') jumpDown(drinkFaucet); else drinkFaucet(); return; }
   if (name === 'vacuum') { inviteVacuum(); return; }
   if (name === 'salmon') { if (pet.sleeping) { toast('Shh… wake your kitten first.'); return; } if (!kitchen.salmonReady) { say('All gone…', 2000); return; } if (Math.random() < .85) { brain.mode = 'idle'; stealSalmon(); } else say(pick(['I would never.', '*innocent look*']), 2200); return; }
@@ -2610,6 +2737,7 @@ function invite(name) {
     jumpTo(name, () => {
       setActivity('sit');
       if (name === 'sill') brain.nextBird = clockNow + rand(3, 8);
+      if (name === 'treeHigh') setActivity('loaf', rand(5, 8), () => setActivity('sit'));
       if (name === 'chair') { brain.kneadUntil = clockNow + 3; setActivity('loaf', 3.4, () => setActivity('catnap', rand(10, 18), () => { slowBlink(); setActivity('sit', 4); })); }
     }, rand(25, 40));
   } else setTimeout(() => {
@@ -3397,6 +3525,10 @@ $('#decor-options').addEventListener('click', e => {
   setTimeout(() => {
     applyDecor(room, id);
     if (kitchen) applyKitchenDecor(kitchen, id);
+    // (The armchair stands somewhere else at Christmas: her places in the study again.)
+    room.layoutCache = null; if (place === room) { usePlace(room); if (brain.perch === 'chair' && !brain.jump) brain.pos.copy(PERCHES.chair.spot); }
+    // (Up the Christmas tree as it's put away: she's on the floor beside it.)
+    if (brain.perch?.startsWith('tree') && id !== 'christmas') { Object.assign(brain, {perch: null, jump: null, climbGoal: null}); brain.elevation = 0; brain.pos.set(TREE.floor[0], 0, TREE.floor[1]); setActivity('sit'); }
     if (room.altToy) (place === room ? room.group : place.group).add(room.altToy);
     pet.decor = id;
     save();
@@ -4404,7 +4536,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });
