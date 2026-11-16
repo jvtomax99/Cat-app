@@ -499,7 +499,8 @@ export function buildChristmasTree(room) {
           const n = V(ax === 'x' ? Math.sign(d) : 0, 0, ax === 'z' ? Math.sign(d) : 0).applyQuaternion(chairQ), vn = D.vel.dot(n);
           if (vn < 0) D.vel.addScaledVector(n, -1.5 * vn);
         }
-        const fr = Math.hypot(g.position.x, g.position.z), R0 = .52 + L.rad;
+        // (Nor in under the lowest boughs: it bounces back out where she can get it.)
+        const fr = Math.hypot(g.position.x, g.position.z), R0 = TREE.radius * .85 + L.rad;
         if (fr < R0 && g.position.y < .5) { g.position.x *= R0 / fr; g.position.z *= R0 / fr; const n = V(g.position.x / fr, 0, g.position.z / fr), vn = D.vel.dot(n); if (vn < 0) D.vel.addScaledVector(n, -1.5 * vn); }
       }
       // Lights: on by day too (as in the picture), brighter in the evening.
