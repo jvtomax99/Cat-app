@@ -12,8 +12,11 @@ await page.evaluate(() => { document.querySelector('#decor-btn').click(); docume
 await page.waitForTimeout(800);
 await step(10);
 const wide = {focus: [-2.4, 3.2, 5.0], yaw: .25, pitch: .12, dist: 12};
-const close_ = {focus: [-2.9, 3.0, 6.2], yaw: .45, pitch: .1, dist: 8};
-const shot = async (name, cam = close_) => { await look(cam); await page.locator('canvas').first().screenshot({path: `${OUT}/${name}.png`}); };
+// (Close shots look at her, from the front right of the tree.)
+const shot = async (name, cam = null) => {
+  if (!cam) { const [x, y, z] = await page.evaluate(() => [kitten.brain.pos.x, kitten.brain.elevation, kitten.brain.pos.z]); cam = {focus: [x + .3, y + .4, z], yaw: .2, pitch: .12, dist: 9}; }
+  await look(cam); await page.locator('canvas').first().screenshot({path: `${OUT}/${name}.png`});
+};
 const state = () => page.evaluate(() => ({perch: kitten.brain.perch, act: kitten.brain.activity, y: +kitten.brain.elevation.toFixed(2), at: kitten.brain.pos.toArray().map(v => +v.toFixed(2)), stuck: !!kitten.brain.treeStuck, fallen: kitten.xmasTree().fallen().map(L => L.down.g.getWorldPosition(L.down.g.position.clone()).toArray().map(v => +v.toFixed(2)).concat(L.down.rest))}));
 const until = async (test, max = 400) => { for (let i = 0; i < max; i += 10) { await step(10); if (await page.evaluate(test)) return true; } return false; };
 const checks = [];
@@ -73,7 +76,7 @@ await page.evaluate(() => kitten.climbTree('treeTop'));
 ok('all the way to the top', await until(() => kitten.brain.perch === 'treeTop' && !kitten.brain.jump, 800), JSON.stringify(await state()));
 ok('stuck there', await until(() => kitten.brain.treeStuck, 100));
 await step(80);
-await shot('5-stuck', {focus: [-3.4, 5.6, 6.2], yaw: .45, pitch: .05, dist: 8});
+await shot('5-stuck');
 await page.evaluate(() => kitten.touchCat('back'));
 ok('a touch helps her down to the floor', await until(() => !kitten.brain.perch && !kitten.brain.jump, 800), JSON.stringify(await state()));
 await step(60);

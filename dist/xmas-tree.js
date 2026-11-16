@@ -23,10 +23,10 @@ export const TREE = {
   glass: -5.9, // (the window wall: no bough goes through it)
   // Up the tree in stages, lying across it with her front half out.
   perches: {
-    treeLow: {spot: at(.85, 1.35), top: 2.0, face: Math.PI / 2 - .15},
-    treeMid: {spot: at(.65, .95), top: 3.6, face: Math.PI / 2 + .25},
-    treeHigh: {spot: at(.6, .62), top: 5.1, face: Math.PI / 2 - .1},
-    treeTop: {spot: at(.5, .32), top: 6.5, face: Math.PI / 2 + .35},
+    treeLow: {spot: at(.75, 1.55), top: 2.0, face: Math.PI / 2 - .15},
+    treeMid: {spot: at(.6, 1.15), top: 3.6, face: Math.PI / 2 + .25},
+    treeHigh: {spot: at(.55, .8), top: 5.1, face: Math.PI / 2 - .1},
+    treeTop: {spot: at(.45, .45), top: 6.5, face: Math.PI / 2 + .35},
   },
   climbFrom: at(1.25, 2.85),
   // Under the low boughs at the front, looking out.
@@ -160,7 +160,7 @@ export function buildChristmasTree(parent, {solids = []} = {}) {
   // A dark heart: the tree is solid, not see-through, as a full fir is.
   const heartMat = new THREE.MeshStandardMaterial({color: '#0f2214', roughness: 1});
   const hp = [];
-  for (let i = 0; i <= 14; i++) { const y = TREE.base + .25 + (TREE.top - .4 - TREE.base) * i / 14; hp.push(new THREE.Vector2(Math.max(.02, radiusAt(y) * .7), y)); }
+  for (let i = 0; i <= 14; i++) { const y = TREE.base + .25 + (TREE.top - .4 - TREE.base) * i / 14; hp.push(new THREE.Vector2(Math.max(.02, radiusAt(y) * .45), y)); }
   hp.unshift(new THREE.Vector2(0, TREE.base + .25)); hp.push(new THREE.Vector2(0, TREE.top - .2));
   const heart = new THREE.Mesh(new THREE.LatheGeometry(hp, 20), heartMat); heart.castShadow = true; heart.receiveShadow = true; sway.add(heart);
 
@@ -173,7 +173,7 @@ export function buildChristmasTree(parent, {solids = []} = {}) {
     const curve = new THREE.CatmullRomCurve3(pts);
     for (let i = 0; i < count; i++) {
       const u = Math.min(1, (i + r()) / count), p = curve.getPointAt(u), tan = curve.getTangentAt(u);
-      if (blocked(p)) continue;
+      if (blocked(p) || nearHer(p, .42)) continue;
       // Mostly flat sprays (needles to the sky), pointing on out along the
       // bough; a few turned, for depth.
       const d = tan.clone().multiplyScalar(r() < .82 ? 1 : -.6).add(V((r() - .5) * .9, (r() - .45) * .5, (r() - .5) * .9)).normalize();
@@ -195,21 +195,21 @@ export function buildChristmasTree(parent, {solids = []} = {}) {
       const pt = (u, drop) => V(0, y, 0).addScaledVector(dir, L * u).add(V(0, -drop, 0));
       const pts = [pt(.05, 0), pt(.4, L * .08), pt(.75, L * .13), pt(1, L * .1)];
       while (pts.length > 2 && blocked(pts[pts.length - 1])) pts.pop();
-      spray(pts, Math.round(L * 8) + 2, .55 + .3 * R / TREE.radius, depth);
+      spray(pts, Math.round(L * 6) + 2, .62 + .32 * R / TREE.radius, depth);
       for (const u of [.45, .72]) {
         const b0 = new THREE.CatmullRomCurve3(pts).getPointAt(Math.min(1, u)), side = V(-dir.z, 0, dir.x).multiplyScalar(r() < .5 ? 1 : -1);
         const sd = dir.clone().multiplyScalar(.6).addScaledVector(side, .8).normalize(), sl = L * (.3 + r() * .14);
         const sp = [b0, b0.clone().addScaledVector(sd, sl * .6).add(V(0, -.03, 0)), b0.clone().addScaledVector(sd, sl)];
-        if (!blocked(sp[2])) spray(sp, Math.round(sl * 7) + 1, .42 + .18 * R / TREE.radius, depth);
+        if (!blocked(sp[2])) spray(sp, Math.round(sl * 5) + 1, .48 + .2 * R / TREE.radius, depth);
       }
     }
   }
   // A full coat over it all: sprays all over the outside, so no gaps show
   // between the boughs (a well-shaped, dense fir, as in the picture).
-  for (let i = 0; i < 1700; i++) {
+  for (let i = 0; i < 1100; i++) {
     const y = TREE.base + .1 + (TREE.top - .5 - TREE.base) * (1 - Math.sqrt(r())), R = radiusAt(y), a = r() * Math.PI * 2;
     const rad = R * (.74 + r() * .28), p = V(Math.cos(a) * rad, y, Math.sin(a) * rad);
-    if (blocked(p)) continue;
+    if (blocked(p) || nearHer(p, .5)) continue;
     const d = V(Math.cos(a), -.25 - r() * .3, Math.sin(a)).add(V((r() - .5) * 1.1, (r() - .5) * .3, (r() - .5) * 1.1)).normalize();
     let up = Y.clone().addScaledVector(d, -d.y).normalize();
     if (r() < .3) up.applyAxisAngle(d, (r() - .5) * 2);
