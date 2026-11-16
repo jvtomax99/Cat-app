@@ -21,7 +21,8 @@ const state = () => page.evaluate(() => ({perch: kitten.brain.perch, act: kitten
 const until = async (test, max = 400) => { for (let i = 0; i < max; i += 10) { await step(10); if (await page.evaluate(test)) return true; } return false; };
 const checks = [];
 const ok = (name, pass, info = '') => { checks.push(pass); console.log(pass ? 'ok  ' : 'FAIL', name, info); };
-const idle = () => page.evaluate(() => { const b = kitten.brain; b.mode = 'idle'; b.perchUntil = 1e9; });
+// (Her own life kept quiet between steps: getting stuck, say, wakes it.)
+const idle = () => page.evaluate(() => { const b = kitten.brain; b.mode = 'idle'; b.perchUntil = 1e9; b.nextIdle = 1e9; b.nextShow = 1e9; });
 
 ok('the tree is up in the kitchen', await page.evaluate(() => kitten.place === kitten.kitchen && kitten.xmasTree()?.root.visible && kitten.xmasTree().foliage.count > 1000), await page.evaluate(() => kitten.xmasTree()?.foliage.count));
 await shot('0-tree', wide);
@@ -84,7 +85,7 @@ await page.evaluate(() => kitten.touchCat('back'));
 ok('a touch helps her down to the floor', await until(() => !kitten.brain.perch && !kitten.brain.jump, 800), JSON.stringify(await state()));
 await step(120);
 ok('and stays down', await page.evaluate(() => !kitten.brain.perch), JSON.stringify(await state()));
-await step(60);
+await idle(); await step(60);
 // Hiding under the low boughs.
 await idle();
 await page.evaluate(() => kitten.treeHide());
