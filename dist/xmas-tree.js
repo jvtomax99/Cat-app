@@ -332,7 +332,7 @@ export function buildChristmasTree(room) {
   // swing when batted and to come off.
   const her = TREE.high, paw = V(her.spot[0] - TREE.x + Math.sin(her.face) * .36, her.top - .36, her.spot[1] - TREE.z + Math.cos(her.face) * .36 + .12);
   const loose = [];
-  [[0, 0, '#c21d27', .085], [.24, .14, '#c9a043', .075], [-.2, .2, '#2f6b3a', .07]].forEach(([dx, dy, color, rad], i) => {
+  [[0, 0, '#c21d27', .085], [-.42, .08, '#c9a043', .075], [-.2, .2, '#2f6b3a', .07]].forEach(([dx, dy, color, rad], i) => {
     const out = V(paw.x, 0, paw.z).normalize(), side = V(-out.z, 0, out.x);
     const hang = paw.clone().addScaledVector(side, dx).add(V(0, -dy, 0)).addScaledVector(out, .05);
     const pivot = new THREE.Group(); pivot.position.copy(hang); sway.add(pivot);
@@ -488,9 +488,9 @@ export function buildChristmasTree(room) {
         if (wz < -3.3 + L.rad) { g.position.z = -3.3 + L.rad - TREE.z; D.vel.z = Math.abs(D.vel.z) * .5; }
         if (wz > 3.6) { g.position.z = 3.6 - TREE.z; D.vel.z = -Math.abs(D.vel.z) * .5; }
         // (The armchair is solid to it: it never rolls in under, out of her reach.)
-        local.set(wx, .3, wz).applyMatrix4(chairInv);
+        local.set(wx, g.position.y, wz).applyMatrix4(chairInv);
         const cb = chairBox, pad = L.rad + .05;
-        if (local.x > cb.min.x - pad && local.x < cb.max.x + pad && local.z > cb.min.z - pad && local.z < cb.max.z + pad) {
+        if (local.y < cb.max.y + L.rad && local.x > cb.min.x - pad && local.x < cb.max.x + pad && local.z > cb.min.z - pad && local.z < cb.max.z + pad) {
           const outs = [[cb.min.x - pad - local.x, 'x'], [cb.max.x + pad - local.x, 'x'], [cb.min.z - pad - local.z, 'z'], [cb.max.z + pad - local.z, 'z']];
           const [d, ax] = outs.reduce((a, b) => Math.abs(b[0]) < Math.abs(a[0]) ? b : a);
           local[ax] += d;
