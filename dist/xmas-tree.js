@@ -20,7 +20,7 @@ import {rng, canvasTexture, lathe} from './room.js';
 // (Her side of it was laid out for a tree in the back right corner; RY
 // turns all of it round together: out at the front of the floor, her side
 // of it is its right, where there's room.)
-const TX = 3.7, TZ = 2.5, RY = 1.9, at = (a, d) => [TX + Math.sin(a + RY) * d, TZ + Math.cos(a + RY) * d];
+const TX = 3.7, TZ = 1.9, RY = 1.5, at = (a, d) => [TX + Math.sin(a + RY) * d, TZ + Math.cos(a + RY) * d];
 export const TREE = {
   x: TX, z: TZ, ry: RY, base: .9, top: 7.5, radius: 1.75,
   walls: {x1: 6.92, z0: -4.1}, // (the right wall and the back wall: no bough goes through them)
