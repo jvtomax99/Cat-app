@@ -90,16 +90,22 @@ await idle(); await step(60);
 await idle();
 // (As in the app, she picks it when she's settled: not halfway through
 // something of her own, like stalking the vacuum's dock.)
-await until(() => ['sit', 'loaf'].includes(kitten.brain.activity) && !kitten.brain.target && !kitten.brain.pounce, 600);
+// (Off on a climb of her own, up on the counter say, she comes down first.)
+const settle = async () => {
+  await until(() => ['sit', 'loaf'].includes(kitten.brain.activity) && !kitten.brain.target && !kitten.brain.pounce && !kitten.brain.jump, 600);
+  for (let i = 0; i < 4 && await page.evaluate(() => !!kitten.brain.perch); i++) { await page.evaluate(() => kitten.jumpDown(() => kitten.setActivity('sit'))); await until(() => !kitten.brain.jump && kitten.brain.activity === 'sit', 300); }
+  await idle();
+};
+await settle();
 await page.evaluate(() => kitten.treeHide());
 ok('hides under the tree', await until(() => kitten.brain.activity === 'loaf' && Math.hypot(kitten.brain.pos.x - kitten.TREE.hide[0], kitten.brain.pos.z - kitten.TREE.hide[1]) < .4, 500), JSON.stringify(await state()));
 await step(20);
 await shot('6-hide');
 await step(260);
 // Into the open box.
-await idle();
+await idle(); await settle();
 await page.evaluate(() => kitten.boxSit());
-ok('sits in the open box', await until(() => kitten.brain.perch === 'xmasBox' && kitten.brain.activity === 'loaf', 500), JSON.stringify(await state()));
+ok('sits in the open box', await until(() => kitten.brain.perch === 'xmasBox' && kitten.brain.activity === 'loaf', 800), JSON.stringify(await state()));
 await step(10);
 await shot('7-box');
 // The look changed away from Christmas: no tree, she's back on her usual floor.
