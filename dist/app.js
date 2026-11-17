@@ -723,7 +723,7 @@ function withTree(L) {
     treeMid: {spot: at(T.treeMid.spot), top: T.treeMid.top, via: 'treeLow', face: T.treeMid.face},
     treeHigh: {spot: at(T.treeHigh.spot), top: T.treeHigh.top, via: 'treeMid', face: T.treeHigh.face},
     treeTop: {spot: at(T.treeTop.spot), top: T.treeTop.top, via: 'treeHigh', face: T.treeTop.face},
-    xmasBox: {spot: at(TREE.box.spot), top: .05, base: at(TREE.boxFrom), face: .3 + TREE.ry},
+    xmasBox: {spot: at(TREE.box.spot), top: .05, base: at(TREE.boxFrom), face: TREE.box.face},
   });
   L.camSolids = L.camSolids.concat([[TREE.x, TREE.z, 1.45, 7.8]]);
   return L;

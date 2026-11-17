@@ -24,20 +24,21 @@ const TX = 3.35, TZ = .45, RY = .9, at = (a, d) => [TX + Math.sin(a + RY) * d, T
 export const TREE = {
   x: TX, z: TZ, ry: RY, base: .9, top: 7.5, radius: 1.75,
   walls: {x1: 6.92, z0: -4.1}, // (the right wall and the back wall: no bough goes through them)
-  // Up the tree in stages, lying across its front, her head to the wall
-  // and a paw hanging down, as in the picture.
+  // Up the tree in stages, lying across its front, her head to the right
+  // and a paw hanging down, as in the picture (side on to the camera: her
+  // faces are not turned by RY).
   perches: {
-    treeLow: {spot: at(-.75, 1.15), top: 1.9, face: Math.PI / 2 + .3 + RY},
-    treeMid: {spot: at(-.5, .9), top: 3.3, face: Math.PI / 2 + .15 + RY},
-    treeHigh: {spot: at(-.35, .65), top: 4.6, face: Math.PI / 2 + .3 + RY},
-    treeTop: {spot: at(-.25, .36), top: 5.8, face: Math.PI / 2 + .4 + RY},
+    treeLow: {spot: at(-.75, 1.15), top: 1.9, face: Math.PI / 2 + .3},
+    treeMid: {spot: at(-.5, .9), top: 3.3, face: Math.PI / 2 + .15},
+    treeHigh: {spot: at(-.35, .65), top: 4.6, face: Math.PI / 2 + .3},
+    treeTop: {spot: at(-.25, .36), top: 5.8, face: Math.PI / 2 + .4},
   },
   climbFrom: at(-1.0, 2.25),
-  // On the skirt under the low boughs at its front right (the open floor:
-  // its left is hard by the island), looking out.
-  hide: at(0, 1.2), hideFace: RY,
+  // On the skirt under the low boughs at its front (its left is hard by
+  // the island), looking out at you.
+  hide: at(-.9, 1.2), hideFace: 0,
   // The open box on the skirt at its right, and where she hops in from.
-  box: {spot: at(.55, 1.55), ry: Math.PI / 2 + .15 + RY}, boxFrom: at(-.197, 1.53),
+  box: {spot: at(.1, 1.55), ry: Math.PI / 2 + .15 + RY - .45, face: .3 + RY - .45}, boxFrom: at(-.647, 1.53),
   // The first look: from out on the floor, then up close to sniff.
   look: at(-.84, 3.82), sniff: at(-.95, 2.45),
   // Kept clear for her: the stand in its collar.
