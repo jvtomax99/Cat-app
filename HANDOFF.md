@@ -1,3 +1,21 @@
+# Handoff: 2026-11-17, the Christmas tree is on the preview (build 437)
+## Christmas tree (phase 06, preview build 437, `5cff5b5`)
+Merlin asked for a tree like a photo of a cat lying in a decorated fir, then
+"huge" with lots of curious play, then sent a picture of the kitchen with
+the tree in the back corner by the doorway. Built to that picture:
+`dist/xmas-tree.js` (`TREE` places everything), `kitchen.setTree`,
+`decor.js` (`bowGeometry`), app.js "Christmas tree" block. Brief:
+`docs/phases/06-christmas-tree.md`; SPEC.md "Christmas tree".
+Checked: `tools/qa/tree.mjs` 23 of 23, `npm run check`, stills; two
+reviewer passes (all findings fixed; the last restyle was not re-reviewed).
+Not checked: a real phone (about 5000 needle cards, 900 lights).
+Next step: Merlin tries it on his phone (decor menu, Christmas, kitchen),
+then notes or "Go live". If it stutters: thin the needle cards first
+(`buildChristmasTree`, the bough sprays and the 1400-card coat).
+The session ran on `claude/brave-mendel-d9gszp`; the preview branch is at
+the same commit. A commit and push in one command was refused twice by the
+permission check; separate commands went through.
+
 # Handoff: 2026-11-14, outside views and the sparrow are live (build 413)
 ## Outside views and the bird (live, build 413, `d71d447`, 2026-11-14)
 Merlin asked for better graphics outside the windows, then for the kitchen
