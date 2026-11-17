@@ -29,9 +29,10 @@ const K = {
   counter: 2.2, counterFront: -2.72, shelf1: 4.1, shelf2: 5.5, shelfX: [-5.2, 3.4], shelfD: .9,
   island: {x0: -3.9, x1: 1.5, z0: -.55, z1: 1.95, top: 2.25},
   tent: {x: 4.75, z: .75, ry: -.45},
-  // At Christmas the tree stands by the island and her corner changes: no
-  // tent, a round bed by the right wall, the fountain and bowl beside it.
-  xmas: {bed: {x: 6.0, z: -.45}, fountain: {x: 5.95, z: 1.9, ry: -.6}, bowl: {x: 5.15, z: 3.35, ry: -.9}},
+  // At Christmas the tree stands in front of the counter's right end and
+  // her corner changes: no tent, a round bed by the right wall, the
+  // fountain beside it (where it stood is in front of the tree).
+  xmas: {bed: {x: 5.6, z: 1.5}, fountain: {x: 5.9, z: 3.2, ry: -.6}, bowl: {x: 4.55, z: 2.6, ry: -.5}},
 };
 // Where she may walk: the open floor, keeping clear of the island.
 // (Her centre .6 from the window wall and the counter: her head turned
@@ -1061,7 +1062,7 @@ export class Kitchen {
 
   // The Christmas tree up (or put away): its foot and the box are in her
   // way; the tent is put away for a round bed by the wall, and her fountain
-  // and bowl move beside it (the tree stands where the fountain was).
+  // moves beside it (it would stand in front of the tree).
   setTree(on) {
     on = !!on;
     for (const o of [TREE_FOOT, TREE_BOX]) { const i = OBSTACLES.indexOf(o); if (on && i < 0) OBSTACLES.push(o); if (!on && i >= 0) OBSTACLES.splice(i, 1); }
