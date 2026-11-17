@@ -32,7 +32,7 @@ const K = {
   // At Christmas the tree stands at the front, right of the island, and her
   // corner changes: no tent, a round bed by the right wall behind it, her
   // fountain and bowl moved behind it too.
-  xmas: {bed: {x: 6.0, z: -1.4}, fountain: {x: 5.9, z: -.2, ry: -.6}, bowl: {x: 4.1, z: -.8, ry: -.5}},
+  xmas: {bed: {x: 6.0, z: -1.6}, fountain: {x: 5.9, z: -.4, ry: -.6}, bowl: {x: 4.1, z: -.9, ry: -.5}},
 };
 // Where she may walk: the open floor, keeping clear of the island.
 // (Her centre .6 from the window wall and the counter: her head turned
