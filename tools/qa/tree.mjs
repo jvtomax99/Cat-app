@@ -1,4 +1,4 @@
-// The Christmas tree in the kitchen's back corner: her first curious look, up it in
+// The Christmas tree in the kitchen beside the island: her first curious look, up it in
 // stages, a bauble batted, one knocked off and chased, stuck at the top and
 // helped down, hiding under it, sitting in the open box; a tap hangs a
 // fallen bauble back. Stills of each step, and checks.
@@ -88,6 +88,9 @@ ok('and stays down', await page.evaluate(() => !kitten.brain.perch), JSON.string
 await idle(); await step(60);
 // Hiding under the low boughs.
 await idle();
+// (As in the app, she picks it when she's settled: not halfway through
+// something of her own, like stalking the vacuum's dock.)
+await until(() => ['sit', 'loaf'].includes(kitten.brain.activity) && !kitten.brain.target && !kitten.brain.pounce, 600);
 await page.evaluate(() => kitten.treeHide());
 ok('hides under the tree', await until(() => kitten.brain.activity === 'loaf' && Math.hypot(kitten.brain.pos.x - kitten.TREE.hide[0], kitten.brain.pos.z - kitten.TREE.hide[1]) < .4, 500), JSON.stringify(await state()));
 await step(20);
