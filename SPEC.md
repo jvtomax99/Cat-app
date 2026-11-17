@@ -174,8 +174,8 @@ the phone's browser and can be added to the home screen.
   by the right wall, her fountain and bowl beside it (the tent is back in
   every other look); with warm white lights all through it, baubles in gold, champagne,
   bronze, mercury silver and deep red, big burgundy velvet bows, a gold star
-  on top, a cream knitted skirt with a few baubles on it, and an open box by
-  the wall; the first time she sees it in a visit she stares up it, creeps
+  on top, a cream knitted skirt with a few baubles on it, and an open box beside
+  it; the first time she sees it in a visit she stares up it, creeps
   up crouched, sits, then sniffs and paws a low bauble and hops back; on her
   own (often) and when the tree is tapped she climbs it in stages and lies
   across its front half out of the needles; up there she bats baubles and

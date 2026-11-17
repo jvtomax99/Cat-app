@@ -723,7 +723,7 @@ function withTree(L) {
     treeMid: {spot: at(T.treeMid.spot), top: T.treeMid.top, via: 'treeLow', face: T.treeMid.face},
     treeHigh: {spot: at(T.treeHigh.spot), top: T.treeHigh.top, via: 'treeMid', face: T.treeHigh.face},
     treeTop: {spot: at(T.treeTop.spot), top: T.treeTop.top, via: 'treeHigh', face: T.treeTop.face},
-    xmasBox: {spot: at(TREE.box.spot), top: .05, base: at(TREE.boxFrom), face: .3},
+    xmasBox: {spot: at(TREE.box.spot), top: .05, base: at(TREE.boxFrom), face: .3 + TREE.ry},
   });
   L.camSolids = L.camSolids.concat([[TREE.x, TREE.z, 1.45, 7.8]]);
   return L;
@@ -3692,14 +3692,19 @@ $('#decor-options').addEventListener('click', e => {
   // Let the menu close and the note show before the room is redressed.
   toast('Decorating…');
   setTimeout(() => {
-    // (Her kitchen bed moves when the tree comes or goes: in it, she goes with it.)
-    const inKitchenBed = !!kitchen && place === kitchen && !brain.perch && !brain.jump && Math.hypot(brain.pos.x - bed.position.x, brain.pos.z - bed.position.z) < kitchen.bedRadius;
+    // (Her kitchen bed, fountain and bowl move when the tree comes or goes:
+    // in the bed, she goes with it; on her way to one of them, she stops.)
+    const treeWas = !!kitchen?.treeOn, inKitchenBed = !!kitchen && place === kitchen && !brain.perch && !brain.jump && Math.hypot(brain.pos.x - bed.position.x, brain.pos.z - bed.position.z) < kitchen.bedRadius;
     applyDecor(room, id);
     if (kitchen) applyKitchenDecor(kitchen, id);
     // (The kitchen's places change with its tree: her perches in it, her floor.)
     if (kitchen) kitchen.layoutCache = null;
     if (place === kitchen) usePlace(kitchen);
-    if (inKitchenBed) { brain.pos.set(CUSHION_SPOT.x, 0, CUSHION_SPOT.z); brain.target = null; }
+    if (place === kitchen && treeWas !== !!kitchen.treeOn && !brain.perch && !brain.jump) {
+      if (inKitchenBed) brain.pos.set(CUSHION_SPOT.x, 0, CUSHION_SPOT.z);
+      else if (brain.target) { brain.target = null; brain.after = null; setActivity('sit'); }
+      brain.target = null;
+    }
     // (In the tree or its box as it's put away: she's on the floor beside it.)
     if (id !== 'christmas') {
       if (treePlace(brain.perch) || treePlace(brain.jump?.perch)) { Object.assign(brain, {perch: null, jump: null, climbGoal: null, treeStuck: false}); brain.elevation = 0; brain.pos.set(TREE.climbFrom[0], 0, TREE.climbFrom[1]); setActivity('sit'); }

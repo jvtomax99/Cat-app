@@ -23,7 +23,7 @@ any other look brings the tent back.
   the island, clear of the doorway; her tent swapped for a round bed; about 230 baubles and 45 teardrops in gold,
   champagne, bronze, mercury silver and deep red, about 15 velvet bows, a
   gold star, about 900 lights; a cream knitted skirt with a few baubles on
-  it and an open box by the wall. The study is as it was.
+  it and an open box beside it. The study is as it was.
 - First look, once a visit: stares up it, creeps up crouched, sits and looks
   again, sniffs and paws a low bauble, hops back when it swings, chirps.
 - Climbs in stages (low, middle, high) and lies across its front half out

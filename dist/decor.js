@@ -1212,7 +1212,7 @@ function kitchenChristmas(kitchen, T) {
   // to walk round, nothing for the vacuum to meet), and a plaid cushion
   // propped in the back of the tent.
   // (At Christmas the tent is put away for her round bed: the mat lies under that.)
-  const tentMat = mesh(new THREE.CircleGeometry(1.15, 56), new THREE.MeshStandardMaterial({map: canvasTexture(512, 512, drawWovenMat), roughness: 1}), g, {cast: false});
+  const tentMat = mesh(new THREE.CircleGeometry(.95, 56), new THREE.MeshStandardMaterial({map: canvasTexture(512, 512, drawWovenMat), roughness: 1}), g, {cast: false});
   tentMat.rotation.set(-Math.PI / 2, 0, .3); tentMat.position.set(4.75, .004, .75); kitchen.xmasMat = tentMat; // (moved with her bed: setTree)
   const plaid = new THREE.MeshStandardMaterial({map: kitchen.room.decorOriginal?.bedMap ?? kitchen.room.materials.plaidBed.map, roughness: .95});
   const cushion = mesh(pillowGeometry(.68, .66, .3), plaid, kitchen.bed);

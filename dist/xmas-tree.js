@@ -16,7 +16,7 @@ import {rng, canvasTexture, lathe} from './room.js';
 // Where it stands and where she goes in it, in the kitchen's frame (plain
 // numbers, so the kitchen's layout can name her perches before it's built).
 // The camera looks from the open front (+z): her places are on the tree's
-// front-left, the side you see and the side she climbs from.
+// front-left, the side she climbs from (turned by RY, below).
 // (Her side of it was laid out for a tree in the back right corner; RY
 // turns all of it round together, so it faces the open floor to the right
 // of the island, away from the island itself.)
@@ -33,10 +33,10 @@ export const TREE = {
     treeTop: {spot: at(-.25, .36), top: 5.8, face: Math.PI / 2 + .4 + RY},
   },
   climbFrom: at(-1.0, 2.25),
-  // On the skirt under the low boughs on its left side (clear of the tent),
-  // looking out.
-  hide: at(-1.3, 1.2), hideFace: -1.3 + RY,
-  // The open box on the skirt by the wall, and where she hops in from.
+  // On the skirt under the low boughs at its front right (the open floor:
+  // its left is hard by the island), looking out.
+  hide: at(0, 1.2), hideFace: RY,
+  // The open box on the skirt at its right, and where she hops in from.
   box: {spot: at(.55, 1.55), ry: Math.PI / 2 + .15 + RY}, boxFrom: at(-.197, 1.53),
   // The first look: from out on the floor, then up close to sniff.
   look: at(-.84, 3.82), sniff: at(-.95, 2.45),

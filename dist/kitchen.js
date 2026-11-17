@@ -1121,7 +1121,7 @@ export class Kitchen {
       if (Math.hypot(v.x - t.x, v.z - t.z) < 1.5 || OBSTACLES.some(c => Math.hypot(v.x - c.x, v.z - c.z) < c.r + (pad ? pad * .5 + (c === TENT ? .5 : .15) : .3))) continue;
       return v;
     }
-    return V(5.5, 0, 3.6);
+    return V(4.0, 0, 3.9);
   }
   // The safety net under every way she moves on the floor (walks, the toy
   // chase, pounces, zoomies): her centre is kept out of the furniture, far
