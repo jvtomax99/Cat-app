@@ -1,6 +1,6 @@
-// Mochi's Christmas tree, in the kitchen's back corner by the doorway to her
-// study, her tent in front of it (Merlin, 2026-11-16: a picture of the
-// kitchen with the tree there). A tall, full fir, warm white fairy lights all
+// Mochi's Christmas tree, in the kitchen beside the island, clear of the
+// doorway to her study (Merlin, 2026-11-17: a picture with it there; while
+// it's up her tent is put away for a round bed by the wall, kitchen.setTree). A tall, full fir, warm white fairy lights all
 // through it, baubles in gold, champagne, bronze, mercury silver and deep
 // red, big burgundy velvet bows, a gold star on top, a cream knitted skirt
 // with a few baubles lying on it, and an open box she sits in. All built in
@@ -17,32 +17,35 @@ import {rng, canvasTexture, lathe} from './room.js';
 // numbers, so the kitchen's layout can name her perches before it's built).
 // The camera looks from the open front (+z): her places are on the tree's
 // front-left, the side you see and the side she climbs from.
-const TX = 5.75, TZ = -2.35, at = (a, d) => [TX + Math.sin(a) * d, TZ + Math.cos(a) * d];
+// (Her side of it was laid out for a tree in the back right corner; RY
+// turns all of it round together, so it faces the open floor to the right
+// of the island, away from the island itself.)
+const TX = 3.35, TZ = .45, RY = .9, at = (a, d) => [TX + Math.sin(a + RY) * d, TZ + Math.cos(a + RY) * d];
 export const TREE = {
-  x: TX, z: TZ, base: .9, top: 7.5, radius: 1.75,
+  x: TX, z: TZ, ry: RY, base: .9, top: 7.5, radius: 1.75,
   walls: {x1: 6.92, z0: -4.1}, // (the right wall and the back wall: no bough goes through them)
   // Up the tree in stages, lying across its front, her head to the wall
   // and a paw hanging down, as in the picture.
   perches: {
-    treeLow: {spot: at(-.75, 1.15), top: 1.9, face: Math.PI / 2 + .3},
-    treeMid: {spot: at(-.5, .9), top: 3.3, face: Math.PI / 2 + .15},
-    treeHigh: {spot: at(-.35, .65), top: 4.6, face: Math.PI / 2 + .3},
-    treeTop: {spot: at(-.25, .36), top: 5.8, face: Math.PI / 2 + .4},
+    treeLow: {spot: at(-.75, 1.15), top: 1.9, face: Math.PI / 2 + .3 + RY},
+    treeMid: {spot: at(-.5, .9), top: 3.3, face: Math.PI / 2 + .15 + RY},
+    treeHigh: {spot: at(-.35, .65), top: 4.6, face: Math.PI / 2 + .3 + RY},
+    treeTop: {spot: at(-.25, .36), top: 5.8, face: Math.PI / 2 + .4 + RY},
   },
   climbFrom: at(-1.0, 2.25),
   // On the skirt under the low boughs on its left side (clear of the tent),
   // looking out.
-  hide: at(-1.3, 1.2), hideFace: -1.3,
+  hide: at(-1.3, 1.2), hideFace: -1.3 + RY,
   // The open box on the skirt by the wall, and where she hops in from.
-  box: {spot: at(.55, 1.55), ry: Math.PI / 2 + .15}, boxFrom: [5.45, -.85],
+  box: {spot: at(.55, 1.55), ry: Math.PI / 2 + .15 + RY}, boxFrom: at(-.197, 1.53),
   // The first look: from out on the floor, then up close to sniff.
-  look: [2.9, .2], sniff: at(-.95, 2.45),
+  look: at(-.84, 3.82), sniff: at(-.95, 2.45),
   // Kept clear for her: the stand in its collar.
   ring: .6,
 };
 // (The way to the open floor in front of it, as an angle round the tree:
 // where a fallen bauble ends up, in reach.)
-const FRONT = -.95;
+const FRONT = -.95 + RY;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const P = n => TREE.perches[n];
 
@@ -327,7 +330,7 @@ export function buildChristmasTree(parent, {solids = [], circles = [], bow = nul
     [[0, 0, '#d9b25e', .1], [.32, .1, '#7a1320', .09], [-.3, .16, '#e8cf95', .085]].forEach(([dx, dy, color, rad]) => hangLoose(paw.clone().addScaledVector(side, dx).add(V(0, -dy, 0)).add(V(0, 0, .12)), color, rad, 'high'));
   }
   [[-1.0, 1.32, '#d9b25e', .1], [-1.15, 1.18, '#7a1320', .11], [-1.3, 1.28, '#d7d9dc', .095]].forEach(([a, y, color, rad]) => {
-    const d = radiusAt(y) + .04; hangLoose(V(Math.sin(a) * d, y, Math.cos(a) * d), color, rad, 'low');
+    a += RY; const d = radiusAt(y) + .04; hangLoose(V(Math.sin(a) * d, y, Math.cos(a) * d), color, rad, 'low');
   });
   {
     const hx = TREE.hide[0] - TREE.x, hz = TREE.hide[1] - TREE.z, f = V(Math.sin(TREE.hideFace), 0, Math.cos(TREE.hideFace));
@@ -351,7 +354,7 @@ export function buildChristmasTree(parent, {solids = [], circles = [], bow = nul
     const skirt = new THREE.Mesh(geo, knit); skirt.receiveShadow = true; root.add(skirt);
     const S2 = batcher();
     for (const [a, d, color, rad] of [[-.2, 1.1, '#d9b25e', .1], [.9, .95, '#7a1320', .09], [-1.6, 1.15, '#e8cf95', .085], [2.6, 1.0, '#a8662f', .1]]) {
-      const p = V(Math.sin(a) * d, rad + .05, Math.cos(a) * d);
+      const p = V(Math.sin(a + RY) * d, rad + .05, Math.cos(a + RY) * d);
       if (blocked(p) || Math.hypot(p.x + TREE.x - TREE.hide[0], p.z + TREE.z - TREE.hide[1]) < .7) continue;
       S2.add(sphere, glass, m4.compose(p, q.identity(), s.setScalar(rad)), color);
       S2.add(cap, brass, m4.compose(p.clone().add(V(rad * .9, .02, 0)), q.setFromAxisAngle(V(0, 0, 1), -Math.PI / 2), s.setScalar(rad * .9)));
@@ -385,7 +388,7 @@ export function buildChristmasTree(parent, {solids = [], circles = [], bow = nul
     g.fillStyle = grd; g.fillRect(0, 0, w, h);
   });
   const washMat = new THREE.MeshBasicMaterial({map: washTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false});
-  const washFloor = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 6.5), washMat); washFloor.rotation.x = -Math.PI / 2; washFloor.position.set(.4, .012, .3); root.add(washFloor);
+  const washFloor = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 6.5), washMat); washFloor.rotation.x = -Math.PI / 2; washFloor.position.set(.4 * Math.cos(RY) + .3 * Math.sin(RY), .012, .3 * Math.cos(RY) - .4 * Math.sin(RY)); root.add(washFloor);
 
   // ---- Movement: the sway (a damped spring about the foot) and the
   // baubles' swing and fall.

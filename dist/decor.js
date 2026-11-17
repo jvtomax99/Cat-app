@@ -612,11 +612,13 @@ export function applyKitchenDecor(kitchen, name) {
     parts[name] ??= name === 'halloween' ? kitchenHalloween(kitchen, T) : kitchenThanksgiving(kitchen, T);
   }
   if (christmas) parts.christmas ??= kitchenChristmas(kitchen, T);
-  // The Christmas tree, in the back corner by the doorway (xmas-tree.js),
+  // The Christmas tree, beside the island (xmas-tree.js),
   // with velvet bows like the shelves'.
+  // (Its corner first: the tent away, her bed, fountain and bowl moved, so
+  // the tree's falling baubles meet them where they now stand.)
+  kitchen.setTree?.(christmas);
   if (christmas) kitchen.xmasTree ??= buildChristmasTree(kitchen.group, {solids: [kitchen.islandSolid, kitchen.counterSolid], circles: kitchen.roundSolids, bow: bowGeometry(kitchen)});
   if (kitchen.xmasTree) kitchen.xmasTree.root.visible = christmas;
-  kitchen.setTree?.(christmas);
   for (const [part, g] of Object.entries(parts)) g.visible = part === 'shared' ? autumn : part === name;
   kitchen.orchid.visible = name === 'classic';
   // Christmas swaps a few of the kitchen's own pieces: the hanging lamps
@@ -631,7 +633,7 @@ export function applyKitchenDecor(kitchen, name) {
     X.fittings.forEach(o => o.visible = christmas);
   }
   if (kitchen.ghostCushion) kitchen.ghostCushion.visible = name === 'halloween';
-  if (kitchen.xmasCushion) kitchen.xmasCushion.visible = christmas;
+  if (kitchen.xmasCushion) kitchen.xmasCushion.visible = christmas && !kitchen.treeOn;
   // Christmas warms the room itself: the plaster and the stone floor take
   // on the pictures' honey tone (and give it back for the other looks).
   const KM = kitchen.materials;
@@ -1205,12 +1207,13 @@ function kitchenChristmas(kitchen, T) {
   });
   kitchen.xmasLamps = {alabaster, arms, fittings};
 
-  // Her corner: a big round woven mat under the tent (her fountain and
+  // Her corner: a round woven mat under her bed (her fountain and
   // bowl have their own mats already), lying flat on the floor (nothing
   // to walk round, nothing for the vacuum to meet), and a plaid cushion
   // propped in the back of the tent.
-  const tentMat = mesh(new THREE.CircleGeometry(1.78, 56), new THREE.MeshStandardMaterial({map: canvasTexture(512, 512, drawWovenMat), roughness: 1}), g, {cast: false});
-  tentMat.rotation.set(-Math.PI / 2, 0, .3); tentMat.position.set(4.75, .004, .75);
+  // (At Christmas the tent is put away for her round bed: the mat lies under that.)
+  const tentMat = mesh(new THREE.CircleGeometry(1.15, 56), new THREE.MeshStandardMaterial({map: canvasTexture(512, 512, drawWovenMat), roughness: 1}), g, {cast: false});
+  tentMat.rotation.set(-Math.PI / 2, 0, .3); tentMat.position.set(4.75, .004, .75); kitchen.xmasMat = tentMat; // (moved with her bed: setTree)
   const plaid = new THREE.MeshStandardMaterial({map: kitchen.room.decorOriginal?.bedMap ?? kitchen.room.materials.plaidBed.map, roughness: .95});
   const cushion = mesh(pillowGeometry(.68, .66, .3), plaid, kitchen.bed);
   kitchen.mesh(pillowPiping(cushion.geometry), new THREE.MeshStandardMaterial({color: '#2b3a2a', roughness: .85}), cushion, {cast: false});
