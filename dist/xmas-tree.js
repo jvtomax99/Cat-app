@@ -1,5 +1,5 @@
-// Mochi's Christmas tree, in the kitchen in front of the back counter's
-// right end, clear of the island (Merlin, 2026-11-17; while
+// Mochi's Christmas tree, in the kitchen out at the front of the floor,
+// right of the island, clear of it and of the counter (Merlin, 2026-11-17; while
 // it's up her tent is put away for a round bed by the wall, kitchen.setTree). A tall, full fir, warm white fairy lights all
 // through it, baubles in gold, champagne, bronze, mercury silver and deep
 // red, big burgundy velvet bows, a gold star on top, a cream knitted skirt
@@ -18,9 +18,9 @@ import {rng, canvasTexture, lathe} from './room.js';
 // The camera looks from the open front (+z): her places are on the tree's
 // front-left, the side she climbs from (turned by RY, below).
 // (Her side of it was laid out for a tree in the back right corner; RY
-// turns all of it round together, so it faces the open floor in front of
-// it, clear of the island.)
-const TX = 3.5, TZ = -.6, RY = .5, at = (a, d) => [TX + Math.sin(a + RY) * d, TZ + Math.cos(a + RY) * d];
+// turns all of it round together: out at the front of the floor, her side
+// of it is its right, where there's room.)
+const TX = 3.7, TZ = 2.5, RY = 1.9, at = (a, d) => [TX + Math.sin(a + RY) * d, TZ + Math.cos(a + RY) * d];
 export const TREE = {
   x: TX, z: TZ, ry: RY, base: .9, top: 7.5, radius: 1.75,
   walls: {x1: 6.92, z0: -4.1}, // (the right wall and the back wall: no bough goes through them)
@@ -40,7 +40,7 @@ export const TREE = {
   // The open box on the skirt at its right, and where she hops in from.
   box: {spot: at(.1, 1.55), ry: Math.PI / 2 + .15 + RY - .45, face: .3 + RY - .45}, boxFrom: at(-.647, 1.53),
   // The first look: from out on the floor, then up close to sniff.
-  look: at(-.84, 3.82), sniff: at(-.95, 2.45),
+  look: at(-.84, 2.9), sniff: at(-.95, 2.45),
   // Kept clear for her: the stand in its collar.
   ring: .6,
 };
