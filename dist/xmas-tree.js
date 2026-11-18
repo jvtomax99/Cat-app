@@ -1,5 +1,5 @@
-// Mochi's Christmas tree, in the kitchen out at the front of the floor,
-// right of the island, clear of it and of the counter (Merlin, 2026-11-17; while
+// Mochi's Christmas tree, in the kitchen's back right corner, right of the
+// doorway to her study (the room was widened for it: Merlin, 2026-11-18; while
 // it's up her tent is put away for a round bed by the wall, kitchen.setTree). A tall, full fir, warm white fairy lights all
 // through it, baubles in gold, champagne, bronze, mercury silver and deep
 // red, big burgundy velvet bows, a gold star on top, a cream knitted skirt
@@ -17,13 +17,11 @@ import {rng, canvasTexture, lathe} from './room.js';
 // numbers, so the kitchen's layout can name her perches before it's built).
 // The camera looks from the open front (+z): her places are on the tree's
 // front-left, the side she climbs from (turned by RY, below).
-// (Her side of it was laid out for a tree in the back right corner; RY
-// turns all of it round together: out at the front of the floor, her side
-// of it is its right, where there's room.)
-const TX = 3.7, TZ = 1.3, RY = 1.2, at = (a, d) => [TX + Math.sin(a + RY) * d, TZ + Math.cos(a + RY) * d];
+// (RY turns all of her side of it round together, should it move again.)
+const TX = 8.1, TZ = -1.4, RY = 0, at = (a, d) => [TX + Math.sin(a + RY) * d, TZ + Math.cos(a + RY) * d];
 export const TREE = {
   x: TX, z: TZ, ry: RY, base: .9, top: 7.5, radius: 1.75,
-  walls: {x1: 6.92, z0: -4.1}, // (the right wall and the back wall: no bough goes through them)
+  walls: {x1: 9.92, z0: -4.1}, // (the right wall and the back wall: no bough goes through them)
   // Up the tree in stages, lying across its front, her head to the right
   // and a paw hanging down, as in the picture (side on to the camera: her
   // faces are not turned by RY).
@@ -484,7 +482,7 @@ export function buildChristmasTree(parent, {solids = [], circles = [], bow = nul
         // the other round things, the tree's stand and the open box.)
         const wx = g.position.x + TREE.x, wz = g.position.z + TREE.z, rad = L.rad;
         if (wx < -5.9 + rad) { g.position.x = -5.9 + rad - TREE.x; D.vel.x = Math.abs(D.vel.x) * .5; }
-        if (wx > 6.92 - rad) { g.position.x = 6.92 - rad - TREE.x; D.vel.x = -Math.abs(D.vel.x) * .5; }
+        if (wx > TREE.walls.x1 - rad) { g.position.x = TREE.walls.x1 - rad - TREE.x; D.vel.x = -Math.abs(D.vel.x) * .5; }
         if (wz < -4.1 + rad) { g.position.z = -4.1 + rad - TREE.z; D.vel.z = Math.abs(D.vel.z) * .5; }
         if (wz > 9) { g.position.z = 9 - TREE.z; D.vel.z = -Math.abs(D.vel.z) * .5; }
         for (const C of circles) {

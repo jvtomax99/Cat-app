@@ -18,9 +18,17 @@ open floor). While it's up the tent is put away for a round bed by the right
 wall, with her fountain and bowl beside it (`kitchen.setTree`, `K.xmas`);
 any other look brings the tent back.
 
+2026-11-18: after several spots Merlin found the tree crowded the island
+and was hard to reach with the camera, and asked for a bigger room. The
+kitchen's right wall moved from x = 7 to 10 (`K.right`; floor, camera
+limits, the joined floor patch and the painting follow it), and the tree
+stands in the new corner right of the doorway (`TX` 8.1, `TZ` -1.4, `RY`
+0: her side of it laid out as first built). Round bed beside it; fountain
+and bowl in their usual places.
+
 ## What it does (for Lettuce, in December)
-- Christmas look: a tall full fir (about 7.5 high) in the kitchen beside
-  the island, clear of the doorway; her tent swapped for a round bed; about 230 baubles and 45 teardrops in gold,
+- Christmas look: a tall full fir (about 7.5 high) in the kitchen's back
+  right corner, right of the doorway (the room widened for it); her tent swapped for a round bed; about 230 baubles and 45 teardrops in gold,
   champagne, bronze, mercury silver and deep red, about 15 velvet bows, a
   gold star, about 900 lights; a cream knitted skirt with a few baubles on
   it and an open box beside it. The study is as it was.

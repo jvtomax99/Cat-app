@@ -669,7 +669,7 @@ function joinRooms() {
   room.group.visible = true;
   if (!kitchen) return;
   room.floorPatch ??= floorPatch(room.floor, room.walls.left, room.walls.right, room.walls.back, 8.6);
-  kitchen.floorPatch ??= floorPatch(kitchen.floor, -6, 7, -4.65, 14);
+  kitchen.floorPatch ??= floorPatch(kitchen.floor, -6, kitchen.right, -4.65, 14);
   for (const [id, r] of [['room', room], ['kitchen', kitchen]]) {
     const here = r === place, j = JOIN[id];
     r.group.visible = true;

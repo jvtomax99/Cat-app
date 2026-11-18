@@ -169,10 +169,11 @@ the phone's browser and can be added to the home screen.
 - **Christmas tree** (preview, phase 06; Merlin 2026-11-16, from a photo of a
   cat lying in a decorated tree, then a picture of the kitchen with the tree
   in it). Done when: in the Christmas look a tall full fir (about 7.5 high)
-  stands in the kitchen beside the island, clear of the doorway (Merlin
-  2026-11-17); while it's up her tent is put away and she has a round bed
-  by the right wall, her fountain and bowl beside it (the tent is back in
-  every other look); with warm white lights all through it, baubles in gold, champagne,
+  stands in the kitchen's back right corner, right of the study doorway,
+  clear of the doorway, the island and the counter (Merlin 2026-11-18: the
+  kitchen was widened for it, right wall 7 to 10, in every look); while
+  it's up her tent is put away and she has a round bed beside the tree
+  (the tent is back in every other look); with warm white lights all through it, baubles in gold, champagne,
   bronze, mercury silver and deep red, big burgundy velvet bows, a gold star
   on top, a cream knitted skirt with a few baubles on it, and an open box beside
   it; the first time she sees it in a visit she stares up it, creeps

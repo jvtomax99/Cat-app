@@ -22,22 +22,22 @@ const {damp} = THREE.MathUtils;
 const rand = (a, b) => a + Math.random() * (b - a);
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-// The plan. Back wall at z = -4.2, window wall at x = -6, right wall at x = 7,
+// The plan. Back wall at z = -4.2, window wall at x = -6, right wall at x = 10
+// (widened from 7 to make room for the Christmas tree, Merlin 2026-11-18),
 // with the opening to her study in the back wall between x = 3.8 and 6.2.
 const K = {
-  back: -4.2, left: -6, right: 7, door: [3.8, 6.2], doorTop: 5.4, wallH: 9.5,
+  back: -4.2, left: -6, right: 10, door: [3.8, 6.2], doorTop: 5.4, wallH: 9.5,
   counter: 2.2, counterFront: -2.72, shelf1: 4.1, shelf2: 5.5, shelfX: [-5.2, 3.4], shelfD: .9,
   island: {x0: -3.9, x1: 1.5, z0: -.55, z1: 1.95, top: 2.25},
   tent: {x: 4.75, z: .75, ry: -.45},
-  // At Christmas the tree stands at the front, right of the island, and her
-  // corner changes: no tent, a round bed by the right wall behind it, her
-  // fountain and bowl moved behind it too.
-  xmas: {bed: {x: 6.0, z: -1.6}, fountain: {x: 5.9, z: -.4, ry: -.6}, bowl: {x: 4.1, z: -.9, ry: -.5}},
+  // At Christmas the tree stands right of the doorway and the tent is put
+  // away for a round bed beside it; her fountain and bowl stay put.
+  xmas: {bed: {x: 8.4, z: 1.7}, fountain: {x: 3.0, z: 1.55, ry: .3}, bowl: {x: 4.55, z: 2.6, ry: -.5}},
 };
 // Where she may walk: the open floor, keeping clear of the island.
 // (Her centre .6 from the window wall and the counter: her head turned
 // to look at something reaches that far.)
-const FLOOR = {x0: -5.25, x1: 6.3, z0: -2.15, z1: 4.3};
+const FLOOR = {x0: -5.25, x1: 9.3, z0: -2.15, z1: 4.3};
 // The island and its stools, kept clear (the stools stand in front of it):
 // her centre this far out keeps her head and hips (each about .6 from it)
 // out of the island's base and the stools' legs (which reach .7 in front
@@ -45,7 +45,7 @@ const FLOOR = {x0: -5.25, x1: 6.3, z0: -2.15, z1: 4.3};
 const KEEP_OUT = {x0: K.island.x0 - .65, x1: K.island.x1 + .65, z0: K.island.z0 - .65, z1: K.island.z1 + 1.35};
 // Where the robot vacuum's centre may go: its body (.43) clear of the walls
 // and the counter; with her aboard, her head and hips (.6 each way) too.
-const VAC_FLOOR = {x0: -5.4, x1: 6.5, z0: -2.25, z1: 4.3}, VAC_FLOOR_RIDE = {x0: -5.3, x1: 6.3, z0: -1.83, z1: 4.3};
+const VAC_FLOOR = {x0: -5.4, x1: 9.5, z0: -2.25, z1: 4.3}, VAC_FLOOR_RIDE = {x0: -5.3, x1: 9.3, z0: -1.83, z1: 4.3};
 // Round things on the floor she walks round: the fountain, her bowl, the
 // tent (in and out by its doorway only) and the robot vacuum.
 const TENT = {x: K.tent.x, z: K.tent.z, r: 1.55};
@@ -920,7 +920,7 @@ export class Kitchen {
   // frame with a narrow gilt liner, larger than life for drama, as in the study.
   buildPainting() {
     const M = this.materials, W = 2.36, H = W * 69.6 / 56.5, F = .24, Ln = .045;
-    const g = new THREE.Group(); g.position.set(K.right, 4.2, .35); g.rotation.y = -Math.PI / 2; this.group.add(g);
+    const g = new THREE.Group(); g.position.set(K.right, 4.2, 1.9); g.rotation.y = -Math.PI / 2; this.group.add(g);
     const ebony = new THREE.MeshStandardMaterial({color: '#21150e', roughness: .45, metalness: .1});
     const gilt = new THREE.MeshStandardMaterial({color: '#9c7b45', roughness: .45, metalness: .7}); // antique gold
     const ow = W + 2 * (F + Ln), oh = H + 2 * (F + Ln);
@@ -1031,8 +1031,8 @@ export class Kitchen {
       bedOffset: this.treeOn ? null : V(Math.sin(K.tent.ry) * .15, 0, Math.cos(K.tent.ry) * .15),
       // Awake in the tent she faces out of the doorway (where it's tallest).
       bedFace: this.treeOn ? -.8 : K.tent.ry,
-      limits: {dist: [1.1, 16], pitch: [.04, 1.25], x: [-5.6, 6.4], z: [-3.6, 4.6], y: [.08, 5.8]},
-      camBox: {x: [-5.8, 6.8], y: [.2, 9.2], z: [-3.9, 26]}, // open to the front: the living area will be there
+      limits: {dist: [1.1, 16], pitch: [.04, 1.25], x: [-5.6, K.right - .6], z: [-3.6, 4.6], y: [.08, 5.8]},
+      camBox: {x: [-5.8, K.right - .2], y: [.2, 9.2], z: [-3.9, 26]}, // open to the front: the living area will be there
       camSolids: [[-2.6, .7, 1.45, 2.3], [.2, .7, 1.45, 2.3]].concat(this.treeOn ? [] : [[K.tent.x, K.tent.z, 1.4, 2.0]]),
       // Tops the camera mustn't sink into (it would see through them): over
       // the island or the back counter it stays a little above the surface.
@@ -1053,7 +1053,7 @@ export class Kitchen {
       // counter, both shelves) and the island; the tent corner is a drag away.
       across: wide
         ? [[I.x0, 1.2, I.z1], [I.x1, 1.2, I.z1], [-3.3, .8, I.z1 + .8], this.treeOn ? [K.xmas.bed.x + .6, .4, K.xmas.bed.z] : [K.tent.x + .7, .9, K.tent.z], [FOUNTAIN.x, .3, FOUNTAIN.z], [BOWL.x, .1, BOWL.z], [-5.2, 4.2, -3.9], [3.4, 4.2, -3.9],
-          [K.left, 4, this.windowRect.z0], [K.left, 1, this.windowRect.z1], [K.door[1], 3, K.back], [K.right, 5.95, -1.2], [K.right, 2.45, 1.9]]
+          [K.left, 4, this.windowRect.z0], [K.left, 1, this.windowRect.z1], [K.door[1], 3, K.back], [K.right - .5, 6.5, -2.2], [K.right - .8, .4, 1.0]]
         : [[I.x0, 1.2, I.z1], [I.x1, 1.2, I.z1], [-3.3, .8, I.z1 + .8], [3.0, .3, 1.55], [-5.2, 4.2, -3.9], [3.4, 4.2, -3.9], [-5.95, .9, -3.55], [-5.95, 5.0, -3.55]],
       bottom: [[I.x0, 0, I.z1 + .8], [I.x1, 0, I.z1 + .3], wide ? [4.55, 0, 3.0] : [2.6, 0, 3.0], [-1, 0, 3.4]],
       top: [[-5.2, 5.8, -3.9], [3.4, 5.8, -3.9], [-3.5, 7.4, .5], [.9, 7.6, 1.1]].concat(wide ? [[-1.2, 8.7, .7]] : []),
@@ -1079,6 +1079,7 @@ export class Kitchen {
   }
   // Solids for things that roll: the island, the back counter, and the
   // round things on the floor (tent, fountain, bowl, the vacuum's dock).
+  get right() { return K.right; }
   get islandSolid() { const I = K.island; return {x0: I.x0, x1: I.x1, z0: I.z0, z1: I.z1, top: I.top}; }
   get counterSolid() { return {x0: K.left, x1: 3.6, z0: K.back, z1: K.counterFront, top: K.counter}; }
   get roundSolids() { return [this.treeOn ? {x: K.xmas.bed.x, z: K.xmas.bed.z, r: .84, top: .3} : {x: TENT.x, z: TENT.z, r: 1.2, top: 1.9}, {x: FOUNTAIN.x, z: FOUNTAIN.z, r: .5, top: .4}, {x: BOWL.x, z: BOWL.z, r: .37, top: .16}, {x: DOCK.x, z: DOCK.z, r: .4, top: .35}]; }
@@ -1115,7 +1116,7 @@ export class Kitchen {
   randomFloorPoint(pad = 0) {
     const t = this.bed.position;
     for (let i = 0; i < 30; i++) {
-      const v = V(-4.8 + Math.random() * 10.4, 0, -2.1 + Math.random() * 6.2);
+      const v = V(-4.8 + Math.random() * (FLOOR.x1 - .7 + 4.8), 0, -2.1 + Math.random() * 6.2);
       if (v.x > KEEP_OUT.x0 - pad && v.x < KEEP_OUT.x1 + pad && v.z > KEEP_OUT.z0 - pad && v.z < KEEP_OUT.z1 + pad) continue;
       // (For the vacuum: clear of each thing by its own margin, as route()
       // pads it, so a goal never lies inside a padded circle.)
