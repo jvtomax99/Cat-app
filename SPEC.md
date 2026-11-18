@@ -206,6 +206,17 @@ Build order and status: `docs/ROADMAP.md` (a brief per phase in
 `docs/phases/`). Next up: phase 03 (tail in the study), then Christmas
 decor, Miso, phase 08 (app screens), phase 09 (test group).
 
+## Planned: the house (phase 20, Merlin 2026-11-18)
+A hall with stairs, an upstairs landing, a bedroom and a bathroom, a roof,
+and a House view of the whole house (the front lifts away; tap a room).
+She walks everywhere herself. Blueprint: `docs/house/blueprint.png`; brief
+and build order: `docs/phases/20-house.md`. Done when: she walks by herself
+from her bed in the study to the bath mat upstairs and back; every room is
+reachable from the picker and the House view; each new room has at least
+two things she does there; a phone runs as smoothly as in the kitchen
+today; old saves load. Not in it: decorating, a garden to walk in, seasonal
+looks for the new rooms, new care needs, bought models.
+
 ## Not in v1 (draft, Merlin to confirm)
 - Picking her up or carrying her, dragging food or the brush to her (plan
   B of phase 14; "Later" unless Merlin approves).
