@@ -491,7 +491,10 @@ try {
 const ambient = new THREE.HemisphereLight(0xfff0dc, 0x8a6446, 1.5);
 scene.add(ambient);
 const sun = new THREE.DirectionalLight(0xffdcae, 3.2);
-sun.position.set(-3, 6, 4);
+// (Each room has the sun from the same side of it; walking through a doorway
+// the sun's turn into the new room's side is eased, crossOver and updateRoom.)
+const SUN_HOME = new THREE.Vector3(-3, 6, 4);
+sun.position.copy(SUN_HOME);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, {left: -6, right: 6, top: 6, bottom: -6, far: 25});
@@ -729,27 +732,38 @@ function withTree(L) {
   L.camSolids = L.camSolids.concat([[TREE.x, TREE.z, 1.45, 7.8]]);
   return L;
 }
+// Her bowl and fountain live in the kitchen (Merlin 2026-11-18): hungry or
+// thirsty in the study, she walks there. (Until the kitchen is built, just
+// after loading, they wait in the study.)
+// Where she stands to eat and drink: in the bowl's and fountain's room,
+// on the side towards the middle of it.
+function placeBowls() {
+  let H = HOME;
+  if (kitchen) {
+    const KL = kitchen.layoutCache ??= withTree(kitchen.layout());
+    for (const [obj, spot] of [[bowl, KL.bowl], [fountain, KL.fountain]]) { kitchen.group.add(obj); obj.position.copy(spot.p); obj.rotation.y = spot.ry; }
+    H = KL.home;
+  }
+  const toHome = new THREE.Vector3().subVectors(H, bowl.position).setY(0).normalize();
+  EAT_SPOT = bowl.position.clone().addScaledVector(toHome, .86).setY(0);
+  const toFountain = new THREE.Vector3().subVectors(H, fountain.position).setY(0).normalize();
+  DRINK_SPOT = fountain.position.clone().addScaledVector(toFountain, 1.0).setY(0);
+}
+// Something to do by her bowl or fountain: in the kitchen now, or once
+// she's walked there.
+const inKitchen = (fn, run = false) => place === kitchen ? fn() : walkToRoom('kitchen', fn, run);
 function usePlace(p) {
   place = p;
   joinRooms();
   const L = p.layoutCache ??= p === room ? studyLayout() : withTree(p.layout());
-  // Her bowl and fountain come with her.
-  for (const [obj, spot] of [[bowl, L.bowl], [fountain, L.fountain]]) {
-    const home = obj.userData.studyHome ??= {p: obj.position.clone(), r: obj.rotation.y};
-    (p === room ? room.group : p.group).add(obj);
-    obj.position.copy(spot ? spot.p : home.p); obj.rotation.y = spot ? spot.ry : home.r;
-  }
   // (So does Halloween's felt bat toy.)
   if (room.altToy) (p === room ? room.group : p.group).add(room.altToy);
   bed = p.bed;
   HOME = L.home; TOY_HOME = L.toyHome; SUN_SPOT = L.sunSpot; PERCHES = L.perches;
+  placeBowls();
   LIMITS = L.limits; CAM_BOX = L.camBox; CAM_SOLIDS = L.camSolids; CAM_BLOCKS = L.camBlocks || [];
-  const toHome = new THREE.Vector3().subVectors(HOME, bowl.position).setY(0).normalize();
-  EAT_SPOT = bowl.position.clone().addScaledVector(toHome, .86).setY(0);
   CUSHION_SPOT = new THREE.Vector3(bed.position.x, 0, bed.position.z);
   if (L.bedOffset) CUSHION_SPOT.add(L.bedOffset);
-  const toFountain = new THREE.Vector3().subVectors(HOME, fountain.position).setY(0).normalize();
-  DRINK_SPOT = fountain.position.clone().addScaledVector(toFountain, 1.0).setY(0);
   if (p === room) room.lamp.position.copy(lampHome); else p.activate(room.lamp);
 }
 // Something she's knocked over lands: a soft clink or thud (if sound's on).
@@ -788,7 +802,7 @@ cat.load(LONGHAIR ? CAT_FILE : './assets/mochi-ragdoll.glb', p => {
   // (Her collar goes on now, not at the next tick.)
   refresh();
   // The kitchen through the study's doorway (built once she's home).
-  if (!kitchen) setTimeout(() => { if (!kitchen) { buildKitchen(); joinRooms(); } }, 400);
+  if (!kitchen) setTimeout(() => { if (!kitchen) { buildKitchen(); joinRooms(); placeBowls(); } }, 400);
   host.classList.add('ready');
   $('#loading').classList.add('done');
   setTimeout(() => $('#loading').hidden = true, 900);
@@ -1140,6 +1154,8 @@ function updateCat(dt, t) {
   }
   // Never through the furniture, however she's moving on the floor.
   if (place.pushOut && !J && !brain.perch && brain.elevation < .05) place.pushOut(brain.pos);
+  // Through the middle of a doorway: she's in the other room now.
+  if (brain.crossing && !J && house.pastDoor(brain.crossing.side, brain.pos) > 0) crossOver(brain.crossing.to);
   // Up on the big pendant shade: she goes where it swings.
   if (brain.perch === 'pendant' && !J && place === kitchen) {
     const top = kitchen.pendantTop(tmpV); brain.pos.x = top.x; brain.pos.z = top.z; brain.elevation = top.y;
@@ -1481,7 +1497,7 @@ function idleLife(t) {
   if (choice === 'treePaw') treePaw();
   if (choice === 'nap') walkTo(CUSHION_SPOT, () => { setActivity('loaf', rand(8, 14)); setTimeout(slowBlink, 1500); }, false, true);
   if (choice === 'bowl') {
-    walkTo(EAT_SPOT, () => { setActivity('beg', 3.5); meow('mew'); say(pick(['Is it snack o’clock?', 'This bowl looks very empty…'])); }, false, true);
+    inKitchen(() => walkTo(EAT_SPOT, () => { setActivity('beg', 3.5); meow('mew'); say(pick(['Is it snack o’clock?', 'This bowl looks very empty…'])); }, false, true));
   }
   if (choice === 'meow') { meow(pick(['mew', 'chirp']), 'idle'); if (Math.random() < .5) say(pick(['Mrrp?', 'Mew!', 'I like it here. With you.'])); }
   if (choice === 'window') jumpTo('sill', () => { setActivity('sit'); brain.nextBird = clockNow + rand(2, 5); }, rand(20, 35));
@@ -2546,7 +2562,7 @@ function act(a, opts = {}) {
   const r = care(pet, a, opts.snack, {auto: opts.auto === true});
   if (!r.ok) {
     if (opts.auto) return false;
-    if (a === 'drink') { glanceAt(fountain.position, 1.5); say('Not thirsty right now, thanks!', 2600, true); return false; }
+    if (a === 'drink') { if (place === kitchen) glanceAt(fountain.position, 1.5); say('Not thirsty right now, thanks!', 2600, true); return false; }
     toast(r.message);
     if (a === 'feed') { twitchEar(); say('I’m stuffed, thank you!', 3600, true); }
     if (a === 'play') { yawn(); say('Too sleepy to play…', 3600, true); }
@@ -2563,21 +2579,21 @@ function act(a, opts = {}) {
     meow('chirp');
     express('excited', 1);
     say(pick([`${name[0].toUpperCase() + name.slice(1)}?! Best. Human. Ever.`, `Mmm, ${name}! You know the way to my heart.`]));
-    walkTo(EAT_SPOT, () => {
+    inKitchen(() => walkTo(EAT_SPOT, () => {
       setActivity('eat', 3.8, () => {
         kibbles.forEach(k => k.visible = false);
         burst('sparkle', 5);
         setActivity('groom', 2.4, () => { finishMode(); setActivity('sit'); });
       });
       brain.chewUntil = clockNow + 3.6;
-    }, true, true);
+    }, true, true), true);
     moment(`A happy tummy, thanks to ${name}.`, 'i-bowl');
   } else if (a === 'drink') {
     setMode('drink');
     if (!opts.auto) { say(pick(['Ooh, fresh water!', 'Sip sip sip…', 'Mrrp! Water time.']), 2600); moment('A refreshing drink from the fountain.', 'i-drop'); }
-    walkTo(DRINK_SPOT, () => {
+    inKitchen(() => walkTo(DRINK_SPOT, () => {
       setActivity('drink', 3.4, () => setActivity('groom', 1.6, () => { finishMode(); setActivity('sit'); }));
-    }, false, true);
+    }, false, true));
   } else if (a === 'brush') {
     setMode('brush', 4);
     setActivity('loaf', 4);
@@ -3319,8 +3335,8 @@ const CAMERA_VIEWS = {
     view.goal.yaw = wrapYaw(typeof yaw === 'number' ? yaw : Math.atan2(camera.position.x - brain.pos.x, camera.position.z - brain.pos.z));
     setCamMode('follow');
   },
-  food: () => lookAtSpot(bowl.position, {y: .15}),
-  water: () => lookAtSpot(fountain.position, {y: .2}),
+  food: () => lookAtSpot(bowl.getWorldPosition(new THREE.Vector3()), {y: .15}),
+  water: () => lookAtSpot(fountain.getWorldPosition(new THREE.Vector3()), {y: .2}),
   bed: () => lookAtSpot(bed.position, {dist: 3, y: .3}),
 };
 // The mode you picked is kept for next time.
@@ -3703,6 +3719,44 @@ function goTo(id) {
   save();
   refresh();
   if (!pet.sleeping) { express('curious', 2); setTimeout(() => glanceAt(new THREE.Vector3(rand(-3, 3), rand(1, 4), -2.5), 2), 600); }
+}
+// Her own walk to another room, through the doorway (house.js): to this
+// side's spot, then on through; halfway through the wall the app changes
+// room (crossOver) and she walks on in. `then` once she's in.
+function walkToRoom(id, then = null, run = false) {
+  const from = placeId(place), d = house.doorBetween(from, id);
+  if (!d || from === id) return false;
+  if (id === 'kitchen' && !kitchen) { buildKitchen(); joinRooms(); }
+  const H = d.here, v = (p, k = 0) => new THREE.Vector3(p.x + H.out.x * k, 0, p.z + H.out.z * k);
+  walkTo(v(H.spot), () => {
+    brain.crossing = {to: id, side: H};
+    walkTo(v(H.mid, .5), () => { brain.crossing = null; then?.(); }, run, true);
+  }, run);
+  return true;
+}
+// The change of room, with nothing moving on screen: where she is, which
+// way she faces, where she's going, the toy and the camera are all put into
+// the new room's own frame (house.js), and the rooms swap places round them.
+function crossOver(id) {
+  const from = placeId(place), next = id === 'kitchen' ? kitchen : room;
+  brain.crossing = null;
+  if (!next || next === place) return;
+  const conv = v => { if (!v) return; const p = house.convert(v, from, id); v.x = p.x; v.z = p.z; };
+  const turn = y => house.convertYaw(y, from, id);
+  conv(brain.pos); conv(brain.target);
+  brain.heading = turn(brain.heading);
+  Object.assign(brain, {faceAt: null, eatAt: null});
+  conv(toy.position); conv(toyTarget);
+  { const p = house.convert(sun.position, from, id); sun.position.x = p.x; sun.position.z = p.z; }
+  // (Her gait reads her speed from where she was a frame ago: that too.)
+  if (cat.motion?.prev) { conv(cat.motion.prev.pos); cat.motion.prev.heading = turn(cat.motion.prev.heading); }
+  for (const o of [view, view.goal]) { conv(o.focus); o.yaw = turn(o.yaw); }
+  view.goal.yaw = wrapYaw(view.goal.yaw);
+  usePlace(next);
+  cat.root.position.set(brain.pos.x, cat.root.position.y, brain.pos.z); cat.root.rotation.y = brain.heading;
+  pet.place = id;
+  save();
+  refresh();
 }
 $('#place-options').addEventListener('click', e => {
   const b = e.target.closest('[data-place]');
@@ -4495,6 +4549,7 @@ function updateRoom(dt, t) {
   // (The clock turning dusk or dawn while you watch.)
   if (Math.floor(t / 5) !== Math.floor((t - dt) / 5) && isNight() !== night) refresh();
   sun.intensity = damp(sun.intensity, night ? .05 : 3.2, 3, dt);
+  if (sun.position.distanceToSquared(SUN_HOME) > 1e-6) sun.position.lerp(SUN_HOME, 1 - Math.exp(-.8 * dt));
   ambient.intensity = damp(ambient.intensity, night ? .35 : 1.5, 3, dt);
   rim.intensity = damp(rim.intensity, night ? 0 : 1.8, 3, dt);
   moon.intensity = damp(moon.intensity, night ? .45 : 0, 3, dt);
@@ -4730,7 +4785,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {house, placeId, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });
