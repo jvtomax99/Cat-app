@@ -1,4 +1,4 @@
-# Phase 21: the house (hall, stairs, upstairs, bathroom, roof)
+# Phase 21: the house (living room, hall, stairs, upstairs, bathroom, roof)
 
 Merlin, 2026-11-18: more rooms she can walk freely, a second floor, a roof,
 a bathroom; "a normal luxury house"; a blueprint first, then build. He
@@ -10,6 +10,14 @@ Blueprint: `docs/house/blueprint.png` (drawn by `node tools/house-blueprint.mjs`
 which holds every size; change the plan there).
 
 ## What it does
+- **Living room** (Merlin's reference picture, 2026-11-18:
+  `docs/house/reference-living-room.jpg`): the kitchen opens into it with
+  no wall between. Glazing from floor to ceiling on the sea side and the
+  end, an antique wool rug, a curved cream sofa, a rosewood coffee table, a
+  worn leather chair, an aubergine mohair chair, a big painting over a
+  sideboard, a fireplace. At Christmas the tree stands where the two
+  spaces meet. Her tent moves here. Things she does: nap on the sofa, lie
+  by the fire, knead the throw, watch the sea from the glazing.
 - Downstairs: kitchen and study as they are, plus a **hall** with the front
   door and the stairs, reached by a new doorway in the kitchen's side wall.
 - Upstairs: a **landing**, a **bedroom** over the kitchen, a **bathroom**
@@ -35,7 +43,11 @@ through at her eye level (stays in "Later").
 
 ## Build order (one session each; each ends on the preview with a phone speed check)
 Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`).
-1. **The hall.** A third room in `ROOMS` and a second doorway in `DOORS`
+1. **The living room**, joined to the kitchen's front (`K.front`, the wall
+   phase 20 left for it): one open space, the tree moved to the join.
+   The furniture is built in code like the kitchen's; the picture sets
+   the mood and materials, not a photo likeness.
+1b. **The hall.** A third room in `ROOMS` and a second doorway in `DOORS`
    (`dist/house.js`); whatever in `app.js` still assumes two rooms
    (`joinRooms`, `cullThroughDoor`, "the other room") becomes a list.
 2. **Stairs and landing.** Floors at different heights (`groundAt`), her
@@ -47,7 +59,7 @@ Stop rule: if a real phone stutters after a step, fix speed before the next.
 
 ## Done when
 She can walk by herself from her bed in the study to the bath mat upstairs
-and back; the room picker and the House view reach all six rooms; each new
+and back; the room picker and the House view reach all seven rooms; each new
 room has its things to do; a phone holds the frame rate it has today in the
 kitchen; saves from before still load.
 
@@ -58,12 +70,14 @@ kitchen; saves from before still load.
 - Hall: x -19.05 to -5.05, z 6.1 to 11.6. New doorway in the kitchen's
   right wall (kitchen's own z about 1.6 to 4; check the Christmas tree's
   corner, the tent and the bowl clear it). Front door in its south wall.
-- Phase 20's brief names a living room at the kitchen's front (west) for
-  later: this plan leaves that side free.
+- Living room: x -33.05 to -19.05, z -9.9 to 6.1, one storey with its own
+  roof; no wall to the kitchen (the kitchen's front wall goes).
 - Upper floor at y 10 (kitchen walls are 9.5, the study's 12: trim to 10).
 - Stairs: two flights of 10 steps with a half landing, at the hall's east end.
 
 ## Risks
+- The living room is the heaviest room to draw (much glazing with the
+  outdoors behind it, the tree at Christmas) and sits in view of the kitchen.
 - Phone speed has never been measured on a real phone, even for two rooms.
 - Stairs are a new kind of movement for her (the leg work of phases 01, 07, 12).
 - The study only lets her walk on the rug; the new rooms need real floor

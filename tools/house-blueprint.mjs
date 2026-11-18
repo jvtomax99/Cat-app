@@ -2,7 +2,7 @@
 // Sizes are in the app's own units, in the study's frame (x east, z south);
 // the study and kitchen are where the code has them (room.js, kitchen.js, JOIN in app.js).
 import {writeFileSync} from 'node:fs';
-const S = 26, X0 = -20.4, Z0 = -13.4, W = 26.2, H = 26.6, M = .41; // px per unit, metres per unit
+const S = 26, X0 = -34.4, Z0 = -13.4, W = 40.2, H = 26.6, M = .41; // px per unit, metres per unit
 const px = x => ((x - X0) * S).toFixed(1), pz = z => ((z - Z0) * S).toFixed(1);
 const C = {ink: '#2b3a4a', wall: '#2b3a4a', old: '#eef0f2', neu: '#fbe9d7', soft: '#7b8794', line: '#b9c2cc', accent: '#c8643c', sea: '#dcebf2', paper: '#fdfcf9'};
 const rect = (x0, z0, x1, z1, o = {}) => `<rect x="${px(x0)}" y="${pz(z0)}" width="${((x1 - x0) * S).toFixed(1)}" height="${((z1 - z0) * S).toFixed(1)}" fill="${o.fill ?? 'none'}" stroke="${o.stroke ?? 'none'}" stroke-width="${o.w ?? 1.5}" ${o.dash ? `stroke-dasharray="${o.dash}"` : ''} rx="${o.rx ?? 0}"/>`;
@@ -31,27 +31,33 @@ const stairs = (x0, z0, x1, z1, n, up) => {
 const panel = (title, sub, body) => `<svg x="0" y="0" width="${W * S}" height="${H * S + 70}"><text x="20" y="34" font-size="24" font-weight="700" fill="${C.ink}">${title}</text><text x="20" y="56" font-size="13" fill="${C.soft}">${sub}</text><g transform="translate(0 70)">${body}</g></svg>`;
 
 // The outline both floors share.
-const WX = -19.05, KX = -5.05, SX0 = -4.6, SX1 = 4.6, N = -9.9, KS = 6.1, SN = -3.4, S_ = 8.6, HS = 11.6;
+const WX = -19.05, KX = -5.05, SX0 = -4.6, SX1 = 4.6, N = -9.9, KS = 6.1, SN = -3.4, S_ = 8.6, HS = 11.6, LX = -33.05;
 const compass = `<g transform="translate(${px(3.6)} ${pz(-10.2)})"><line x1="0" y1="16" x2="0" y2="-16" stroke="${C.ink}" stroke-width="1.5"/><path d="M0 -22 l5 10 h-10 z" fill="${C.ink}"/><text x="0" y="-27" font-size="12" text-anchor="middle" fill="${C.ink}">sea</text></g>`;
 const shell = gaps => // the outer walls (in the app, a wall the camera is behind hides)
   wall(WX, N, KX, N, gaps.north ?? []) + wall(KX, N, KX, SN, []) + wall(KX, SN, SX1, SN, gaps.studyNorth ?? []) + wall(SX1, SN, SX1, S_, gaps.east ?? []) +
-  wall(SX1, S_, KX, S_, gaps.studySouth ?? []) + wall(KX, S_, KX, HS, []) + wall(KX, HS, WX, HS, gaps.south ?? []) + wall(WX, HS, WX, N, gaps.west ?? []);
+  wall(SX1, S_, KX, S_, gaps.studySouth ?? []) + wall(KX, S_, KX, HS, []) + wall(KX, HS, WX, HS, gaps.south ?? []) +
+  (gaps.living ? wall(WX, HS, WX, KS, []) + wall(WX, KS, LX, KS, []) + wall(LX, KS, LX, N, gaps.west ?? []) + wall(LX, N, WX, N, gaps.living) : wall(WX, HS, WX, N, gaps.west ?? []));
 
 const ground =
   rect(X0, Z0, X0 + W, N - 1.9, {fill: C.sea}) + text(-12, -12.4, 'dunes and sea', {fill: '#5a8ca6', italic: true, size: 12}) +
-  rect(WX, N - 1.9, KX, N, {fill: '#efe8dc', stroke: C.line, w: 1}) + text(-12, N - .75, 'terrace (there today)', {size: 12, fill: C.soft}) +
-  room('Kitchen', WX, N, KX, KS, {old: true, at: -1.2, ax: -15.6}) + room('Study', SX0, SN, SX1, S_, {old: true, at: 5}) + room('Hall', WX, KS, KX, HS, {at: 9.0, ax: -11.6}) +
+  rect(LX - 1.2, N - 1.9, KX, N, {fill: '#efe8dc', stroke: C.line, w: 1}) + rect(LX - 1.2, N, LX, KS, {fill: '#efe8dc', stroke: C.line, w: 1}) + text(-12, N - .75, 'terrace (the kitchen\'s is there today)', {size: 12, fill: C.soft}) +
+  room('Living room', LX, N, WX, KS, {at: 3.9, ax: -29.6}) + room('Kitchen', WX, N, KX, KS, {old: true, at: 3.9, ax: -15.4}) + room('Study', SX0, SN, SX1, S_, {old: true, at: 5}) + room('Hall', WX, KS, KX, HS, {at: 9.0, ax: -11.6}) +
   rect(KX, SN, SX0, S_, {fill: C.wall}) +
-  thing('island', -11.2, -7.6, -8.7, -2.4) + thing('', -6.5, -9.1, -5.25, -.5) + text(-5.9, -4.7, 'counter', {size: 11, fill: C.soft}) + thing('tent', -10.9, -.1, -9.1, 1.7, {rx: 27}) +
+  line(WX, N + .3, WX, KS - .3, {stroke: C.soft, w: 1.5, dash: '4 6', cap: 'butt'}) + text(-19.05, 5.2, 'open, no wall', {size: 11, fill: C.accent}) +
+  `<circle cx="${px(-19.3)}" cy="${pz(-6.6)}" r="${1.75 * S}" fill="#e4efe2" stroke="#5d8a62" stroke-width="1.2"/>` + text(-19.3, -6.5, 'tree', {size: 11, fill: '#3f6b45'}) + text(-19.3, -5.9, '(Christmas)', {size: 10, fill: '#3f6b45'}) +
+  thing('rug', -31.4, -4.6, -21.4, 3.0, {rx: 6}) + thing('sofa', -29.4, -5.9, -23.2, -3.9, {rx: 22}) + thing('table', -28.6, -2.6, -24.4, -1.0, {rx: 20}) + thing('', -23.0, -1.2, -21.3, .6, {rx: 8}) + text(-22.15, 1.3, 'leather chair', {size: 10, fill: C.soft}) + thing('', -31.6, -1.6, -29.8, .2, {rx: 22}) + text(-30.7, .9, 'mohair chair', {size: 10, fill: C.soft}) +
+  thing('fire', -27.6, 5.2, -24.6, 5.9) + thing('sideboard', -32.6, 4.6, -29.2, 5.4) + thing('tent', -32.3, -8.6, -30.5, -6.8, {rx: 23}) +
+  thing('island', -11.2, -7.6, -8.7, -2.4) + thing('', -6.5, -9.1, -5.25, -.5) + text(-5.9, -4.7, 'counter', {size: 11, fill: C.soft}) + 
   thing('rug', -2.25, -1.2, 1.45, 1.8) + thing('', 3.9, .2, 4.5, 2.0) + text(3.7, 1.25, 'fire', {size: 11, fill: C.soft, anchor: 'end'}) + thing('bed', -3.9, -3.0, -2.4, -1.8, {rx: 16}) +
   stairs(-8.4, 6.9, -6.9, 11.3, 10, true) + stairs(-6.7, 6.9, -5.25, 11.3, 10, false) + text(-6.8, 6.7, 'stairs up', {size: 11, fill: C.accent}) +
   thing('console', -17.6, 6.5, -15.0, 7.1) + thing('', -18.7, 7.6, -18.1, 10.4) + text(-17.9, 9.15, 'bench', {size: 11, fill: C.soft, anchor: 'start'}) +
-  shell({north: [[4, 11]], studyNorth: [[3.6, 6.4]], south: [[7.2, 9.0]]}) + win(WX + 4, N, WX + 11, N) + win(KX + 3.6, SN, KX + 6.4, SN) +
+  shell({north: [[4, 11]], studyNorth: [[3.6, 6.4]], south: [[7.2, 9.0]], living: [[.8, 13.2]], west: [[1.2, 14.8]]}) + win(WX + 4, N, WX + 11, N) + win(LX + .8, N, LX + 13.2, N) + win(LX, KS - 1.2, LX, KS - 14.8) + win(KX + 3.6, SN, KX + 6.4, SN) +
   wall(SX0 - .22, SN, SX0 - .22, S_, [[3.3, 5.7]], {w: 11.7}) + wall(WX, KS, KX, KS, [[5.8, 8.2]]) +
   text(-12.05, 5.75, 'new doorway', {size: 11, fill: C.accent}) + text(-3.2, 1.3, 'doorway', {size: 11, fill: C.soft}) +
   text(-13.15, 12.4, 'front door', {size: 12, fill: C.accent}) + line(-14.05, HS, -12.25, HS, {stroke: C.accent, w: 5, cap: 'butt'}) + compass;
 
 const upper =
+  rect(LX, N, WX, KS, {fill: '#eceae4', stroke: C.line, w: 1.5}) + text(-26, -1.6, 'roof of the living room', {size: 13, fill: C.soft}) +
   room('Bedroom', WX, N, KX, KS, {at: .2, ax: -13.6}) + room('Bathroom', SX0, SN, SX1, S_, {at: 5.6}) + room('Landing', WX, KS, -8.6, HS, {at: 8.6, ax: -12.6}) +
   rect(-8.6, KS, KX, HS, {fill: '#f3f1ec'}) + rect(KX, SN, SX0, S_, {fill: C.wall}) +
   thing('big bed', -9.6, -6.6, -5.4, -1.6) + thing('window seat', -15.0, -9.7, -8.1, -8.9) + thing('wardrobe', -10.2, 5.0, -5.3, 5.9) + thing('rug', -15.2, -6.2, -10.4, -2.0, {rx: 10}) + thing('chaise', -18.7, -7.5, -17.5, -4.3, {rx: 12}) + thing('dresser', -18.8, 1.4, -18.0, 4.6) +
@@ -70,6 +76,8 @@ const pane = (x0, y0, x1, y1) => er(x0, y0, x1, y1, {fill: '#cfe3ee'}) + `<line 
 const front =
   `<rect x="0" y="${ey(0)}" width="${W * S}" height="60" fill="#e9e2d2"/>` +
   poly([[SX0 - .5, 10], [SX1 + .6, 10], [SX1 + .6, 20], [SX0 - .5, 20]], '#f6f1e7') + poly([[SX0 - 1, 20], [SX1 + 1.1, 20], [0, 23.4]], '#6f7f8c') +
+  er(LX, 0, WX, 10.6, {fill: '#f6f1e7'}) + er(LX - .4, 10.6, WX, 11.1, {fill: '#7d8d9a'}) + pane(-31.8, .3, -29.0, 9.2) + pane(-27.6, .3, -24.8, 9.2) + pane(-23.4, .3, -20.6, 9.2) +
+  `<text x="${px(-26)}" y="${ey(-1.1)}" font-size="13" text-anchor="middle" fill="${C.soft}">living room</text>` +
   poly([[WX, 0], [KX + .5, 0], [KX + .5, 20], [WX, 20]], '#fbf7ee') + poly([[WX - .6, 20], [KX + 1.1, 20], [(WX + KX) / 2 + .25, 24.6]], '#7d8d9a') +
   er(KX + .5, 0, SX1 + .6, 10) +
   er(-14.25, 0, -12.05, 5.6, {fill: '#3d4f5e', rx: 3}) + `<circle cx="${px(-12.45)}" cy="${ey(2.7)}" r="3" fill="#d8b46a"/>` + er(-14.9, 0, -11.4, .35, {fill: '#d9d2c2'}) +
@@ -81,7 +89,7 @@ const PH = H * S + 70, FH = 28.5 * S + 80;
 const key = y => `<g transform="translate(20 ${y})" font-size="13" fill="${C.ink}"><rect width="18" height="18" fill="${C.old}" stroke="${C.line}"/><text x="26" y="14">there today</text><rect x="130" width="18" height="18" fill="${C.neu}" stroke="${C.line}"/><text x="156" y="14">new</text><text x="210" y="14" fill="${C.soft}">A wall between you and a room hides, as today.</text></g>`;
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W * S}" height="${PH * 2 + FH + 60}" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
 <rect width="100%" height="100%" fill="${C.paper}"/>
-<g transform="translate(0 10)">${panel('Downstairs', 'Kitchen and study stay as they are. New: the hall with the stairs.', ground)}</g>
+<g transform="translate(0 10)">${panel('Downstairs', 'Kitchen and study stay. New: the living room, open to the kitchen, and the hall with the stairs.', ground)}</g>
 ${key(PH + 14)}
 <g transform="translate(0 ${PH + 50})">${panel('Upstairs', 'All new: landing, bedroom, bathroom (through the bedroom).', upper)}</g>
 <g transform="translate(0 ${PH * 2 + 60})"><text x="20" y="34" font-size="24" font-weight="700" fill="${C.ink}">From the front</text><text x="20" y="56" font-size="13" fill="${C.soft}">What the House view shows from outside: pale walls, slate roof. Come closer and the near walls hide.</text>

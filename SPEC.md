@@ -233,7 +233,8 @@ Build order and status: `docs/ROADMAP.md` (a brief per phase in
 decor, Miso, phase 08 (app screens), phase 09 (test group).
 
 ## Planned: the house (phase 21, Merlin 2026-11-18)
-After phase 20 (One home). A hall with stairs, an upstairs landing, a
+After phase 20 (One home). A living room the kitchen opens into (first;
+reference picture `docs/house/reference-living-room.jpg`), a hall with stairs, an upstairs landing, a
 bedroom and a bathroom, a roof, and a House view of the whole house (tap a
 room). She walks everywhere herself. Blueprint (approved 2026-11-18):
 `docs/house/blueprint.png`; brief and build order: `docs/phases/21-house.md`.
