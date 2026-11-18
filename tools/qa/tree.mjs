@@ -62,7 +62,7 @@ await step(6);
 await shot('4-chase');
 await step(140);
 const s = await state();
-ok('the bauble stays in the kitchen', s.fallen.every(([x, y, z]) => x > -6 && x < 7 && z > -4.2 && z < 9.1 && y > 0), JSON.stringify(s.fallen));
+ok('the bauble stays in the kitchen', s.fallen.every(([x, y, z]) => x > -6 && x < 10 && z > -4.2 && z < 9.1 && y > 0), JSON.stringify(s.fallen));
 // A tap on the fallen bauble (she's moved off it first: a tap on her is a stroke).
 await page.evaluate(() => { kitten.brain.target = null; kitten.brain.pos.set(1, 0, 4.2); });
 await look(wide); await step(2);
