@@ -28,14 +28,18 @@ the phone's browser and can be added to the home screen.
   no leg stretched more than ~4 cm (`tools/qa/legs.mjs`).
 - **Two rooms.** Done when: she walks between the study and the kitchen
   through the doorway, and the player can switch rooms and views.
+  (Today switching rooms moves her instantly. Phase 20, approved
+  2026-11-18: she really walks through, the camera follows, the room
+  picker calls her, food and water live in the kitchen.)
 - **Looking around: two camera modes** (live, phase 16; Merlin
   2026-11-13, after "still really bad": replaces the one-finger map drag
   and the automatic view changes of phase 14). Done when: the Explore and
   Mochi buttons pick the mode and it is remembered; a pinch, drag or tap
   never changes it. Mochi: the camera stays on her, one finger circles her,
-  a pinch zooms on her. Explore: one finger turns the view from one side
-  wall round to the other (about 200 degrees; past the end it gives and
-  springs back; no full circle, the rooms have three walls), a pinch zooms
+  a pinch zooms on her. Explore: one finger turns the view all the way
+  round (Merlin 2026-11-18: each room got a front wall, and any wall the
+  camera is behind hides; turned to a wall with little room behind, the
+  camera rises and looks down rather than squeezing in close), a pinch zooms
   to the thing under the fingers (on the fireplace: to the fireplace), two
   fingers sliding move the view and twisting turns it, a double tap on a
   thing goes close to it (again on it: the whole room), pinching far out
@@ -166,6 +170,28 @@ the phone's browser and can be added to the home screen.
   (`tools/qa/vacuum.mjs`). The study keeps its classic look, with pine
   and a brass lantern on the mantel and a plaid cushion on the armchair
   (seen through the doorway).
+- **Christmas tree** (preview, phase 06; Merlin 2026-11-16, from a photo of a
+  cat lying in a decorated tree, then a picture of the kitchen with the tree
+  in it). Done when: in the Christmas look a tall full fir (about 7.5 high)
+  stands in the kitchen's back right corner, right of the study doorway,
+  clear of the doorway, the island and the counter (Merlin 2026-11-18: the
+  kitchen was widened for it, right wall 7 to 10, in every look); while
+  it's up her tent is put away and she has a round bed beside the tree
+  (the tent is back in every other look); with warm white lights all through it, baubles in gold, champagne,
+  bronze, mercury silver and deep red, big burgundy velvet bows, a gold star
+  on top, a cream knitted skirt with a few baubles on it, and an open box beside
+  it; the first time she sees it in a visit she stares up it, creeps
+  up crouched, sits, then sniffs and paws a low bauble and hops back; on her
+  own (often) and when the tree is tapped she climbs it in stages and lies
+  across its front half out of the needles; up there she bats baubles and
+  sometimes knocks one off, which tumbles down the outside, rolls and stops
+  in reach, and she goes down and pats it along; a tap on it hangs it back;
+  sometimes she climbs to the very top, is stuck, mews, and a tap on her
+  helps her down; she hides under the low boughs looking out and pats the
+  baubles over her; she sits in the open box (also when it's tapped); out
+  of the Christmas look none of it is there (`tools/qa/tree.mjs`). Not in
+  it: decorating the tree yourself, presents, broken baubles, anything kept
+  in the save.
 - **Quick on a phone, and there without signal** (phase 18, live, build 392).
   Done when: the first open on a phone downloads under 6 MB before she is
   on screen; after one open with signal the app opens and plays with no
@@ -206,16 +232,17 @@ Build order and status: `docs/ROADMAP.md` (a brief per phase in
 `docs/phases/`). Next up: phase 03 (tail in the study), then Christmas
 decor, Miso, phase 08 (app screens), phase 09 (test group).
 
-## Planned: the house (phase 20, Merlin 2026-11-18)
-A hall with stairs, an upstairs landing, a bedroom and a bathroom, a roof,
-and a House view of the whole house (the front lifts away; tap a room).
-She walks everywhere herself. Blueprint: `docs/house/blueprint.png`; brief
-and build order: `docs/phases/20-house.md`. Done when: she walks by herself
-from her bed in the study to the bath mat upstairs and back; every room is
-reachable from the picker and the House view; each new room has at least
-two things she does there; a phone runs as smoothly as in the kitchen
-today; old saves load. Not in it: decorating, a garden to walk in, seasonal
-looks for the new rooms, new care needs, bought models.
+## Planned: the house (phase 21, Merlin 2026-11-18)
+After phase 20 (One home). A hall with stairs, an upstairs landing, a
+bedroom and a bathroom, a roof, and a House view of the whole house (tap a
+room). She walks everywhere herself. Blueprint (approved 2026-11-18):
+`docs/house/blueprint.png`; brief and build order: `docs/phases/21-house.md`.
+Done when: she walks by herself from her bed in the study to the bath mat
+upstairs and back; every room is reachable from the picker and the House
+view; each new room has at least two things she does there; a phone runs
+as smoothly as in the kitchen today; old saves load. Not in it: decorating,
+a garden to walk in, seasonal looks for the new rooms, new care needs,
+bought models.
 
 ## Not in v1 (draft, Merlin to confirm)
 - Picking her up or carrying her, dragging food or the brush to her (plan
@@ -239,8 +266,7 @@ looks for the new rooms, new care needs, bought models.
   ($99 a year) and a look at Apple's rules for apps that are a website.
   The list: `docs/app-store.md`. The name "Pocket Kitten" is already taken
   on the store (checked 2026-11-14).
-- A true 360 turn: needs a fourth wall in both rooms (phase 16 chose a
-  wide turn). Also from phase 16: an arrow pointing to Mochi when she is
+- From phase 16: an arrow pointing to Mochi when she is
   off screen, walking through the room at eye level. (The photo button
   came in phase 17.)
 - First steps for food, water, brushing and sleep (ChatGPT's review of the
@@ -252,10 +278,11 @@ looks for the new rooms, new care needs, bought models.
   store wrapper.
 - Miso, the second cat (blue British Shorthair), and the cats playing together.
 - Adopting more cats by levelling up.
-- Christmas tree mischief (phase 06, December).
 - The dog visit at the French doors.
 - Friendly app screens (phase 08): "real app ready".
 - Sharing with the 1000-member group after the test group.
+- More rooms on the house plan (Merlin 2026-11-18): a living room in the
+  kitchen's open front, then others, one per phase; stairs; a house map.
 
 ## Decisions
 - Nothing goes live without Merlin's "Go live"; one preview branch,

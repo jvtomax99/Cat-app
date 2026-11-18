@@ -580,6 +580,9 @@ export class Room {
     const door = {a: 2.6 - this.door.z1, b: 2.6 - this.door.z0, top: this.door.top};
     // Kept so a wall the camera swings behind can be hidden (dollhouse style).
     this.wallGroups = [wall(9.2, 0, W.back, 0), wall(12, W.left, 2.6, Math.PI / 2, door), wall(12, W.right, 2.6, -Math.PI / 2)];
+    // The front wall, where the side walls end (so the camera can turn all
+    // the way round); hidden while the camera stands in front of the room.
+    this.wallGroups.push(wall(9.2, 0, W.front = 8.6, Math.PI));
   }
 
   buildWindow() {

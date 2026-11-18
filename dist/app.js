@@ -4,6 +4,9 @@ import {AWAY_MIN, awayStory} from './away.js';
 import {TOYS, RIBBONS, LATE, nextGift, newGifts, waitingGifts, owns, toysAt} from './rewards.js';
 import {todaysWish, grantWish, wishDone, WISH_WORTH} from './wish.js';
 import {DECORS, applyDecor, inSeason, decorNow, applyKitchenDecor} from './decor.js';
+import {TREE} from './xmas-tree.js';
+import * as house from './house.js';
+const {placeOf, laneAt} = house;
 import {load as loadSave, store as storeSave, keepStorage, toCode, fromCode, keys as saveKeys} from './save.js';
 import {RealCat, EXPRESSIONS} from './real-cat.js';
 import {MotionCat} from './motion-cat.js';
@@ -646,12 +649,11 @@ function studyLayout() {
   };
 }
 // The study and the kitchen are joined: the doorway in the study's left wall
-// is the opening in the kitchen's back wall. The room she's in stands at the
-// origin and the other is set beyond the doorway, so each is seen through it
-// from the other (with its floor cut to the room, under that doorway too).
-// (The kitchen's opening, x 3.8 to 6.2 in its back wall at z -4.2, .45 deep,
-// meets the study's at z -.1 to 2.3 in its left wall at x -4.6.)
-const JOIN = {kitchen: {p: [-9.25, 0, -3.9], ry: -Math.PI / 2}, room: {p: [3.9, 0, -9.25], ry: Math.PI / 2}};
+// is the opening in the kitchen's back wall (where each stands: house.js).
+// The room she's in stands at the origin and the other is set beyond the
+// doorway, so each is seen through it from the other (with its floor cut to
+// the room, under that doorway too).
+const placeId = p => p === room ? 'room' : 'kitchen';
 function floorPatch(floor, x0, x1, z0, z1) {
   const S = floor.geometry.parameters.width, geo = new THREE.PlaneGeometry(x1 - x0, z1 - z0);
   geo.rotateX(-Math.PI / 2); geo.translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
@@ -668,11 +670,11 @@ function joinRooms() {
   room.group.visible = true;
   if (!kitchen) return;
   room.floorPatch ??= floorPatch(room.floor, room.walls.left, room.walls.right, room.walls.back, 8.6);
-  kitchen.floorPatch ??= floorPatch(kitchen.floor, -6, 7, -4.65, 14);
+  kitchen.floorPatch ??= floorPatch(kitchen.floor, -6, kitchen.right, -4.65, 14);
   for (const [id, r] of [['room', room], ['kitchen', kitchen]]) {
-    const here = r === place, j = JOIN[id];
+    const here = r === place, j = placeOf(id, placeId(place));
     r.group.visible = true;
-    r.group.position.set(...(here ? [0, 0, 0] : j.p)); r.group.rotation.set(0, here ? 0 : j.ry, 0);
+    r.group.position.set(j.at.x, 0, j.at.z); r.group.rotation.set(0, j.ry, 0);
     r.group.updateMatrixWorld(true);
     r.floor.visible = here; r.floorPatch.visible = !here;
     if (here) r.group.traverse(o => o.layers.set(SEEN));
@@ -712,10 +714,25 @@ function cullThroughDoor(other) {
     o.layers.set(portal.intersectsObject(o) ? SEEN : UNSEEN);
   });
 }
+// The kitchen at Christmas: her places in the tree and the open box, and the
+// camera kept out of the tree.
+function withTree(L) {
+  if (kitchen?.decor !== 'christmas' || !kitchen.xmasTree) return L;
+  const at = ([x, z]) => new THREE.Vector3(x, 0, z), T = TREE.perches;
+  Object.assign(L.perches, {
+    treeLow: {spot: at(T.treeLow.spot), top: T.treeLow.top, base: at(TREE.climbFrom), face: T.treeLow.face},
+    treeMid: {spot: at(T.treeMid.spot), top: T.treeMid.top, via: 'treeLow', face: T.treeMid.face},
+    treeHigh: {spot: at(T.treeHigh.spot), top: T.treeHigh.top, via: 'treeMid', face: T.treeHigh.face},
+    treeTop: {spot: at(T.treeTop.spot), top: T.treeTop.top, via: 'treeHigh', face: T.treeTop.face},
+    xmasBox: {spot: at(TREE.box.spot), top: .05, base: at(TREE.boxFrom), face: TREE.box.face},
+  });
+  L.camSolids = L.camSolids.concat([[TREE.x, TREE.z, 1.45, 7.8]]);
+  return L;
+}
 function usePlace(p) {
   place = p;
   joinRooms();
-  const L = p.layoutCache ??= p === room ? studyLayout() : p.layout();
+  const L = p.layoutCache ??= p === room ? studyLayout() : withTree(p.layout());
   // Her bowl and fountain come with her.
   for (const [obj, spot] of [[bowl, L.bowl], [fountain, L.fountain]]) {
     const home = obj.userData.studyHome ??= {p: obj.position.clone(), r: obj.rotation.y};
@@ -824,7 +841,14 @@ function walkTo(point, then = null, run = false, anywhere = false) {
   // Mid-jump: go there once she lands. Up on a perch: hop down first.
   if (brain.jump) { brain.jump.then = () => walkTo(point, then, run, anywhere); return; }
   if (brain.perch) { brain.climbGoal = 'floor'; jumpDown(() => walkTo(point, then, run, anywhere)); return; }
-  const target = anywhere ? point.clone() : onRug(point.clone());
+  // (A spot in the lane to a doorway is fine as it is: house.js.)
+  const lane = laneAt(placeId(place), point), target = anywhere || lane ? point.clone() : onRug(point.clone());
+  // Into or out of a lane, by its mouth: straight down the middle of it,
+  // clear of what stands beside it.
+  const from = laneAt(placeId(place), brain.pos), mouth = (lane || from)?.mouth;
+  if (lane !== from && mouth && Math.hypot(brain.pos.x - mouth.x, brain.pos.z - mouth.z) > .15 && Math.hypot(target.x - mouth.x, target.z - mouth.z) > .15) {
+    walkTo(new THREE.Vector3(mouth.x, 0, mouth.z), () => walkTo(target, then, run, true), run, true); return;
+  }
   // In the kitchen she goes round the island, not through it.
   if (place.route) {
     const path = place.route(brain.pos, target);
@@ -863,7 +887,12 @@ function leap(to, toY, perch, then = null, out = 0) {
 }
 function jumpTo(name, then = null, stay = 40, inner = false) {
   const P = PERCHES[name];
+  // (In the air already: the new goal waits for the landing, else the climb
+  // by way of the perch she's leaving would go round and round.)
+  if (brain.jump) { brain.jump.then = () => jumpTo(name, then, stay, inner); return; }
   if (!P || brain.perch === name) { then?.(); return; }
+  // (The Christmas tree only stands in the Christmas look.)
+  if (treePlace(name) && !treeUp()) { brain.climbGoal = null; setActivity('sit'); return; }
   if (!inner) brain.climbGoal = name;
   // A perch reached by way of another (the kitchen's step, counter and
   // shelves): up from the one below; from higher up, come down to it first.
@@ -878,8 +907,11 @@ function jumpTo(name, then = null, stay = 40, inner = false) {
   // Only jump from the take-off spot (a walk can end early if it ran out of
   // time); otherwise keep walking there, or give up after a few tries.
   const go = tries => walkTo(P.base, () => {
-    if (Math.hypot(brain.pos.x - P.base.x, brain.pos.z - P.base.z) > .3) { if (tries < 3) go(tries + 1); else setActivity('sit'); return; }
-    leap(P.spot, P.top, name, () => { brain.perchUntil = clockNow + stay; then ? then() : setActivity('sit'); });
+    // (Where the perch is now: the look may have changed on the way.)
+    const Q = PERCHES[name];
+    if (!Q || (treePlace(name) && !treeUp())) { brain.climbGoal = null; setActivity('sit'); return; }
+    if (Math.hypot(brain.pos.x - Q.base.x, brain.pos.z - Q.base.z) > .3) { if (tries < 3) go(tries + 1); else setActivity('sit'); return; }
+    leap(Q.spot, Q.top, name, () => { brain.perchUntil = clockNow + stay; then ? then() : setActivity('sit'); });
   }, false, true);
   go(0);
 }
@@ -1077,11 +1109,16 @@ function updateCat(dt, t) {
       brain.jump = null;
       brain.perch = J.perch;
       brain.elevation = J.toY;
+      // (The tree was put away while she was in the air: she's on the floor beside it.)
+      if (treePlace(J.perch) && !treeUp()) { brain.perch = null; brain.climbGoal = null; brain.elevation = 0; brain.pos.set(TREE.climbFrom[0], 0, TREE.climbFrom[1]); }
+      if (J.fromPerch === 'treeTop') brain.treeStuck = false;
       // Landing on the pendant shade sets it swinging (on, and off it).
       if (place === kitchen && (J.perch === 'pendant' || J.fromPerch === 'pendant')) {
         const dx = J.to.x - J.from.x, dz = J.to.z - J.from.z, d = Math.hypot(dx, dz) || 1, s = J.perch === 'pendant' ? .45 : -.3;
         kitchen.bumpPendant(-dz / d * s, dx / d * s, rand(-.8, .8));
       }
+      // Landing in the Christmas tree (or leaving it) shakes it.
+      if (treeUp() && (J.perch?.startsWith('tree') || J.fromPerch?.startsWith('tree'))) xmasTree().shake(J.perch?.startsWith('tree') ? .9 : .5, new THREE.Vector3(J.to.x - J.from.x, 0, J.to.z - J.from.z));
       if (brain.climbGoal != null && (J.perch === brain.climbGoal || (brain.climbGoal === 'floor' && !J.perch))) brain.climbGoal = null;
       // Partway along a climb: sometimes straight on, sometimes a moment
       // balancing on her feet, sometimes a brief sit, eyes on the next perch.
@@ -1405,9 +1442,13 @@ function idleLife(t) {
   if (pet.energy < 50) options.push('nap');
   // At Christmas, the top shelf by the garland is the place for a nap.
   if (place === kitchen && kitchen.decor === 'christmas') options.push('garlandNap', 'garlandNap');
+  // And the tree is the most interesting thing in the house.
+  if (treeUp()) options.push('tree', 'tree', 'tree', 'treeHide', 'treeHide', 'xmasBox', 'xmasBox', 'treePaw', 'treePaw');
   options.push('meow');
   if (pet.happiness > 50) options.push('meow');
   let choice = pick(options);
+  // (The tree, the first time she sees it: nothing else for a while.)
+  if (treeUp() && !brain.treeSeen) { brain.treeSeen = true; curiousLook(); return; }
   // Something worth watching comes round often: soon after you open the
   // app, then every half a minute or so. A tired kitten picks the calm ones.
   if (t > brain.nextShow) {
@@ -1415,6 +1456,7 @@ function idleLife(t) {
     const shows = place === room ? ['window', 'chair', 'sunbeam', 'mantel', 'mantel'] : ['counter', 'shelf', 'shelfHigh', 'pendant', 'pendant', 'sunbeam'];
     if (pet.energy > 35) shows.push('solo', 'solo', 'zoomies');
     choice = pick(shows);
+    if (treeUp() && Math.random() < .6) choice = pick(['tree', 'tree', 'treeHide', 'xmasBox']);
   }
   if (choice === 'glance') glanceAt(new THREE.Vector3(rand(-3, 3), rand(.2, 2.4), rand(-.5, 2.5)), rand(1.2, 2.6));
   if (choice === 'twitch') { twitchEar(0); setTimeout(() => twitchEar(1), 140); }
@@ -1433,6 +1475,10 @@ function idleLife(t) {
   if (choice === 'dash') dash();
   if (choice === 'drink') act('drink', {auto: true});
   if (choice === 'garlandNap') garlandNap();
+  if (choice === 'tree') climbTree(Math.random() < .3 ? 'treeTop' : 'treeHigh');
+  if (choice === 'treeHide') treeHide();
+  if (choice === 'xmasBox') boxSit();
+  if (choice === 'treePaw') treePaw();
   if (choice === 'nap') walkTo(CUSHION_SPOT, () => { setActivity('loaf', rand(8, 14)); setTimeout(slowBlink, 1500); }, false, true);
   if (choice === 'bowl') {
     walkTo(EAT_SPOT, () => { setActivity('beg', 3.5); meow('mew'); say(pick(['Is it snack o’clock?', 'This bowl looks very empty…'])); }, false, true);
@@ -1633,9 +1679,17 @@ function pendantLife() {
 function perchLife(t) {
   if (t > brain.perchUntil) { jumpDown(() => setActivity(restingActivity(), rand(2, 5))); return; }
   if (brain.perch === 'pendant') { pendantLife(); return; }
+  if (treePlace(brain.perch) && brain.climbGoal === 'floor') return;
+  if (brain.perch === 'treeLow' || brain.perch === 'treeMid') { treeClimbLife(); return; }
+  if (brain.perch === 'treeTop' && brain.treeStuck) { stuckLife(); return; }
   const options = ['glance', 'twitch', 'slowBlink', 'groom', 'lookBack', 'loaf'];
   if (brain.perch === 'sill' && t > brain.nextKnock && !room.bookFall && t - brain.actStart > 6) options.push('book');
   if (brain.perch === 'mantel' && t > brain.nextKnock && !room.vaseFall && t - brain.actStart > 4) options.push('vase', 'vase');
+  if (brain.perch === 'treeHigh' && treeUp() && t - brain.actStart > 2) {
+    options.push('bauble', 'bauble', 'bauble', 'loaf', 'upTop');
+    if (t > brain.nextKnock && t - brain.actStart > 4 && xmasTree().hanging('high').length) options.push('treeDrop', 'treeDrop');
+  }
+  if (brain.perch === 'xmasBox') options.push('loaf', 'loaf', 'peek', 'peek');
   if (PERCHES[brain.perch]?.lane && place === kitchen && t - brain.actStart > 2) options.push('stroll', 'stroll', 'stroll');
   // Something on this shelf that could do with being on the floor.
   if (PERCHES[brain.perch]?.lane && place === kitchen && t > brain.nextKnock && kitchen.knockableNear(brain.perch, brain.pos.x) && t - brain.actStart > 2) options.push('knock', 'knock');
@@ -1651,6 +1705,10 @@ function perchLife(t) {
   if (choice === 'loaf') setActivity('loaf', rand(6, 12), () => setActivity('sit'));
   if (choice === 'book') knockBook();
   if (choice === 'vase') knockVase();
+  if (choice === 'bauble') batBauble();
+  if (choice === 'upTop') climbTree('treeTop');
+  if (choice === 'peek') { glanceAt(camera.position, 2.2); if (Math.random() < .5) { express('excited', 1.6); meow('chirp', 'idle'); } }
+  if (choice === 'treeDrop') knockBauble();
   if (choice === 'knock') knockThing(kitchen.knockableNear(brain.perch, brain.pos.x));
   if (choice === 'stroll') stroll();
   if (choice === 'faucet') drinkFaucet();
@@ -1679,6 +1737,239 @@ function knockVase() {
       }, 900);
     }, 220);
   }, d * 1000));
+}
+
+// The Christmas tree (xmas-tree.js): a tall fir in the kitchen's back
+// corner by the doorway, in the Christmas look. The first time she sees it, a
+// long curious look. Then: up it in stages (lying across it, half out;
+// sometimes on up to the top, where she's stuck and mews till you tap her),
+// pats at its baubles from the floor and from up there (now and then one
+// comes off, and she goes down after it), hiding under the low boughs,
+// and sitting in the open box among the presents.
+function xmasTree() { const T = kitchen?.xmasTree; if (T) T.onLand ??= () => onLand('cup'); return T; }
+function treeUp() { return !!kitchen && place === kitchen && kitchen.decor === 'christmas' && !!kitchen.xmasTree?.root.visible; }
+const treePlace = name => !!name && (name.startsWith('tree') || name === 'xmasBox');
+const ahead = () => new THREE.Vector3(Math.sin(brain.heading), 0, Math.cos(brain.heading));
+const floorAt = ([x, z]) => new THREE.Vector3(x, 0, z);
+// Room for all of her at (x, z) facing `heading`: the kitchen's floor, clear
+// of the island, the tree's foot, the box and the rest.
+function floorFree(x, z, heading) {
+  for (const k of [-.5, 0, .45]) {
+    const v = new THREE.Vector3(x + Math.sin(heading) * k, 0, z + Math.cos(heading) * k);
+    if (kitchen.pushOut(kitchen.clampFloor(v.clone())).distanceTo(v) > .04) return false;
+  }
+  return true;
+}
+// Up she goes, in stages: `to` is how far (treeHigh, or treeTop and stuck).
+function climbTree(to = 'treeHigh') {
+  if (!treeUp() || !['idle', 'solo'].includes(brain.mode)) return false;
+  brain.mode = 'idle';
+  jumpTo(to, () => {
+    if (to === 'treeTop') { stuckAtTop(); return; }
+    setActivity('loaf', rand(5, 9), () => setActivity('sit'));
+    if (Math.random() < .5) later(1.5, () => { glanceAt(camera.position, 2.2); meow('chirp', 'idle'); });
+  }, to === 'treeTop' ? 75 : rand(35, 55));
+  return true;
+}
+// Stopped partway up: on up, mostly; a look up first.
+function treeClimbLife() {
+  const up = PERCHES[brain.perch === 'treeLow' ? 'treeMid' : 'treeHigh'];
+  glanceAt(new THREE.Vector3(up.spot.x, up.top + .4, up.spot.z), 1.4);
+  if (Math.random() < .7) later(.8, () => { if ((brain.perch === 'treeLow' || brain.perch === 'treeMid') && !brain.jump && brain.climbGoal !== 'floor' && brain.mode === 'idle') climbTree(Math.random() < .3 ? 'treeTop' : 'treeHigh'); });
+}
+// Down out of the tree, a branch at a time.
+function downFromTree(then) {
+  if (brain.perch?.startsWith('tree') || brain.perch === 'xmasBox') jumpDown(() => downFromTree(then)); else then?.();
+}
+// At the very top: a look down, and the realisation.
+let stuckHinted = false;
+function stuckAtTop() {
+  brain.treeStuck = true;
+  setActivity('sit');
+  glanceAt(new THREE.Vector3(brain.pos.x + 1, 0, brain.pos.z + 1.5), 2.4);
+  later(2.2, () => {
+    if (!brain.treeStuck || brain.perch !== 'treeTop' || !treeUp()) return;
+    express('surprised', 1.4); twitchEar(0, 1.2); twitchEar(1, 1.2);
+    later(1.2, () => { if (brain.treeStuck && brain.perch === 'treeTop') stuckLife(); });
+    if (!stuckHinted) { stuckHinted = true; later(2.4, () => { if (brain.treeStuck && brain.perch === 'treeTop' && treeUp()) toast(`${pet.name || 'Mochi'} is stuck! Tap her to help her down.`); }); }
+  });
+}
+// Stuck: mews down at you, looks down, shifts about.
+function stuckLife() {
+  brain.nextIdle = clockNow + rand(3.5, 6);
+  const r = Math.random();
+  if (r < .55) { glanceAt(camera.position, 2.2); meow(pick(['mew', 'meow']), 'idle'); express('lonely', 2.4); if (Math.random() < .6) say(pick(['Um… how do I get down?', 'Help?', 'It was easier going up.', 'I live here now. Help.']), 2400); }
+  else if (r < .8) { glanceAt(new THREE.Vector3(brain.pos.x + rand(-1, 1.5), 0, brain.pos.z + rand(.5, 2)), 2); setActivity('poise', rand(.8, 1.4), () => setActivity('sit')); }
+  else { setActivity('loaf', rand(3, 5), () => setActivity('sit')); twitchEar(); }
+}
+// You help her down: back to the floor, and thanks.
+function helpDown() {
+  if (!brain.treeStuck) return false;
+  brain.treeStuck = false; brain.climbGoal = 'floor';
+  express('love', 2); meow('chirp', 'idle'); say(pick(['My hero.', 'I was fine. Totally fine.', 'Thank you!!']), 2400);
+  later(.6, () => downFromTree(() => {
+    setActivity('sit', 3); glanceAt(camera.position, 2.5); burst('heart', 4); treat({happiness: 3});
+  }));
+  return true;
+}
+// A pat or two at a bauble under her paws: it swings, the tree trembles.
+function batBauble() {
+  const T = xmasTree(), hanging = T?.hanging('high');
+  if (!hanging?.length) return;
+  const L = pick(hanging), pats = Math.random() < .5 ? [0, .7] : [0, .6, 1.3];
+  glanceAt(T.ballWorld(L.i), 3);
+  pats.forEach(d => setTimeout(() => {
+    if (brain.perch !== 'treeHigh' || brain.jump) return;
+    brain.swatAt = T.ballWorld(L.i);
+    setActivity('swat', SWAT, () => setActivity('sit'));
+    setTimeout(() => { if (T.bat(L.i, ahead())) T.shake(.12, ahead()); }, 220);
+  }, d * 1000));
+  setTimeout(() => { if (brain.perch === 'treeHigh' && Math.random() < .4) { glanceAt(camera.position, 2); express('curious', 1.6); } }, (pats.at(-1) + 1.4) * 1000);
+}
+// Pat, pat, and the third one sends it down. A look at it, a look at you,
+// then down after it for a game across the floor.
+function knockBauble() {
+  const T = xmasTree(), hanging = T?.hanging('high');
+  if (!hanging?.length) return;
+  brain.nextKnock = clockNow + rand(70, 120);
+  const L = pick(hanging);
+  glanceAt(T.ballWorld(L.i), 3.5);
+  [0, .9, 1.8].forEach((d, n) => setTimeout(() => {
+    if (brain.perch !== 'treeHigh' || brain.jump) return;
+    brain.swatAt = T.ballWorld(L.i);
+    setActivity('swat', SWAT, () => setActivity('sit'));
+    setTimeout(() => {
+      if (brain.perch !== 'treeHigh' || brain.jump || !treeUp()) return;
+      if (n < 2) { if (T.bat(L.i, ahead())) T.shake(.12, ahead()); return; }
+      if (!T.drop(L.i)) return;
+      T.shake(.3, ahead());
+      setTimeout(() => {
+        glanceAt(T.ballWorld(L.i), 2.2); express('surprised', 1.2);
+        setTimeout(() => {
+          if (brain.perch !== 'treeHigh' || brain.mode !== 'idle') return;
+          glanceAt(camera.position, 2.5); express('curious', 2);
+          if (Math.random() < .6) say(pick(['…it fell.', 'It jumped. I saw it.', 'Shiny! Down there now.', 'I barely touched it.']), 2600);
+          setTimeout(() => chaseBauble(L.i), 2600);
+        }, 1500);
+      }, 500);
+    }, 220);
+  }, d * 1000));
+}
+// Down after a fallen bauble: up to it, and a pat or two to send it rolling.
+function chaseBauble(i, pats = 2) {
+  const T = xmasTree();
+  if (!T?.loose[i]?.down || brain.mode !== 'idle' || !treeUp()) return;
+  downFromTree(() => {
+    // (From the side nearest the middle of the room with room for her.)
+    const ball = T.ballWorld(i), from = new THREE.Vector3(ball.x, 0, ball.z);
+    let best = null;
+    for (let k = 0; k < 16; k++) {
+      const a = k / 16 * Math.PI * 2, at = from.clone().add(new THREE.Vector3(Math.sin(a) * .78, 0, Math.cos(a) * .78));
+      if (!floorFree(at.x, at.z, angleTo(at, from))) continue;
+      const d = Math.hypot(at.x - 1, at.z - 4.5);
+      if (!best || d < best.d) best = {at, d};
+    }
+    if (!best) { glanceAt(ball, 2); return; }
+    walkTo(best.at, () => {
+      if (!T.loose[i].down || brain.mode !== 'idle' || !treeUp()) return;
+      brain.heading = angleTo(brain.pos, from);
+      brain.swatAt = T.ballWorld(i);
+      setActivity('swat', SWAT, () => setActivity('sit', rand(1.5, 3)));
+      setTimeout(() => {
+        const dir = new THREE.Vector3().subVectors(from, brain.pos).setY(0).normalize();
+        T.kick(i, dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), rand(-.5, .5)), rand(1.6, 2.6));
+        later(1.4, () => { if (pats > 1 && Math.random() < .7) chaseBauble(i, pats - 1); else { glanceAt(camera.position, 2); express('excited', 1.8); } });
+      }, 220);
+    }, true, true);
+  });
+}
+// A tap on a fallen bauble: you hang it back on the tree.
+function rehangBauble(i) {
+  const T = xmasTree();
+  if (!T?.rehang(i)) return;
+  T.shake(.1);
+  if (!pet.sleeping && brain.mode === 'idle' && !brain.perch) { glanceAt(T.ballWorld(i), 1.8); express('curious', 1.4); }
+}
+// From the floor: up to the low boughs, a sniff, and a paw at a bauble.
+// `startle`: it swings back at her and she hops back (the first time).
+function treePaw(startle = false, then = null) {
+  const T = xmasTree(), hanging = T?.hanging('low');
+  if (!hanging?.length || brain.perch || !treeUp()) return false;
+  brain.mode = 'idle';
+  const L = pick(hanging), at = floorAt(TREE.sniff);
+  walkTo(at, () => {
+    if (!treeUp()) return;
+    const ball = T.ballWorld(L.i);
+    brain.heading = angleTo(brain.pos, ball);
+    glanceAt(ball, 3); brain.swatAt = ball;
+    setActivity('pause', rand(1, 1.6), () => {
+      setActivity('swat', SWAT, () => setActivity('sit', rand(1.5, 3), then));
+      setTimeout(() => { if (T.bat(L.i, ahead(), startle ? .6 : 1)) T.shake(.06, ahead()); }, 220);
+      if (startle) setTimeout(() => { hop(); express('surprised', 1.2); twitchEar(0, 1); twitchEar(1, 1); }, 650);
+      else if (Math.random() < .5) setTimeout(() => { brain.swatAt = T.ballWorld(L.i); setActivity('swat', SWAT, () => setActivity('sit', rand(1.5, 3), then)); setTimeout(() => T.bat(L.i, ahead()), 220); }, 1100);
+    });
+  }, false, true);
+  return true;
+}
+// The first time she sees it: a long stare up it, then a careful creep,
+// a sit and another look, up close for a sniff and a very careful paw.
+function curiousLook() {
+  const T = xmasTree();
+  if (!T || brain.perch) return false;
+  brain.mode = 'idle';
+  const top = T.world(0, TREE.top - 1.2, 0), c = Math.cos(TREE.ry), sn = Math.sin(TREE.ry), mid = T.world(-.5 * c + .8 * sn, 3.0, .5 * sn + .8 * c);
+  glanceAt(top, 2.8); express('surprised', 1.6); twitchEar(0, 1.5); twitchEar(1, 1.5);
+  later(2.2, () => {
+    if (!treeUp() || brain.mode !== 'idle') return;
+    express('curious', 4);
+    walkTo(floorAt(TREE.look), () => {
+      if (!treeUp()) return;
+      brain.swatAt = mid; brain.heading = angleTo(brain.pos, mid);
+      setActivity('stalk', 2.2, () => {
+        glanceAt(top, 2.2); setActivity('sit', 2, () => {
+          glanceAt(mid, 1.6);
+          treePaw(true, () => {
+            glanceAt(camera.position, 2.4); meow('chirp', 'idle');
+            say(pick(['What IS this?', 'A tree. Inside. With toys on it.', 'Is it… mine?', 'So many shiny things.']), 2800);
+          });
+        });
+      });
+    }, false, true);
+  });
+  return true;
+}
+// Under the low boughs at the front: in she goes, turns, and lies looking
+// out; a pat at the baubles hanging over her now and then.
+function treeHide() {
+  const T = xmasTree();
+  if (!T || brain.perch || !treeUp()) return false;
+  brain.mode = 'idle';
+  const f = new THREE.Vector3(Math.sin(TREE.hideFace), 0, Math.cos(TREE.hideFace)), spot = floorAt(TREE.hide);
+  const stay = rand(14, 22);
+  walkTo(spot.clone().addScaledVector(f, -.35), () => treeUp() && walkTo(spot.clone().addScaledVector(f, .08), () => {
+    if (!treeUp()) return;
+    brain.nextIdle = clockNow + stay;
+    setActivity('loaf', stay, () => setActivity('sit'));
+    later(rand(2.5, 4), () => { if (brain.activity === 'loaf') { glanceAt(camera.position, 2.2); slowBlink(); } });
+    for (const d of [rand(6, 8), rand(10, 13)]) later(d, () => {
+      const L = pick(T.hanging('hide') || []);
+      if (!L || brain.activity !== 'loaf' || brain.mode !== 'idle') return;
+      brain.swatAt = T.ballWorld(L.i); glanceAt(brain.swatAt, 1.5);
+      setActivity('swat', SWAT, () => setActivity('loaf', Math.max(2, stay - (clockNow - brain.actStart)), () => setActivity('sit')));
+      setTimeout(() => { if (T.bat(L.i, f)) T.shake(.05, f); }, 220);
+    });
+  }, false, true), false, true);
+  return true;
+}
+// Into the open box among the presents: in, round, and down she settles.
+function boxSit() {
+  if (!treeUp() || !['idle', 'solo'].includes(brain.mode)) return false;
+  brain.mode = 'idle';
+  jumpTo('xmasBox', () => {
+    setActivity('loaf', rand(8, 14), () => setActivity('sit'));
+    later(1.2, () => { glanceAt(camera.position, 2.4); if (Math.random() < .6) say(pick(['Mine now.', 'If it fits…', 'Best present.']), 2200); });
+  }, rand(25, 40));
+  return true;
 }
 
 // The top book on the sill: she pats at it, twice, and the third pat sends it
@@ -2188,6 +2479,8 @@ function zoneAt(point) {
 let lastDislike = -10, lastMumble = -10, dislikes = [];
 function touchCat(zone, opts = {}) {
   if (!ready) return;
+  // Stuck at the top of the Christmas tree: your hand helps her down.
+  if (brain.treeStuck && brain.perch === 'treeTop' && helpDown()) return;
   if ((zone === 'tail' || zone === 'paws') && brain.activity !== 'belly') { dislikeTouch(zone); return; }
   if (pet.taught.ball && !pet.sleeping) learned('pet');
   // (Asleep: a mumble now and then, not at every stroke.)
@@ -2585,6 +2878,15 @@ function perchAt() {
     const hit = ray.intersectObject(obj, true).find(h => h.object.visible && h.object.material?.blending !== THREE.AdditiveBlending);
     if (hit && (!best || hit.distance < best.d)) best = {name, d: hit.distance};
   }
+  // The Christmas tree: a fallen bauble (to hang back up), or the tree itself.
+  if (treeUp()) {
+    const T = xmasTree(), f = T.hitFallen(ray);
+    if (f && (!best || f.dist < best.d)) return 'bauble:' + f.i;
+    const box = ray.intersectObject(T.boxHit, false)[0];
+    if (box && (!best || box.distance < best.d)) best = {name: 'xmasBox', d: box.distance};
+    const hit = ray.intersectObject(T.hit, false)[0];
+    if (hit && (!best || hit.distance < best.d)) best = {name: 'treeHigh', d: hit.distance};
+  }
   return best?.name || null;
 }
 // Tapping a perch invites her up. She's a cat: mostly she goes (with a
@@ -2593,6 +2895,7 @@ function perchAt() {
 let lastInvite = {name: null, at: -99};
 function invite(name) {
   if (name.startsWith('knock:')) { inviteKnock(kitchen.knockables[+name.slice(6)]); return; }
+  if (name.startsWith('bauble:')) { rehangBauble(+name.slice(7)); return; }
   if (name === 'faucet') { if (pet.sleeping) { toast('Shh… wake your kitten first.'); return; } if (!['idle', 'solo'].includes(brain.mode)) return; brain.mode = 'idle'; later(.35, () => meow('chirp', 'idle')); if (brain.perch && brain.perch !== 'counter') jumpDown(drinkFaucet); else drinkFaucet(); return; }
   if (name === 'vacuum') { inviteVacuum(); return; }
   if (name === 'salmon') { if (pet.sleeping) { toast('Shh… wake your kitten first.'); return; } if (!kitchen.salmonReady) { say('All gone…', 2000); return; } if (Math.random() < .85) { brain.mode = 'idle'; stealSalmon(); } else say(pick(['I would never.', '*innocent look*']), 2200); return; }
@@ -2610,6 +2913,7 @@ function invite(name) {
     jumpTo(name, () => {
       setActivity('sit');
       if (name === 'sill') brain.nextBird = clockNow + rand(3, 8);
+      if (name === 'treeHigh' || name === 'xmasBox') setActivity('loaf', rand(5, 8), () => setActivity('sit'));
       if (name === 'chair') { brain.kneadUntil = clockNow + 3; setActivity('loaf', 3.4, () => setActivity('catnap', rand(10, 18), () => { slowBlink(); setActivity('sit', 4); })); }
     }, rand(25, 40));
   } else setTimeout(() => {
@@ -2668,17 +2972,13 @@ function clampGoal() {
   g.focus.y = clamp(g.focus.y, LIMITS.y[0], view.farY);
   g.focus.z = clamp(g.focus.z, ...LIMITS.z);
 }
-// Turn the view. The rooms are open at the front, so the turn runs from one
-// side wall round to the other and no further: past the end it gives a
-// little, like a rubber band, and springs back when you let go (`updateCamera`).
-const TURN_MAX = 1.75, TURN_OVER = .16;
+// Turn the view, all the way round: each room has a front wall too, and a
+// wall the camera is behind hides (room.js, kitchen.js). The turn is kept
+// within one circle; the camera eases the short way round to it (`updateCamera`).
+const wrapYaw = a => a - Math.round(a / (Math.PI * 2)) * Math.PI * 2;
 function turnBy(da) {
   if (!da) return;
-  const g = view.goal, past = Math.abs(g.yaw) - TURN_MAX;
-  if (past > 0 && da * g.yaw > 0) da *= .3 * Math.max(0, 1 - past / TURN_OVER);
-  let to = g.yaw + da;
-  if (Math.abs(to) > Math.abs(g.yaw)) to = Math.sign(to) * Math.min(Math.abs(to), Math.max(Math.abs(g.yaw), TURN_MAX + TURN_OVER));
-  g.yaw = to;
+  view.goal.yaw = wrapYaw(view.goal.yaw + da);
 }
 // How the tilt changes with distance: the last few metres in drop the view
 // to her level (the way a pet game frames her); further out it holds.
@@ -2699,6 +2999,48 @@ function pan(dx, dy) {
   view.lastDrag = clockNow;
   setCamMode('free');
   clampGoal();
+}
+// The camera's arm, looking from the focus along `off`: as long as it can
+// be inside the room (dFree), and then kept clear of furniture (d), with
+// the little rise (lift) that sees over something low.
+// Something tall in the way: the arm stops just in front of it. Something
+// low (the island, a stool, the chair): the camera rises to see over it.
+function cameraArm(off, dist) {
+  // Spring arm: if the camera would leave the room, shorten the arm instead.
+  let d = boxArm(view.focus, off, dist);
+  const fx = view.focus.x, fz = view.focus.z, fy = view.focus.y, ox = off.x, oz = off.z, oy = off.y, hz = Math.hypot(ox, oz);
+  const dFree = d;
+  let lift = 0;
+  const blocked = (tHit, h) => {
+    if (!(tHit > 0 && tHit < d) || fy + oy * tHit >= h) return;
+    // Rise so the line of sight clears its top (at that distance along),
+    // if that's only a little; otherwise come in front of it.
+    const s = tHit / d, need = h < 3.2 && tHit > d * .25 ? fy + (h + .15 - fy) / s - (fy + oy * d) : Infinity;
+    if (need < 1.6) lift = Math.max(lift, need); else d = Math.min(d, tHit - .15);
+  };
+  if (hz > 1e-4) {
+    for (const [cx, cz, r, h] of CAM_SOLIDS) {
+      const px = fx - cx, pz = fz - cz;
+      if (px * px + pz * pz < r * r) continue; // looking at the piece itself
+      const a2 = ox * ox + oz * oz, b2 = 2 * (px * ox + pz * oz), c2 = px * px + pz * pz - r * r, disc = b2 * b2 - 4 * a2 * c2;
+      if (disc < 0) continue;
+      blocked((-b2 - Math.sqrt(disc)) / (2 * a2), h);
+    }
+    // Worktops (the island, the counter): boxes, so the camera never ends
+    // up looking at a close-up of the stone from inside one.
+    for (const [x0, x1, z0, z1, top] of CAM_BLOCKS) {
+      // (Looking at the worktop itself, or at its very edge: it isn't in the way.)
+      if (fx > x0 - .3 && fx < x1 + .3 && fz > z0 - .3 && fz < z1 + .3) continue;
+      let t0 = 0, t1 = d;
+      for (const [o, f, lo, hi] of [[ox, fx, x0, x1], [oz, fz, z0, z1]]) {
+        if (Math.abs(o) < 1e-6) { if (f < lo || f > hi) { t0 = 1; t1 = 0; } continue; }
+        const a = (lo - f) / o, b = (hi - f) / o;
+        t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b));
+      }
+      if (t0 < t1) blocked(t0, top - .2);
+    }
+  }
+  return {dFree, d, lift};
 }
 // How long the camera's arm can be before it leaves the room.
 function boxArm(focus, off, d) {
@@ -2971,11 +3313,10 @@ const CAMERA_VIEWS = {
     view.home = {yaw: fit.yaw, pitch: fit.pitch};
     setCamMode('room');
   },
-  // (`yaw`: from where to look at her; left out, from where the camera is.
-  // Never from beyond the ends of the turn.)
+  // (`yaw`: from where to look at her; left out, from where the camera is.)
   follow(yaw) {
     Object.assign(view.goal, {dist: ready ? clamp(fitDistance(framing(false).radius), 2.6, 6) : tallScreen() ? 4.2 : 3.4, pitch: .26});
-    view.goal.yaw = clamp(typeof yaw === 'number' ? yaw : Math.atan2(camera.position.x - brain.pos.x, camera.position.z - brain.pos.z), -TURN_MAX, TURN_MAX);
+    view.goal.yaw = wrapYaw(typeof yaw === 'number' ? yaw : Math.atan2(camera.position.x - brain.pos.x, camera.position.z - brain.pos.z));
     setCamMode('follow');
   },
   food: () => lookAtSpot(bowl.position, {y: .15}),
@@ -3340,6 +3681,7 @@ function renderPlaces() {
 // Take her (and the camera) to another room.
 function goTo(id) {
   if (id === 'kitchen' && !kitchen) buildKitchen();
+  brain.treeStuck = false;
   const target = id === 'kitchen' ? kitchen : room;
   if (target === place) return;
   if (brain.mode === 'play') endPlay(true);
@@ -3395,8 +3737,25 @@ $('#decor-options').addEventListener('click', e => {
   // Let the menu close and the note show before the room is redressed.
   toast('Decorating…');
   setTimeout(() => {
+    // (Her kitchen bed, fountain and bowl move when the tree comes or goes:
+    // in the bed, she goes with it; on her way to one of them, she stops.)
+    const treeWas = !!kitchen?.treeOn, inKitchenBed = !!kitchen && place === kitchen && !brain.perch && !brain.jump && Math.hypot(brain.pos.x - bed.position.x, brain.pos.z - bed.position.z) < kitchen.bedRadius;
     applyDecor(room, id);
     if (kitchen) applyKitchenDecor(kitchen, id);
+    // (The kitchen's places change with its tree: her perches in it, her floor.)
+    if (kitchen) kitchen.layoutCache = null;
+    if (place === kitchen) usePlace(kitchen);
+    if (place === kitchen && treeWas !== !!kitchen.treeOn && !brain.perch && !brain.jump) {
+      if (inKitchenBed) brain.pos.set(CUSHION_SPOT.x, 0, CUSHION_SPOT.z);
+      else if (brain.target) { brain.target = null; brain.after = null; setActivity('sit'); }
+      brain.target = null;
+    }
+    // (In the tree or its box as it's put away: she's on the floor beside it.)
+    if (id !== 'christmas') {
+      if (treePlace(brain.perch) || treePlace(brain.jump?.perch)) { Object.assign(brain, {perch: null, jump: null, climbGoal: null, treeStuck: false}); brain.elevation = 0; brain.pos.set(TREE.climbFrom[0], 0, TREE.climbFrom[1]); setActivity('sit'); }
+      else if (treePlace(brain.climbGoal)) { brain.climbGoal = null; brain.target = null; setActivity('sit'); }
+      brain.treeStuck = false;
+    }
     if (room.altToy) (place === room ? room.group : place.group).add(room.altToy);
     pet.decor = id;
     save();
@@ -4079,11 +4438,6 @@ function updateCamera(dt) {
       Object.assign(view, {shiftPx: px, shiftW: W, shiftH: clear.h});
     }
   }
-  // Let go past the end of the turn: it springs back to the end.
-  if (!touches.size && !view.fling && !titleOn) {
-    const over = Math.abs(g.yaw) - TURN_MAX;
-    if (over > 0 && over < .5) g.yaw = damp(g.yaw, Math.sign(g.yaw) * TURN_MAX, 9, dt);
-  }
   let distGoal = g.dist;
   if (following) {
     // Keep Mochi (and, while playing, the toy) comfortably in frame. The
@@ -4110,48 +4464,20 @@ function updateCamera(dt) {
   view.focus.x = damp(view.focus.x, g.focus.x, r, dt);
   view.focus.y = damp(view.focus.y, g.focus.y, r, dt);
   view.focus.z = damp(view.focus.z, g.focus.z, r, dt);
+  // (The short way round: the turn has no ends.)
+  view.yaw = g.yaw + wrapYaw(view.yaw - g.yaw);
   view.yaw = damp(view.yaw, g.yaw, 8 * slow, dt);
   view.pitch = damp(view.pitch, g.pitch, 8 * slow, dt);
   view.dist = damp(view.dist, distGoal, (following && distGoal > g.dist ? 1.6 : 7) * slow, dt);
-  camOffset.set(Math.sin(view.yaw) * Math.cos(view.pitch), Math.sin(view.pitch), Math.cos(view.yaw) * Math.cos(view.pitch));
-  // Spring arm: if the camera would leave the room, shorten the arm instead.
-  let d = boxArm(view.focus, camOffset, view.dist);
-  // Keep furniture from coming between the camera and what it looks at.
-  // Something tall in the way: the arm stops just in front of it. Something
-  // low (the island, a stool, the chair): the camera rises to see over it.
-  // Both ease in and out, so a turn past a piece of furniture glides rather
-  // than jumping.
-  const fx = view.focus.x, fz = view.focus.z, fy = view.focus.y, ox = camOffset.x, oz = camOffset.z, oy = camOffset.y, hz = Math.hypot(ox, oz);
-  const dFree = d;
-  let lift = 0;
-  const blocked = (tHit, h) => {
-    if (!(tHit > 0 && tHit < d) || fy + oy * tHit >= h) return;
-    // Rise so the line of sight clears its top (at that distance along),
-    // if that's only a little; otherwise come in front of it.
-    const s = tHit / d, need = h < 3.2 && tHit > d * .25 ? fy + (h + .15 - fy) / s - (fy + oy * d) : Infinity;
-    if (need < 1.6) lift = Math.max(lift, need); else d = Math.min(d, tHit - .15);
-  };
-  if (hz > 1e-4) {
-    for (const [cx, cz, r, h] of CAM_SOLIDS) {
-      const px = fx - cx, pz = fz - cz;
-      if (px * px + pz * pz < r * r) continue; // looking at the piece itself
-      const a2 = ox * ox + oz * oz, b2 = 2 * (px * ox + pz * oz), c2 = px * px + pz * pz - r * r, disc = b2 * b2 - 4 * a2 * c2;
-      if (disc < 0) continue;
-      blocked((-b2 - Math.sqrt(disc)) / (2 * a2), h);
-    }
-    // Worktops (the island, the counter): boxes, so the camera never ends
-    // up looking at a close-up of the stone from inside one.
-    for (const [x0, x1, z0, z1, top] of CAM_BLOCKS) {
-      if (fx > x0 && fx < x1 && fz > z0 && fz < z1) continue;
-      let t0 = 0, t1 = d;
-      for (const [o, f, lo, hi] of [[ox, fx, x0, x1], [oz, fz, z0, z1]]) {
-        if (Math.abs(o) < 1e-6) { if (f < lo || f > hi) { t0 = 1; t1 = 0; } continue; }
-        const a = (lo - f) / o, b = (hi - f) / o;
-        t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b));
-      }
-      if (t0 < t1) blocked(t0, top - .2);
-    }
-  }
+  // Turned towards a wall or furniture with little room behind (the back
+  // of the room, the island): the camera rises and looks down rather than
+  // being squeezed in close (no ceiling up there), as far as it needs,
+  // easing in and out.
+  const aim = p => camOffset.set(Math.sin(view.yaw) * Math.cos(p), Math.sin(p), Math.cos(view.yaw) * Math.cos(p));
+  let rise = 0;
+  if (!titleOn) for (; rise < 1.2 - view.pitch; rise += .1) if (cameraArm(aim(view.pitch + rise), view.dist).d > Math.min(view.dist * .8, 6.5)) break;
+  view.rise = damp(view.rise || 0, Math.max(0, rise), 4, dt);
+  const {dFree, d, lift} = cameraArm(aim(view.pitch + view.rise), view.dist);
   // (Only the dodging eases; zoom and turning follow you as before.)
   const cut = dFree - d;
   view.cut = damp(view.cut || 0, cut, cut > (view.cut || 0) ? 12 : 3, dt);
@@ -4404,7 +4730,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {house, placeId, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });

@@ -19,8 +19,9 @@ preview branch.
 | `window-view.js` | The sky, sea and beach outside (a shader on one sheet), and for the study window (`room.outside`) three painted dune pictures laid at different distances, so the view shifts as the camera moves. `SCENES` at the top places everything. `room.view = {day, night}` picks the study's mood (0 day, 1 night, 2 dusk; `decor.js` sets dusk for Halloween). The dune pictures are tiled by painting three copies: ground first in all three, then what stands on it. No canvas `filter`: iPhones ignore it. |
 | `terrace.js` | Outside the kitchen, in 3D (`kitchen.terrace`; `kitchen.outside` is the strip the dog walks on): paving to a low wall, olive trees in pots (leaf cards), dunes (`duneHeight`) with grass cards, and the sheet from `window-view.js` far behind for sky and sea (`kitchen.terraceView`). Unlit: shade is painted in, and `update` tints it all by night. |
 | `bird.js` | The sparrow at the windows (`makeBird`): painted cards (body, folded wing and legs when perched, two spread wings on hinges), flat front to back to fit between the view and the glazing bars. Flown by `Room.updateBird`. |
-| `kitchen.js` | `Kitchen`: island, shelves, sink and faucet, pendant lamp, robot vacuum, terrace, dog (`?dog`). Layout constants in `K`; spots in `layout()`. |
-| `decor.js` | Seasonal decor for both rooms; `pillowGeometry`. Seasonal looks have `months` and are stored away out of season (`inSeason`, `decorNow`; `?decor=halloween` shows one anyway). Christmas (`kitchenChristmas`) dresses the kitchen only; the study stays classic under it. Its evening lights run from `kitchen.updateChristmas`. |
+| `kitchen.js` | `Kitchen`: island, shelves, sink and faucet, pendant lamp, robot vacuum, terrace, dog (`?dog`). Layout constants in `K`; spots in `layout()`. Room width is `K.right` (10 since 2026-11-18); `FLOOR`, `VAC_FLOOR` and `randomFloorPoint` sit just inside it, so move them with it. At Christmas `setTree` swaps the tent for a round bed (`K.xmas`). |
+| `decor.js` | Seasonal decor for both rooms; `pillowGeometry`. Seasonal looks have `months` and are stored away out of season (`inSeason`, `decorNow`; `?decor=halloween` shows one anyway). Christmas (`kitchenChristmas`) dresses the kitchen; the study stays classic under it, plus pine on the mantel. The Christmas tree (`xmas-tree.js`) stands in the kitchen. Its evening lights run from `kitchen.updateChristmas`. |
+| `xmas-tree.js` | The Christmas tree in the kitchen's back corner by the doorway (Christmas look only, `kitchen.xmasTree`, built in `applyKitchenDecor`): fir sprays, lights, baubles, velvet bows (one merged bow geometry from `decor.js`, instanced), the star, the skirt and the open box as a few instanced draws; the needles are cleared round the places she lies. `TREE` (plain numbers) places it, her perches `treeLow`/`treeMid`/`treeHigh`/`treeTop`, `xmasBox`, the hiding spot and the first-look spots. `kitchen.setTree(on)` adds its foot and the box to `OBSTACLES`; app.js `withTree` adds the perches and a camera solid to the kitchen's layout. Tree API: `shake`, `bat`, `drop`, `kick`, `rehang`, `hanging(group)`, `hitFallen`, `update`. Her side (app.js): `curiousLook`, `climbTree`, `stuckAtTop`/`helpDown`, `batBauble`, `knockBauble`, `chaseBauble`, `treePaw`, `treeHide`, `boxSit`, `rehangBauble`. Nothing is saved. |
 | `pet-state.js`, `save.js` | Care meters, saves, offline progress. |
 | `away.js` | The "While you were away" story: lines by part of the day, `awayStory(from, to, {asleep, decor})`, seeded by when the player left. No three.js, tested in node. |
 | `rewards.js` | Gifts of friendship: `GIFTS` (level to gift), `TOYS`, what a level owns. Owning is worked out from the level every time; the save keeps only `pet.gifts` (shown) and `pet.toy` (picked). |
@@ -224,10 +225,13 @@ floor); far out gives `room` back; in `follow` it only changes the
 distance. `goClose` = a double tap in Explore. Two fingers sliding call
 `pan` (Explore only). Tilt follows zoom (`tiltFor(dist)`, applied as a
 change, so each view keeps its own angle). `turnBy` is the only way the
-view turns (drag, twist, flick): `TURN_MAX` each way from the front (the
-rooms have no front wall, and from behind them wall furniture hangs in the
-way), with a little give that `updateCamera` springs back. The camera
-stays inside `CAM_BOX`: turned to a side, the arm shortens. `view.shown` is
+view turns (drag, twist, flick), all the way round: `goal.yaw` is kept in
+one circle (`wrapYaw`) and `view.yaw` eases the short way to it. Each room
+has a front wall (study `walls.front`, kitchen `K.front`); a wall the
+camera is behind hides (`room.update`, `kitchen.update`). The camera
+stays inside `CAM_BOX`; `cameraArm` gives its arm after walls and
+furniture, and when that is short (turned to a wall or the island)
+`view.rise` tilts it up to look down instead of squeezing in close. `view.shown` is
 how far the camera really is (walls, `boxArm`, furniture); zoom starts from
 it. `view.zoomHeld` = the player chose the zoom, so follow leaves it.
 `clearArea()` = the part of the picture above the care buttons and the
