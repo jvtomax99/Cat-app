@@ -53,7 +53,9 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    front wall goes; one floor and one sea terrace for both; the tree to the
    join; her tent and fountain moved for real), then what she does there.
    Weight on its own: about 150 draw calls and 67k triangles a frame
-   (indoors 103 and 36k; the two terraces 48 and 31k).*
+   (indoors 103 and 36k; the two terraces 48 and 31k). Merlin tried the
+   room on its own on his phone, 2026-11-18: "the speed is good" (the
+   first real-phone check; the joined rooms are still unmeasured).*
 1b. **The hall.** A third room in `ROOMS` and a second doorway in `DOORS`
    (`dist/house.js`); whatever in `app.js` still assumes two rooms
    (`joinRooms`, `cullThroughDoor`, "the other room") becomes a list.
