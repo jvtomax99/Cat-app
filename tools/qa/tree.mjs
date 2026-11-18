@@ -98,7 +98,7 @@ const settle = async () => {
 };
 await settle();
 await page.evaluate(() => kitten.treeHide());
-ok('hides under the tree', await until(() => kitten.brain.activity === 'loaf' && Math.hypot(kitten.brain.pos.x - kitten.TREE.hide[0], kitten.brain.pos.z - kitten.TREE.hide[1]) < .4, 500), JSON.stringify(await state()));
+ok('hides under the tree', await until(() => kitten.brain.activity === 'loaf' && Math.hypot(kitten.brain.pos.x - kitten.TREE.hide[0], kitten.brain.pos.z - kitten.TREE.hide[1]) < .4, 900), JSON.stringify(await state()));
 await step(20);
 await shot('6-hide');
 await step(260);

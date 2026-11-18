@@ -28,6 +28,9 @@ the phone's browser and can be added to the home screen.
   no leg stretched more than ~4 cm (`tools/qa/legs.mjs`).
 - **Two rooms.** Done when: she walks between the study and the kitchen
   through the doorway, and the player can switch rooms and views.
+  (Today switching rooms moves her instantly. Phase 20, approved
+  2026-11-18: she really walks through, the camera follows, the room
+  picker calls her, food and water live in the kitchen.)
 - **Looking around: two camera modes** (live, phase 16; Merlin
   2026-11-13, after "still really bad": replaces the one-finger map drag
   and the automatic view changes of phase 14). Done when: the Explore and
@@ -266,6 +269,8 @@ decor, Miso, phase 08 (app screens), phase 09 (test group).
 - The dog visit at the French doors.
 - Friendly app screens (phase 08): "real app ready".
 - Sharing with the 1000-member group after the test group.
+- More rooms on the house plan (Merlin 2026-11-18): a living room in the
+  kitchen's open front, then others, one per phase; stairs; a house map.
 
 ## Decisions
 - Nothing goes live without Merlin's "Go live"; one preview branch,
