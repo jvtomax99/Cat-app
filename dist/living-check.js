@@ -82,6 +82,18 @@ window.check = {
   night(on) { night = !!on; for (let i = 0; i < 240; i++) tick(1 / 20); draw(); },
   step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); draw(); },
   info,
+  // Every spot on a 10 cm grid over the room, put through clampFloor: how
+  // many end up inside furniture (none should); and the perches' base
+  // spots and the tent's door, which must be free floor.
+  clampGrid() {
+    const Y = living.layout(), bad = [], inRect = (p, R) => p.x > R.x0 + 1e-3 && p.x < R.x1 - 1e-3 && p.z > R.z0 + 1e-3 && p.z < R.z1 - 1e-3;
+    const blocked = p => Y.keepOut.some(R => inRect(p, R)) || Y.obstacles.some(c => Math.hypot(p.x - c.x, p.z - c.z) < c.r - 2e-3 && !(c.x === L.tent.x && c.z === L.tent.z && tentDoor(p)));
+    const tentDoor = p => { const dx = p.x - L.tent.x, dz = p.z - L.tent.z, ax = Math.sin(L.tent.ry), az = Math.cos(L.tent.ry); return Math.abs(dx * az - dz * ax) < .6 && dx * ax + dz * az > -1.0; };
+    let n = 0;
+    for (let x = L.sea; x <= L.south; x += .1) for (let z = L.join; z <= L.end; z += .1) { n++; const p = living.clampFloor(new THREE.Vector3(x, 0, z)); if (blocked(p) || p.x < Y.floor.x0 - 1e-3 || p.x > Y.floor.x1 + 1e-3 || p.z < Y.floor.z0 - 1e-3 || p.z > Y.floor.z1 + 1e-3) bad.push([+x.toFixed(1), +z.toFixed(1)]); }
+    const spots = Object.entries(Y.perches).filter(([, p]) => p.base).map(([k, p]) => [k, p.base]).concat([['tentDoor', Y.tentDoor], ['home', Y.home], ['windowSpot', Y.windowSpot], ['fireSpot', Y.fireSpot.at]]);
+    return {tried: n, bad: bad.length, first: bad.slice(0, 5), spotsBlocked: spots.filter(([, p]) => blocked(p)).map(([k]) => k)};
+  },
   routes(n = 400) {
     let found = 0, worst = 0;
     for (let i = 0; i < n; i++) {

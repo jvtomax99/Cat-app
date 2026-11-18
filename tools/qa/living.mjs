@@ -57,6 +57,8 @@ for (const night of (process.env.NIGHTS || '0 1').split(' ')) {
     await page.setViewportSize({width: W, height: H});
     const info = await page.evaluate(v => { dispatchEvent(new Event('resize')); check.look(v); return check.info(); }, CAMS.wide);
     console.log('one frame, the wide view:', JSON.stringify(info));
+    const grid = await page.evaluate(() => check.clampGrid());
+    console.log(`${grid.bad || grid.spotsBlocked.length ? 'FAIL' : 'PASS'}: spots put on the floor that ended inside furniture: ${grid.bad} of ${grid.tried}${grid.bad ? ' (first: ' + JSON.stringify(grid.first) + ')' : ''}; her spots that are blocked: ${grid.spotsBlocked.join(', ') || 'none'}`);
     const routes = await page.evaluate(() => check.routes(400));
     console.log(`${routes.found === routes.tried ? 'PASS' : 'FAIL'}: walks across the floor that found a way: ${routes.found} of ${routes.tried} (longest detour ${routes.longestDetour} times the straight line)`);
   }

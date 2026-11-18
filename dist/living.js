@@ -51,7 +51,8 @@ const FLOOR = {x0: L.sea + .65, x1: L.south - 1.75, z0: .3, z1: L.end - .65};
 // hips (each about .6 from it) out of it.
 const KEEP_OUT = [
   {x0: L.sofa.x - 1.65, x1: L.sofa.x + 2.1, z0: L.sofa.z - 3.7, z1: L.sofa.z + 3.7, tag: 'sofa'},
-  {x0: L.table.x - 1.4, x1: L.table.x + 1.4, z0: L.table.z - 2.7, z1: L.table.z + 2.7, tag: 'table'},
+  // (It starts where the sofa's ends: there is no way between the two.)
+  {x0: L.sofa.x + 2.1, x1: L.table.x + 1.4, z0: L.table.z - 2.7, z1: L.table.z + 2.7, tag: 'table'},
 ];
 const TENT = {x: L.tent.x, z: L.tent.z, r: 1.55}, FOUNTAIN = {x: L.fountain.x, z: L.fountain.z, r: .9, ry: L.fountain.ry};
 const OBSTACLES = [
@@ -65,12 +66,17 @@ export class LivingRoom {
   // room: the study (room.js), for the materials and reflections the rooms
   // share. alone: the room on its own (a stand-in for the kitchen's window
   // wall and a strip of floor on the kitchen side); joined to the kitchen,
-  // pass alone: false, and floor: false to stand on the kitchen's floor.
-  constructor(scene, room, {alone = true, floor = true, floorMaterial = null} = {}) {
+  // pass alone: false, floor: false to stand on the kitchen's floor, and
+  // seaTerrace: false when the kitchen's terrace runs on behind this room.
+  // Still to settle at the join: layout() has no `bowl` (it stays in the
+  // kitchen); `bed` is only there after adopt(); decor.js's seasonal
+  // plaster and floor colours know only the kitchen.
+  constructor(scene, room, {alone = true, floor = true, floorMaterial = null, seaTerrace = true} = {}) {
     this.scene = scene;
     this.room = room;
     this.id = 'living';
     this.alone = alone;
+    this.seaTerrace = seaTerrace;
     this.group = new THREE.Group();
     this.group.visible = false;
     scene.add(this.group);
@@ -255,18 +261,19 @@ export class LivingRoom {
   buildOutdoors() {
     const wallOut = 4.4, anisotropy = this.room?.outside?.material.uniforms.uFar.value.anisotropy ?? 4, corner = wallOut + .46;
     // The sea side: its wall stops at the corner of the far end's.
-    const sea = buildTerrace({x: L.sea, zc: 8, long: 52, wallOut, anisotropy, wall: [-26, L.end + corner - 8], trees: [[-5.4, 1.2, .9], [1.7, 1.0, .7], [8.6, 1.3, .85]]});
+    const sea = this.seaTerrace && buildTerrace({x: L.sea, zc: 8, long: 52, wallOut, anisotropy, wall: [-26, L.end + corner - 8], trees: [[-5.4, 1.2, .9], [1.7, 1.0, .7], [8.6, 1.3, .85]]});
     // The far end: the same thing turned a quarter (its own x runs out
     // from the glazing, its z along it).
     const end = buildTerrace({x: -L.end, zc: 2, long: 52, wallOut, anisotropy, wall: [L.sea - corner - 2, 26], trees: [[-3.4, 1.1, .8], [4.3, 1.3, .9]]});
     end.group.rotation.y = Math.PI / 2;
-    this.group.add(sea.group, end.group);
-    this.terraces = [sea, end];
-    this.terraceView = sea.view;
+    this.group.add(end.group);
+    if (this.seaTerrace) this.group.add(sea.group);
+    this.terraces = this.seaTerrace ? [sea, end] : [end];
+    this.terraceView = end.view;
     // The paving: one L of it round the corner.
     const pave = this.paving = new THREE.MeshBasicMaterial({color: '#e2d6c0', toneMapped: false});
     const b = this.batch(pave, this.group, {cast: false, receive: false}), w = wallOut + .05, flat = -Math.PI / 2;
-    b.add(new THREE.PlaneGeometry(w, 52), L.sea - w / 2, -.001, 8, flat);
+    if (this.seaTerrace) b.add(new THREE.PlaneGeometry(w, 52), L.sea - w / 2, -.001, 8, flat);
     b.add(new THREE.PlaneGeometry(52 - w, w), 2 + w / 2, -.001, L.end + w / 2, flat);
     b.done();
   }
@@ -488,7 +495,7 @@ export class LivingRoom {
       q.setFromEuler(e.set(r() * 1.4 - .7, r() * TAU, (k % 2 ? 1 : -1) * (.7 + r() * .5)));
       leaves.setMatrixAt(n++, m4.compose(at, q, V(1, 1, 1).multiplyScalar(.8 + r() * .6)));
     }
-    leaves.castShadow = true; g.add(leaves);
+    g.add(leaves);
     // The painting: a big canvas in a slim dark frame.
     const W = 3.1, H = 3.6, cy = 5.15, pic = new THREE.Group();
     pic.position.set(0, cy, -S.deep / 2 - .02); g.add(pic);
@@ -554,7 +561,7 @@ export class LivingRoom {
     this.fireGlow.scale.set(2.3, 1.9, 1); this.fireGlow.position.set(0, .75, D + .1);
     g.add(this.fireGlow);
     this.hearthGlow = this.mesh(new THREE.PlaneGeometry(6.4, 4.6), new THREE.MeshBasicMaterial({map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, color: '#ff9a4a'}), g, {cast: false, receive: false});
-    this.hearthGlow.rotation.x = -Math.PI / 2; this.hearthGlow.position.set(0, .11, D + 1.7);
+    this.hearthGlow.rotation.x = -Math.PI / 2; this.hearthGlow.position.set(0, .012, D + 1.7);
     this.fireLevel = .5;
   }
 
@@ -607,11 +614,11 @@ export class LivingRoom {
         // Up onto the sofa from its kitchen end; along the seat; and from
         // the seat up onto the back.
         sofa: {spot: at(S.x + .25, S.z - 2.1), top: S.seat, base: at(S.x + 1.5, S.z - 4.0), face: Math.PI / 2, lane: {x: S.x + .2, z0: S.z - 2.2, z1: S.z + 2.2}},
-        sofaBack: {spot: at(S.x - .75, S.z - 1.2), top: S.back, via: 'sofa', face: Math.PI / 2},
+        sofaBack: {spot: at(S.x - .55, S.z - 1.2), top: S.back, via: 'sofa', face: Math.PI / 2},
         // The mohair chair: a round seat to curl up in.
-        mohair: {spot: at(L.mohair.x, L.mohair.z), top: L.mohair.seat, base: at(L.mohair.x - .35, L.mohair.z - 1.75), face: L.mohair.ry},
+        mohair: {spot: at(L.mohair.x, L.mohair.z), top: L.mohair.seat, base: at(L.mohair.x - 1.6, L.mohair.z - .35), face: L.mohair.ry},
         // The sling chair's seat.
-        sling: {spot: at(L.sling.x, L.sling.z), top: .92, base: at(L.sling.x - .55, L.sling.z + 1.7), face: L.sling.ry},
+        sling: {spot: at(L.sling.x, L.sling.z), top: .92, base: at(L.sling.x - 1.6, L.sling.z + .6), face: L.sling.ry},
       },
       // What her tail keeps out of (clearTail in motion.js), as it is on
       // the floor.
@@ -670,6 +677,18 @@ export class LivingRoom {
     clampF();
     for (let pass = 0; pass < 3; pass++) { this.pushOutOnce(v, .05); }
     clampF();
+    // (Pushed out of one thing into the next and back, between the sofa's
+    // end and the lamp say, or out past the glazing behind the tent and
+    // back in by the floor's edge: the nearest clear spot instead.)
+    const blocked = q => KEEP_OUT.some(R => q.x > R.x0 && q.x < R.x1 && q.z > R.z0 && q.z < R.z1) || OBSTACLES.some(c => this.blocks(c) && Math.hypot(q.x - c.x, q.z - c.z) < c.r - 1e-3 && !this.inTentDoor(c, q));
+    if (blocked(v)) {
+      const q = V(0, 0, 0);
+      search: for (let ring = 1; ring <= 40; ring++) for (let i = 0; i < ring * 8; i++) {
+        const a = i / (ring * 8) * TAU;
+        q.set(Math.min(F.x1, Math.max(F.x0, v.x + Math.cos(a) * ring * .1)), 0, Math.min(F.z1, Math.max(F.z0, v.z + Math.sin(a) * ring * .1)));
+        if (!blocked(q)) { v.copy(q); break search; }
+      }
+    }
     return v;
   }
   randomFloorPoint(pad = 0) {
@@ -681,6 +700,14 @@ export class LivingRoom {
     }
     return V(6.4, 0, 7.2);
   }
+  // Is this round thing here (the tent and fountain only once adopted)?
+  blocks(c) { return c === TENT ? !!this.bed : c === FOUNTAIN ? !!this.fountain : true; }
+  // In the corridor along the tent's door axis, the way into the bed.
+  inTentDoor(c, v) {
+    if (c !== TENT) return false;
+    const dx = v.x - c.x, dz = v.z - c.z, ax = Math.sin(L.tent.ry), az = Math.cos(L.tent.ry);
+    return Math.abs(dx * az - dz * ax) < .6 && dx * ax + dz * az > -1.0;
+  }
   // The safety net under every way she moves on the floor: her centre is
   // kept out of the furniture. Into the tent only along its doorway.
   pushOut(v) {
@@ -689,18 +716,17 @@ export class LivingRoom {
   }
   pushOutOnce(v, more = 0) {
     for (const R of KEEP_OUT) if (v.x > R.x0 && v.x < R.x1 && v.z > R.z0 && v.z < R.z1) {
-      const opts = [[R.x0 - v.x, 0], [R.x1 - v.x, 0], [0, R.z0 - v.z], [0, R.z1 - v.z]].sort((a, b) => Math.abs(a[0] + a[1]) - Math.abs(b[0] + b[1]));
-      v.x += opts[0][0] * 1.01; v.z += opts[0][1] * 1.01;
+      // (Out by the nearest side that doesn't lead into the other piece:
+      // the sofa and the table stand side by side.)
+      const opts = [[R.x0 - .01 - v.x, 0], [R.x1 + .01 - v.x, 0], [0, R.z0 - .01 - v.z], [0, R.z1 + .01 - v.z]].sort((a, b) => Math.abs(a[0] + a[1]) - Math.abs(b[0] + b[1]));
+      const free = opts.find(([dx, dz]) => !KEEP_OUT.some(Q => Q !== R && v.x + dx > Q.x0 && v.x + dx < Q.x1 && v.z + dz > Q.z0 && v.z + dz < Q.z1)) ?? opts[0];
+      v.x += free[0]; v.z += free[1];
     }
     for (const c of OBSTACLES) {
-      if ((c === TENT || c === FOUNTAIN) && !this[c === TENT ? 'bed' : 'fountain']) continue;
+      if (!this.blocks(c)) continue;
       const dx = v.x - c.x, dz = v.z - c.z, d = Math.hypot(dx, dz);
-      if (d >= c.r) continue;
-      if (c === TENT) {
-        // In by the doorway: a corridor along the door axis into the bed.
-        const ax = Math.sin(L.tent.ry), az = Math.cos(L.tent.ry), along = dx * ax + dz * az, side = Math.abs(dx * az - dz * ax);
-        if (side < .6 && along > -1.0) continue;
-      }
+      // (In by the tent's doorway.)
+      if (d >= c.r || this.inTentDoor(c, v)) continue;
       const k = (c.r + more) / Math.max(d, 1e-3);
       v.x = c.x + (d < 1e-3 ? c.r + more : dx * k); v.z = c.z + (d < 1e-3 ? 0 : dz * k);
     }
