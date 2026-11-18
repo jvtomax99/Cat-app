@@ -3755,9 +3755,10 @@ function walkToRoom(id, then = null, run = false) {
   if (!d || from === id) return false;
   if (id === 'kitchen' && !kitchen) { buildKitchen(); joinRooms(); }
   const H = d.here, v = (p, k = 0) => new THREE.Vector3(p.x + H.out.x * k, 0, p.z + H.out.z * k);
+  brain.toRoom = id;
   walkTo(v(H.spot), () => {
     brain.crossing = {to: id, side: H};
-    walkTo(v(H.mid, .5), () => { brain.crossing = null; then?.(); }, run, true);
+    walkTo(v(H.mid, .5), () => { brain.crossing = null; brain.toRoom = null; then?.(); }, run, true);
   }, run);
   return true;
 }
@@ -3766,7 +3767,7 @@ function walkToRoom(id, then = null, run = false) {
 // the new room's own frame (house.js), and the rooms swap places round them.
 function crossOver(id) {
   const from = placeId(place), next = id === 'kitchen' ? kitchen : room;
-  brain.crossing = null;
+  Object.assign(brain, {crossing: null, toRoom: null, justCrossed: true});
   if (!next || next === place) return;
   const conv = v => { if (!v) return; const p = house.convert(v, from, id); v.x = p.x; v.z = p.z; };
   const turn = y => house.convertYaw(y, from, id);
@@ -4540,10 +4541,15 @@ function updateCamera(dt) {
     view.auto = distGoal;
     // Walking through a doorway: the camera comes round behind her, so it
     // goes through the opening with her, not into the wall beside it.
-    const lane = brain.target && laneAt(placeId(place), brain.pos);
-    if (lane) {
-      const s = brain.crossing ? -1 : 1, want = Math.atan2(lane.out.x * s, lane.out.z * s);
-      g.yaw = wrapYaw(g.yaw + wrapYaw(want - g.yaw) * (1 - Math.exp(-2.5 * dt)));
+    // (On her way out: from this side. Just come in: from the side she
+    // came from, so the camera trails her through. Never faster than a
+    // slow turn.)
+    const lane = laneAt(placeId(place), brain.pos);
+    if (!lane) brain.justCrossed = false;
+    const s = brain.toRoom ? -1 : brain.justCrossed ? 1 : 0;
+    if (lane && s && brain.target) {
+      const want = Math.atan2(lane.out.x * s, lane.out.z * s), k = wrapYaw(want - g.yaw) * (1 - Math.exp(-2.5 * dt));
+      g.yaw = wrapYaw(g.yaw + clamp(k, -1.1 * dt, 1.1 * dt));
     }
   }
   // (Leaving the title screen, the camera glides out slowly.)
@@ -4563,14 +4569,18 @@ function updateCamera(dt) {
   // easing in and out.
   const aim = p => camOffset.set(Math.sin(view.yaw) * Math.cos(p), Math.sin(p), Math.cos(view.yaw) * Math.cos(p));
   // (By a doorway: the boxes either side of it count too; see boxArm.)
-  { const id = placeId(place), near = p => laneAt(id, p) || house.neighbours(id).some(o => { const S = house.doorBetween(id, o).here; return house.pastDoor(S, p) > -.3 && Math.abs((p.x - S.mid.x) * S.out.z - (p.z - S.mid.z) * S.out.x) < 2.5; });
-    view.doorBoxes = kitchen && (near(view.focus) || near(camera.position)) ? doorBoxes() : null; }
+  { const id = placeId(place), past = p => house.neighbours(id).some(o => house.pastDoor(house.doorBetween(id, o).here, p) > -.3);
+    view.doorBoxes = kitchen && (laneAt(id, view.focus) || past(view.focus) || past(camera.position)) ? doorBoxes() : null; }
   let rise = 0;
   if (!titleOn) for (; rise < 1.2 - view.pitch; rise += .1) if (cameraArm(aim(view.pitch + rise), view.dist).d > Math.min(view.dist * .8, 6.5)) break;
   view.rise = damp(view.rise || 0, Math.max(0, rise), 4, dt);
-  const {dFree, d, lift} = cameraArm(aim(view.pitch + view.rise), view.dist);
+  const arm = cameraArm(aim(view.pitch + view.rise), view.dist), {d, lift} = arm;
+  // (The room's edge coming closer or going away, as a doorway's room
+  // changes behind the camera, eases too; zoom follows you as before.)
+  view.armFree = view.armFree === undefined || Math.abs(arm.dFree - view.dist) < 1e-3 && Math.abs(view.armFree - view.dist) < .02 ? arm.dFree : damp(view.armFree, arm.dFree, 4, dt);
+  const dFree = Math.min(view.armFree, view.dist);
   // (Only the dodging eases; zoom and turning follow you as before.)
-  const cut = dFree - d;
+  const cut = arm.dFree - d;
   view.cut = damp(view.cut || 0, cut, cut > (view.cut || 0) ? 12 : 3, dt);
   view.lift = damp(view.lift || 0, Math.min(lift, 4), lift > (view.lift || 0) ? 8 : 2.5, dt);
   view.shown = Math.max(.6, dFree - view.cut);
