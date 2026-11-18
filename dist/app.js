@@ -657,6 +657,7 @@ function studyLayout() {
 // doorway, so each is seen through it from the other (with its floor cut to
 // the room, under that doorway too).
 const placeId = p => p === room ? 'room' : 'kitchen';
+let camRoom = null; // (the room the camera last stood in: drawn whole)
 function floorPatch(floor, x0, x1, z0, z1) {
   const S = floor.geometry.parameters.width, geo = new THREE.PlaneGeometry(x1 - x0, z1 - z0);
   geo.rotateX(-Math.PI / 2); geo.translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
@@ -670,7 +671,7 @@ function floorPatch(floor, x0, x1, z0, z1) {
   return m;
 }
 function joinRooms() {
-  room.group.visible = true;
+  room.group.visible = true; camRoom = null;
   if (!kitchen) return;
   room.floorPatch ??= floorPatch(room.floor, room.walls.left, room.walls.right, room.walls.back, 8.6);
   kitchen.floorPatch ??= floorPatch(kitchen.floor, -6, kitchen.right, -4.65, 14);
@@ -695,9 +696,9 @@ function doorwayInView() {
   camera.updateMatrixWorld();
   return doorView.setFromProjectionMatrix(doorPV.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)).intersectsBox(doorBox);
 }
-function cullThroughDoor(other) {
+function cullThroughDoor(other, camInStudy = place === room) {
   // The opening on the camera's side of the wall, in the world.
-  const d = room.door, x = room.walls.left - (place === room ? 0 : .45), C = camera.position;
+  const d = room.door, x = room.walls.left - (camInStudy ? 0 : .45), C = camera.position;
   [[d.z0, 0], [d.z1, 0], [d.z1, d.top], [d.z0, d.top]].forEach(([z, y], i) => doorPts[i].set(x, y, z).applyMatrix4(room.group.matrixWorld));
   beyond.addVectors(doorPts[0], doorPts[2]).sub(C); // (as far past the opening as the camera is before it)
   // Four planes through the camera and the opening's edges, and the opening.
@@ -2984,6 +2985,8 @@ function clampGoal() {
   view.farY = Math.max(LIMITS.y[1], Math.min(view.farY, g.focus.y));
   g.dist = clamp(g.dist, LIMITS.dist[0], view.far);
   g.pitch = clamp(g.pitch, ...LIMITS.pitch);
+  // (Looking at her in a doorway, or through it: not held in the room.)
+  if (laneAt(placeId(place), g.focus)) return;
   g.focus.x = clamp(g.focus.x, ...LIMITS.x);
   g.focus.y = clamp(g.focus.y, LIMITS.y[0], view.farY);
   g.focus.z = clamp(g.focus.z, ...LIMITS.z);
@@ -3058,8 +3061,32 @@ function cameraArm(off, dist) {
   }
   return {dFree, d, lift};
 }
+// Near a doorway the camera may stand in either room, or in the opening
+// between them: the boxes it may be in (this room's, the other's, and the
+// opening's), in this room's frame.
+function doorBoxes() {
+  const id = placeId(place), out = [];
+  for (const other of house.neighbours(id)) {
+    const o = other === 'kitchen' ? kitchen : room;
+    if (!o?.layoutCache) continue;
+    const B = o.layoutCache.camBox, c = [[B.x[0], B.z[0]], [B.x[1], B.z[1]]].map(([x, z]) => house.convert({x, z}, other, id));
+    out.push({x: [Math.min(c[0].x, c[1].x), Math.max(c[0].x, c[1].x)], y: B.y, z: [Math.min(c[0].z, c[1].z), Math.max(c[0].z, c[1].z)]});
+    const S = house.doorBetween(id, other).here, w = house.doorBetween(id, other).width / 2 - .25;
+    const a = {x: S.mid.x - S.out.x * 1.5, z: S.mid.z - S.out.z * 1.5}, b = {x: S.mid.x + S.out.x * 1.5, z: S.mid.z + S.out.z * 1.5};
+    out.push({x: [Math.min(a.x, b.x) - Math.abs(S.out.z) * w, Math.max(a.x, b.x) + Math.abs(S.out.z) * w], y: [.2, 5], z: [Math.min(a.z, b.z) - Math.abs(S.out.x) * w, Math.max(a.z, b.z) + Math.abs(S.out.x) * w]});
+  }
+  return out;
+}
+const inBox = (B, x, y, z) => x >= B.x[0] && x <= B.x[1] && y >= B.y[0] && y <= B.y[1] && z >= B.z[0] && z <= B.z[1];
 // How long the camera's arm can be before it leaves the room.
 function boxArm(focus, off, d) {
+  // (She, or the camera, at a doorway: the arm may run through it into
+  // the other room, as far as it stays inside some room or the opening.)
+  if (view.doorBoxes) {
+    const boxes = [CAM_BOX, ...view.doorBoxes];
+    for (let t = .1; t <= d; t += .1) if (!boxes.some(B => inBox(B, focus.x + off.x * t, focus.y + off.y * t, focus.z + off.z * t))) return Math.max(.1, t - .1);
+    return d;
+  }
   for (const [k, [lo, hi]] of Object.entries(CAM_BOX)) {
     const o = off[k], f = focus[k];
     if (o > 1e-4 && f + o * d > hi) d = Math.min(d, (hi - f) / o);
@@ -4511,6 +4538,13 @@ function updateCamera(dt) {
     // only wins for a while: the toy has to stay in the picture.)
     if (playing ? clockNow - view.zoomedAt > 8 : !view.zoomHeld) distGoal = Math.max(g.dist, fit);
     view.auto = distGoal;
+    // Walking through a doorway: the camera comes round behind her, so it
+    // goes through the opening with her, not into the wall beside it.
+    const lane = brain.target && laneAt(placeId(place), brain.pos);
+    if (lane) {
+      const s = brain.crossing ? -1 : 1, want = Math.atan2(lane.out.x * s, lane.out.z * s);
+      g.yaw = wrapYaw(g.yaw + wrapYaw(want - g.yaw) * (1 - Math.exp(-2.5 * dt)));
+    }
   }
   // (Leaving the title screen, the camera glides out slowly.)
   const slow = clockNow < view.glideUntil ? .22 : 1;
@@ -4528,6 +4562,9 @@ function updateCamera(dt) {
   // being squeezed in close (no ceiling up there), as far as it needs,
   // easing in and out.
   const aim = p => camOffset.set(Math.sin(view.yaw) * Math.cos(p), Math.sin(p), Math.cos(view.yaw) * Math.cos(p));
+  // (By a doorway: the boxes either side of it count too; see boxArm.)
+  { const id = placeId(place), near = p => laneAt(id, p) || house.neighbours(id).some(o => { const S = house.doorBetween(id, o).here; return house.pastDoor(S, p) > -.3 && Math.abs((p.x - S.mid.x) * S.out.z - (p.z - S.mid.z) * S.out.x) < 2.5; });
+    view.doorBoxes = kitchen && (near(view.focus) || near(camera.position)) ? doorBoxes() : null; }
   let rise = 0;
   if (!titleOn) for (; rise < 1.2 - view.pitch; rise += .1) if (cameraArm(aim(view.pitch + rise), view.dist).d > Math.min(view.dist * .8, 6.5)) break;
   view.rise = damp(view.rise || 0, Math.max(0, rise), 4, dt);
@@ -4555,8 +4592,16 @@ function updateRoom(dt, t) {
   moon.intensity = damp(moon.intensity, night ? .45 : 0, 3, dt);
   fill.intensity = damp(fill.intensity, night ? .7 : 0, 3, dt);
   const atFountain = brain.activity === 'drink' && !brain.eatAt;
+  // The room the camera stands in is drawn whole; the other only through
+  // the doorway. (Following her through it, the camera may still stand in
+  // the room she has just left.)
   const other = place === room ? kitchen : room;
-  if (other) { other.group.visible = doorwayInView(); if (other.group.visible) cullThroughDoor(other); }
+  if (other) {
+    const id = placeId(place), d = house.doorBetween(id, placeId(other));
+    const camIn = d && house.pastDoor(d.here, camera.position) > 0 ? other : place, far = camIn === place ? other : place;
+    if (camRoom !== camIn) { camRoom = camIn; camIn.group.visible = true; camIn.group.traverse(o => o.layers.set(SEEN)); }
+    far.group.visible = doorwayInView(); if (far.group.visible) cullThroughDoor(far, camIn === room);
+  }
   if (place === room) { room.update(dt, t, night, {drinking: atFountain, camera}); if (kitchen?.group.visible) kitchen.update(dt, t, night, {camera, away: true}); }
   else {
     place.update(dt, t, night, {camera, lamp: room.lamp, cat: brain});
