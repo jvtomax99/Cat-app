@@ -5,6 +5,8 @@ import {TOYS, RIBBONS, LATE, nextGift, newGifts, waitingGifts, owns, toysAt} fro
 import {todaysWish, grantWish, wishDone, WISH_WORTH} from './wish.js';
 import {DECORS, applyDecor, inSeason, decorNow, applyKitchenDecor} from './decor.js';
 import {TREE} from './xmas-tree.js';
+import * as house from './house.js';
+const {placeOf, laneAt} = house;
 import {load as loadSave, store as storeSave, keepStorage, toCode, fromCode, keys as saveKeys} from './save.js';
 import {RealCat, EXPRESSIONS} from './real-cat.js';
 import {MotionCat} from './motion-cat.js';
@@ -647,12 +649,11 @@ function studyLayout() {
   };
 }
 // The study and the kitchen are joined: the doorway in the study's left wall
-// is the opening in the kitchen's back wall. The room she's in stands at the
-// origin and the other is set beyond the doorway, so each is seen through it
-// from the other (with its floor cut to the room, under that doorway too).
-// (The kitchen's opening, x 3.8 to 6.2 in its back wall at z -4.2, .45 deep,
-// meets the study's at z -.1 to 2.3 in its left wall at x -4.6.)
-const JOIN = {kitchen: {p: [-9.25, 0, -3.9], ry: -Math.PI / 2}, room: {p: [3.9, 0, -9.25], ry: Math.PI / 2}};
+// is the opening in the kitchen's back wall (where each stands: house.js).
+// The room she's in stands at the origin and the other is set beyond the
+// doorway, so each is seen through it from the other (with its floor cut to
+// the room, under that doorway too).
+const placeId = p => p === room ? 'room' : 'kitchen';
 function floorPatch(floor, x0, x1, z0, z1) {
   const S = floor.geometry.parameters.width, geo = new THREE.PlaneGeometry(x1 - x0, z1 - z0);
   geo.rotateX(-Math.PI / 2); geo.translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
@@ -671,9 +672,9 @@ function joinRooms() {
   room.floorPatch ??= floorPatch(room.floor, room.walls.left, room.walls.right, room.walls.back, 8.6);
   kitchen.floorPatch ??= floorPatch(kitchen.floor, -6, kitchen.right, -4.65, 14);
   for (const [id, r] of [['room', room], ['kitchen', kitchen]]) {
-    const here = r === place, j = JOIN[id];
+    const here = r === place, j = placeOf(id, placeId(place));
     r.group.visible = true;
-    r.group.position.set(...(here ? [0, 0, 0] : j.p)); r.group.rotation.set(0, here ? 0 : j.ry, 0);
+    r.group.position.set(j.at.x, 0, j.at.z); r.group.rotation.set(0, j.ry, 0);
     r.group.updateMatrixWorld(true);
     r.floor.visible = here; r.floorPatch.visible = !here;
     if (here) r.group.traverse(o => o.layers.set(SEEN));
@@ -840,7 +841,14 @@ function walkTo(point, then = null, run = false, anywhere = false) {
   // Mid-jump: go there once she lands. Up on a perch: hop down first.
   if (brain.jump) { brain.jump.then = () => walkTo(point, then, run, anywhere); return; }
   if (brain.perch) { brain.climbGoal = 'floor'; jumpDown(() => walkTo(point, then, run, anywhere)); return; }
-  const target = anywhere ? point.clone() : onRug(point.clone());
+  // (A spot in the lane to a doorway is fine as it is: house.js.)
+  const lane = laneAt(placeId(place), point), target = anywhere || lane ? point.clone() : onRug(point.clone());
+  // Into or out of a lane, by its mouth: straight down the middle of it,
+  // clear of what stands beside it.
+  const from = laneAt(placeId(place), brain.pos), mouth = (lane || from)?.mouth;
+  if (lane !== from && mouth && Math.hypot(brain.pos.x - mouth.x, brain.pos.z - mouth.z) > .15 && Math.hypot(target.x - mouth.x, target.z - mouth.z) > .15) {
+    walkTo(new THREE.Vector3(mouth.x, 0, mouth.z), () => walkTo(target, then, run, true), run, true); return;
+  }
   // In the kitchen she goes round the island, not through it.
   if (place.route) {
     const path = place.route(brain.pos, target);
@@ -2964,17 +2972,13 @@ function clampGoal() {
   g.focus.y = clamp(g.focus.y, LIMITS.y[0], view.farY);
   g.focus.z = clamp(g.focus.z, ...LIMITS.z);
 }
-// Turn the view. The rooms are open at the front, so the turn runs from one
-// side wall round to the other and no further: past the end it gives a
-// little, like a rubber band, and springs back when you let go (`updateCamera`).
-const TURN_MAX = 1.75, TURN_OVER = .16;
+// Turn the view, all the way round: each room has a front wall too, and a
+// wall the camera is behind hides (room.js, kitchen.js). The turn is kept
+// within one circle; the camera eases the short way round to it (`updateCamera`).
+const wrapYaw = a => a - Math.round(a / (Math.PI * 2)) * Math.PI * 2;
 function turnBy(da) {
   if (!da) return;
-  const g = view.goal, past = Math.abs(g.yaw) - TURN_MAX;
-  if (past > 0 && da * g.yaw > 0) da *= .3 * Math.max(0, 1 - past / TURN_OVER);
-  let to = g.yaw + da;
-  if (Math.abs(to) > Math.abs(g.yaw)) to = Math.sign(to) * Math.min(Math.abs(to), Math.max(Math.abs(g.yaw), TURN_MAX + TURN_OVER));
-  g.yaw = to;
+  view.goal.yaw = wrapYaw(view.goal.yaw + da);
 }
 // How the tilt changes with distance: the last few metres in drop the view
 // to her level (the way a pet game frames her); further out it holds.
@@ -2995,6 +2999,48 @@ function pan(dx, dy) {
   view.lastDrag = clockNow;
   setCamMode('free');
   clampGoal();
+}
+// The camera's arm, looking from the focus along `off`: as long as it can
+// be inside the room (dFree), and then kept clear of furniture (d), with
+// the little rise (lift) that sees over something low.
+// Something tall in the way: the arm stops just in front of it. Something
+// low (the island, a stool, the chair): the camera rises to see over it.
+function cameraArm(off, dist) {
+  // Spring arm: if the camera would leave the room, shorten the arm instead.
+  let d = boxArm(view.focus, off, dist);
+  const fx = view.focus.x, fz = view.focus.z, fy = view.focus.y, ox = off.x, oz = off.z, oy = off.y, hz = Math.hypot(ox, oz);
+  const dFree = d;
+  let lift = 0;
+  const blocked = (tHit, h) => {
+    if (!(tHit > 0 && tHit < d) || fy + oy * tHit >= h) return;
+    // Rise so the line of sight clears its top (at that distance along),
+    // if that's only a little; otherwise come in front of it.
+    const s = tHit / d, need = h < 3.2 && tHit > d * .25 ? fy + (h + .15 - fy) / s - (fy + oy * d) : Infinity;
+    if (need < 1.6) lift = Math.max(lift, need); else d = Math.min(d, tHit - .15);
+  };
+  if (hz > 1e-4) {
+    for (const [cx, cz, r, h] of CAM_SOLIDS) {
+      const px = fx - cx, pz = fz - cz;
+      if (px * px + pz * pz < r * r) continue; // looking at the piece itself
+      const a2 = ox * ox + oz * oz, b2 = 2 * (px * ox + pz * oz), c2 = px * px + pz * pz - r * r, disc = b2 * b2 - 4 * a2 * c2;
+      if (disc < 0) continue;
+      blocked((-b2 - Math.sqrt(disc)) / (2 * a2), h);
+    }
+    // Worktops (the island, the counter): boxes, so the camera never ends
+    // up looking at a close-up of the stone from inside one.
+    for (const [x0, x1, z0, z1, top] of CAM_BLOCKS) {
+      // (Looking at the worktop itself, or at its very edge: it isn't in the way.)
+      if (fx > x0 - .3 && fx < x1 + .3 && fz > z0 - .3 && fz < z1 + .3) continue;
+      let t0 = 0, t1 = d;
+      for (const [o, f, lo, hi] of [[ox, fx, x0, x1], [oz, fz, z0, z1]]) {
+        if (Math.abs(o) < 1e-6) { if (f < lo || f > hi) { t0 = 1; t1 = 0; } continue; }
+        const a = (lo - f) / o, b = (hi - f) / o;
+        t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b));
+      }
+      if (t0 < t1) blocked(t0, top - .2);
+    }
+  }
+  return {dFree, d, lift};
 }
 // How long the camera's arm can be before it leaves the room.
 function boxArm(focus, off, d) {
@@ -3267,11 +3313,10 @@ const CAMERA_VIEWS = {
     view.home = {yaw: fit.yaw, pitch: fit.pitch};
     setCamMode('room');
   },
-  // (`yaw`: from where to look at her; left out, from where the camera is.
-  // Never from beyond the ends of the turn.)
+  // (`yaw`: from where to look at her; left out, from where the camera is.)
   follow(yaw) {
     Object.assign(view.goal, {dist: ready ? clamp(fitDistance(framing(false).radius), 2.6, 6) : tallScreen() ? 4.2 : 3.4, pitch: .26});
-    view.goal.yaw = clamp(typeof yaw === 'number' ? yaw : Math.atan2(camera.position.x - brain.pos.x, camera.position.z - brain.pos.z), -TURN_MAX, TURN_MAX);
+    view.goal.yaw = wrapYaw(typeof yaw === 'number' ? yaw : Math.atan2(camera.position.x - brain.pos.x, camera.position.z - brain.pos.z));
     setCamMode('follow');
   },
   food: () => lookAtSpot(bowl.position, {y: .15}),
@@ -4393,11 +4438,6 @@ function updateCamera(dt) {
       Object.assign(view, {shiftPx: px, shiftW: W, shiftH: clear.h});
     }
   }
-  // Let go past the end of the turn: it springs back to the end.
-  if (!touches.size && !view.fling && !titleOn) {
-    const over = Math.abs(g.yaw) - TURN_MAX;
-    if (over > 0 && over < .5) g.yaw = damp(g.yaw, Math.sign(g.yaw) * TURN_MAX, 9, dt);
-  }
   let distGoal = g.dist;
   if (following) {
     // Keep Mochi (and, while playing, the toy) comfortably in frame. The
@@ -4424,48 +4464,20 @@ function updateCamera(dt) {
   view.focus.x = damp(view.focus.x, g.focus.x, r, dt);
   view.focus.y = damp(view.focus.y, g.focus.y, r, dt);
   view.focus.z = damp(view.focus.z, g.focus.z, r, dt);
+  // (The short way round: the turn has no ends.)
+  view.yaw = g.yaw + wrapYaw(view.yaw - g.yaw);
   view.yaw = damp(view.yaw, g.yaw, 8 * slow, dt);
   view.pitch = damp(view.pitch, g.pitch, 8 * slow, dt);
   view.dist = damp(view.dist, distGoal, (following && distGoal > g.dist ? 1.6 : 7) * slow, dt);
-  camOffset.set(Math.sin(view.yaw) * Math.cos(view.pitch), Math.sin(view.pitch), Math.cos(view.yaw) * Math.cos(view.pitch));
-  // Spring arm: if the camera would leave the room, shorten the arm instead.
-  let d = boxArm(view.focus, camOffset, view.dist);
-  // Keep furniture from coming between the camera and what it looks at.
-  // Something tall in the way: the arm stops just in front of it. Something
-  // low (the island, a stool, the chair): the camera rises to see over it.
-  // Both ease in and out, so a turn past a piece of furniture glides rather
-  // than jumping.
-  const fx = view.focus.x, fz = view.focus.z, fy = view.focus.y, ox = camOffset.x, oz = camOffset.z, oy = camOffset.y, hz = Math.hypot(ox, oz);
-  const dFree = d;
-  let lift = 0;
-  const blocked = (tHit, h) => {
-    if (!(tHit > 0 && tHit < d) || fy + oy * tHit >= h) return;
-    // Rise so the line of sight clears its top (at that distance along),
-    // if that's only a little; otherwise come in front of it.
-    const s = tHit / d, need = h < 3.2 && tHit > d * .25 ? fy + (h + .15 - fy) / s - (fy + oy * d) : Infinity;
-    if (need < 1.6) lift = Math.max(lift, need); else d = Math.min(d, tHit - .15);
-  };
-  if (hz > 1e-4) {
-    for (const [cx, cz, r, h] of CAM_SOLIDS) {
-      const px = fx - cx, pz = fz - cz;
-      if (px * px + pz * pz < r * r) continue; // looking at the piece itself
-      const a2 = ox * ox + oz * oz, b2 = 2 * (px * ox + pz * oz), c2 = px * px + pz * pz - r * r, disc = b2 * b2 - 4 * a2 * c2;
-      if (disc < 0) continue;
-      blocked((-b2 - Math.sqrt(disc)) / (2 * a2), h);
-    }
-    // Worktops (the island, the counter): boxes, so the camera never ends
-    // up looking at a close-up of the stone from inside one.
-    for (const [x0, x1, z0, z1, top] of CAM_BLOCKS) {
-      if (fx > x0 && fx < x1 && fz > z0 && fz < z1) continue;
-      let t0 = 0, t1 = d;
-      for (const [o, f, lo, hi] of [[ox, fx, x0, x1], [oz, fz, z0, z1]]) {
-        if (Math.abs(o) < 1e-6) { if (f < lo || f > hi) { t0 = 1; t1 = 0; } continue; }
-        const a = (lo - f) / o, b = (hi - f) / o;
-        t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b));
-      }
-      if (t0 < t1) blocked(t0, top - .2);
-    }
-  }
+  // Turned towards a wall or furniture with little room behind (the back
+  // of the room, the island): the camera rises and looks down rather than
+  // being squeezed in close (no ceiling up there), as far as it needs,
+  // easing in and out.
+  const aim = p => camOffset.set(Math.sin(view.yaw) * Math.cos(p), Math.sin(p), Math.cos(view.yaw) * Math.cos(p));
+  let rise = 0;
+  if (!titleOn) for (; rise < 1.2 - view.pitch; rise += .1) if (cameraArm(aim(view.pitch + rise), view.dist).d > Math.min(view.dist * .8, 6.5)) break;
+  view.rise = damp(view.rise || 0, Math.max(0, rise), 4, dt);
+  const {dFree, d, lift} = cameraArm(aim(view.pitch + view.rise), view.dist);
   // (Only the dodging eases; zoom and turning follow you as before.)
   const cut = dFree - d;
   view.cut = damp(view.cut || 0, cut, cut > (view.cut || 0) ? 12 : 3, dt);
@@ -4718,7 +4730,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {house, placeId, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });

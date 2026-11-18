@@ -26,7 +26,7 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // (widened from 7 to make room for the Christmas tree, Merlin 2026-11-18),
 // with the opening to her study in the back wall between x = 3.8 and 6.2.
 const K = {
-  back: -4.2, left: -6, right: 10, door: [3.8, 6.2], doorTop: 5.4, wallH: 9.5,
+  back: -4.2, left: -6, right: 10, front: 9.8, door: [3.8, 6.2], doorTop: 5.4, wallH: 9.5,
   counter: 2.2, counterFront: -2.72, shelf1: 4.1, shelf2: 5.5, shelfX: [-5.2, 3.4], shelfD: .9,
   island: {x0: -3.9, x1: 1.5, z0: -.55, z1: 1.95, top: 2.25},
   tent: {x: 4.75, z: .75, ry: -.45},
@@ -167,6 +167,10 @@ export class Kitchen {
     wall(d1 - d0, H - K.doorTop, (d0 + d1) / 2, (H + K.doorTop) / 2, K.back, 0);
     wall(K.right - d1, H, (d1 + K.right) / 2, H / 2, K.back, 0);
     wall(14, H, K.right, H / 2, 2.8, -Math.PI / 2);
+    // The front wall, where the right wall ends (so the camera can turn all
+    // the way round); hidden while the camera stands in front of the room.
+    // (Where the living room will join on later.)
+    wall(K.right - K.left, H, (K.left + K.right) / 2, H / 2, K.front, Math.PI);
     // The window wall: plaster round the tall window.
     const wz0 = -3.7, wz1 = 3.9, wy0 = 0, wy1 = 8.0;
     wall(wz0 - K.back, H, K.left, H / 2, (K.back + wz0) / 2, Math.PI / 2);

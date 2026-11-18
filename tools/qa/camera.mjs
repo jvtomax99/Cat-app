@@ -1,6 +1,6 @@
 // Looking around, measured (phase 16: two modes, Explore and Mochi). Zoom
 // never has a dead stretch, your zoom is kept while following her, one
-// finger turns, the turn ends at the side walls and springs back, pinch and
+// finger turns, the turn goes all the way round (front walls hide), pinch and
 // double tap aim at the thing under the fingers, and no drag, pinch or tap
 // ever changes the mode: only the buttons do.
 //   node tools/qa/camera.mjs        OUT=qa-out/camera (stills)
@@ -92,11 +92,14 @@ const dragBy = async (dx, n = 6) => { const sx = box.x + box.w / 2 - dx * n / 2,
 const h0 = await state(); await dragBy(-20); const h1 = await state();
 await step(160); const h2 = await state(); await shot('4c-turned');
 line('one finger turns the view', Math.abs(h1.yaw - h0.yaw) > .5 && h1.mode === 'free' && Math.abs(h2.yaw - h1.yaw) < .03, `turned ${((h1.yaw - h0.yaw) * 57.3).toFixed(0)}° for a 120 px drag (${h0.mode} to ${h1.mode}); 8 s later it had drifted ${((h2.yaw - h1.yaw) * 57.3).toFixed(1)}°`);
-// (On and on: the turn ends at a side wall, gives a little, springs back; then all the way to the other side.)
+// (On and on: the turn goes all the way round, and on; the camera is never
+// squeezed up close on the way.)
+const wrap = a => a - Math.round(a / (Math.PI * 2)) * Math.PI * 2;
 const ends = async name => {
-  for (let i = 0; i < 6; i++) await dragBy(-40); const a = await state(); await shot(`4c-${name}-end-a`);
-  for (let i = 0; i < 10; i++) await dragBy(40); const b = await state(); await shot(`4c-${name}-end-b`);
-  line(`${name}: the turn runs side to side`, Math.abs(a.yaw - 1.75) < .03 && Math.abs(b.yaw + 1.75) < .03 && a.mode !== 'follow', `from ${(a.yaw * 57.3).toFixed(0)}° to ${(b.yaw * 57.3).toFixed(0)}° (${((a.yaw - b.yaw) * 57.3).toFixed(0)}° in all), camera ${a.dist.toFixed(1)} m and ${b.dist.toFixed(1)} m from what it looks at`);
+  let total = 0, last = (await state()).yaw, near = Infinity;
+  for (let i = 0; i < 22; i++) { await dragBy(-40); const s = await state(); total += wrap(s.yaw - last); last = s.yaw; near = Math.min(near, s.dist); if (i === 10) await shot(`4c-${name}-turned-round`); }
+  const a = await state();
+  line(`${name}: the turn goes all the way round`, Math.abs(total) > Math.PI * 2 && a.mode !== 'follow' && near > 2.5, `turned ${(total * 57.3).toFixed(0)}° in all; the camera came no closer than ${near.toFixed(1)} m to what it looks at`);
 };
 await ends('study');
 
@@ -199,11 +202,12 @@ for (let i = 1; i <= 12; i++) { await touch('touchMove', pair(i * .05)); await s
 await touch('touchEnd', []); await step(30);
 const t1 = await state();
 line('twist turns the view', Math.abs(t1.yaw) > .25 && Math.abs(t1.dist - 7) < .5, `turned ${(t1.yaw * 57.3).toFixed(0)}° for a 34° twist; distance ${t1.dist.toFixed(2)} m`);
-// (Twisting on and on: the turn ends at the side and springs back to it.)
+// (Twisting on and on: on past where the old turn stopped.)
 await look(HOME); await step(2);
-for (let k = 0; k < 3; k++) { await touch('touchStart', pair(0)); for (let i = 1; i <= 16; i++) { await touch('touchMove', pair(i * .1)); await step(2); } await touch('touchEnd', []); await step(10); }
-await step(40); const t2 = await state(); await shot('7d-twist-to-the-end');
-line('the turn ends at the side', Math.abs(Math.abs(t2.yaw) - 1.75) < .03, `after three big twists: turned ${(t2.yaw * 57.3).toFixed(0)}°, camera ${t2.dist.toFixed(2)} m from the spot`);
+let twisted = 0, tl = (await state()).yaw;
+for (let k = 0; k < 3; k++) { await touch('touchStart', pair(0)); for (let i = 1; i <= 16; i++) { await touch('touchMove', pair(i * .1)); await step(2); const s = await state(); twisted += wrap(s.yaw - tl); tl = s.yaw; } await touch('touchEnd', []); await step(10); }
+await step(40); const t2 = await state(); await shot('7d-twist-on');
+line('twisting on, the turn goes on', Math.abs(twisted) > 1.9, `after three big twists: turned ${(twisted * 57.3).toFixed(0)}°, camera ${t2.dist.toFixed(2)} m from the spot`);
 await cdp.send('Emulation.setTouchEmulationEnabled', {enabled: false});
 
 // 8. The kitchen turns side to side too.

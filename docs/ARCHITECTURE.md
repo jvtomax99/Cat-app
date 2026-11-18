@@ -225,10 +225,13 @@ floor); far out gives `room` back; in `follow` it only changes the
 distance. `goClose` = a double tap in Explore. Two fingers sliding call
 `pan` (Explore only). Tilt follows zoom (`tiltFor(dist)`, applied as a
 change, so each view keeps its own angle). `turnBy` is the only way the
-view turns (drag, twist, flick): `TURN_MAX` each way from the front (the
-rooms have no front wall, and from behind them wall furniture hangs in the
-way), with a little give that `updateCamera` springs back. The camera
-stays inside `CAM_BOX`: turned to a side, the arm shortens. `view.shown` is
+view turns (drag, twist, flick), all the way round: `goal.yaw` is kept in
+one circle (`wrapYaw`) and `view.yaw` eases the short way to it. Each room
+has a front wall (study `walls.front`, kitchen `K.front`); a wall the
+camera is behind hides (`room.update`, `kitchen.update`). The camera
+stays inside `CAM_BOX`; `cameraArm` gives its arm after walls and
+furniture, and when that is short (turned to a wall or the island)
+`view.rise` tilts it up to look down instead of squeezing in close. `view.shown` is
 how far the camera really is (walls, `boxArm`, furniture); zoom starts from
 it. `view.zoomHeld` = the player chose the zoom, so follow leaves it.
 `clearArea()` = the part of the picture above the care buttons and the

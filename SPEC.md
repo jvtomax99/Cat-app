@@ -36,9 +36,10 @@ the phone's browser and can be added to the home screen.
   and the automatic view changes of phase 14). Done when: the Explore and
   Mochi buttons pick the mode and it is remembered; a pinch, drag or tap
   never changes it. Mochi: the camera stays on her, one finger circles her,
-  a pinch zooms on her. Explore: one finger turns the view from one side
-  wall round to the other (about 200 degrees; past the end it gives and
-  springs back; no full circle, the rooms have three walls), a pinch zooms
+  a pinch zooms on her. Explore: one finger turns the view all the way
+  round (Merlin 2026-11-18: each room got a front wall, and any wall the
+  camera is behind hides; turned to a wall with little room behind, the
+  camera rises and looks down rather than squeezing in close), a pinch zooms
   to the thing under the fingers (on the fireplace: to the fireplace), two
   fingers sliding move the view and twisting turns it, a double tap on a
   thing goes close to it (again on it: the whole room), pinching far out
@@ -253,8 +254,7 @@ decor, Miso, phase 08 (app screens), phase 09 (test group).
   ($99 a year) and a look at Apple's rules for apps that are a website.
   The list: `docs/app-store.md`. The name "Pocket Kitten" is already taken
   on the store (checked 2026-11-14).
-- A true 360 turn: needs a fourth wall in both rooms (phase 16 chose a
-  wide turn). Also from phase 16: an arrow pointing to Mochi when she is
+- From phase 16: an arrow pointing to Mochi when she is
   off screen, walking through the room at eye level. (The photo button
   came in phase 17.)
 - First steps for food, water, brushing and sleep (ChatGPT's review of the
