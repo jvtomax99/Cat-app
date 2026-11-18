@@ -4,7 +4,7 @@ Merlin, 2026-11-18: more rooms she can walk freely, a second floor, a roof,
 a bathroom; "a normal luxury house"; a blueprint first, then build. He
 picked: add now, in steps; and "rooms plus a House view" (today's close
 view in each room, and a House button that pulls back to the whole house).
-Status: **blueprint approved by Merlin 2026-11-18 (Lettuce has not seen it yet). Starts when phase 20 (One home) is done: it builds on that phase's house map and room crossing.**
+Status: **blueprint approved by Merlin 2026-11-18; Lettuce saw it and liked it (Merlin, 2026-11-18). Starts when phase 20 (One home) is done: it builds on that phase's house map and room crossing.**
 
 Blueprint: `docs/house/blueprint.png` (drawn by `node tools/house-blueprint.mjs`,
 which holds every size; change the plan there).
