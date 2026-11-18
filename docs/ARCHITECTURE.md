@@ -265,9 +265,20 @@ eating reach → pick a pose → `cat.update(dt, t, ctl)` (MotionCat).
 - Player actions go through `act('feed' | 'drink' | 'play' | …)`.
 
 ## Coordinates and sizes
-- The active room is at the origin; `brain.pos` is in its frame. The other
-  room is placed by `JOIN` (seen through the doorway; `cullThroughDoor`
-  hides what's out of view).
+- The active room is at the origin; `brain.pos` is in its frame. Where
+  each room stands in the house, and its doorways, is `dist/house.js`
+  (`placeOf`, `convert`, `doorBetween`; checked by `house-checks.mjs`).
+  The other room is set by `joinRooms`; the room the camera stands in is
+  drawn whole and the other only through the doorway (`cullThroughDoor`).
+- Between rooms (phase 20): each doorway has a lane from her floor
+  (`laneAt`; `walkTo` enters and leaves it by its mouth). `walkToRoom(id)`
+  walks her through; halfway through the wall `crossOver` puts her, her
+  target, the toy, the camera, the sun and her gait's last position into
+  the new room's frame and calls `usePlace` (nothing moves on screen).
+  `callToRoom` is the room picker; `inKitchen(fn)` sends her to the bowl
+  and fountain, which live in the kitchen (`placeBowls`). Near a doorway
+  the camera may stand in either room or the opening (`doorBoxes`). `goTo`
+  (teleport) is only for start-up and tests.
 - Her own frame: +z is forward. The root is near the front legs: front
   wrists at z +.23, hips at -.48, tail base at -.71. Standing nose about
   +.4 ahead; head down to eat, her mouth reaches about +.75 to +.9.

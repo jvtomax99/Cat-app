@@ -1,6 +1,6 @@
 # Phase 20: One home, she walks between rooms
 
-Status: todo. Plan approved by Merlin 2026-11-18 (food and water in the
+Status: built on the preview branch, being tested (2026-11-18: steps 1 to 7; test `tools/qa/house-walk.mjs`). Plan approved by Merlin 2026-11-18 (food and water in the
 kitchen only; first version study + kitchen). Start after the Christmas
 tree (phase 06) is on the preview.
 
