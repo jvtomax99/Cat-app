@@ -99,7 +99,10 @@ export function duneHeight(u, z) {
 
 // `x`: the glazing; `zc`: its middle. `wallOut`: how far out the terrace
 // wall stands; `far`: where the dunes end and the sky's sheet stands.
-export function buildTerrace({x, zc, wallOut = 4.4, far = 18, long = 46, anisotropy = 4}) {
+// `wall`: where the wall runs from and to along the glazing, measured from
+// `zc` (the whole length unless given: the living room's two terraces meet
+// at a corner, and each wall stops there). `trees`: [along, size, out] each.
+export function buildTerrace({x, zc, wallOut = 4.4, far = 18, long = 46, anisotropy = 4, wall = [-long / 2, long / 2], trees = [[-3.0, 1.3, .85], [.9, 1.0, .7], [3.5, 1.36, .9]]}) {
   const group = new THREE.Group(), tinted = [], r = rng(77);
   const basic = o => { const m = new THREE.MeshBasicMaterial({toneMapped: false, ...o}); tinted.push(m); return m; };
   const add = (geo, mat, px = 0, py = 0, pz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(px, py, pz); group.add(m); return m; };
@@ -110,8 +113,9 @@ export function buildTerrace({x, zc, wallOut = 4.4, far = 18, long = 46, anisotr
 
   // The wall and its cap stone.
   const wx = x - wallOut - .2;
-  add(new THREE.BoxGeometry(.4, .8, long), basic({map: texture(512, 128, drawBlocks, [long / 2.2, 1])}), wx, .4, zc);
-  add(shade(new THREE.BoxGeometry(.52, .1, long), hex('#ece1c9'), {lo: .86, hi: 1.05}), basic({vertexColors: true}), wx, .85, zc);
+  const wallLong = wall[1] - wall[0], wallZ = zc + (wall[0] + wall[1]) / 2;
+  add(new THREE.BoxGeometry(.4, .8, wallLong), basic({map: texture(512, 128, drawBlocks, [wallLong / 2.2, 1])}), wx, .4, wallZ);
+  add(shade(new THREE.BoxGeometry(.52, .1, wallLong), hex('#ece1c9'), {lo: .86, hi: 1.05}), basic({vertexColors: true}), wx, .85, wallZ);
 
   // The dunes.
   const deep = far - wallOut - .4, nx = 44, nz = 110, ground = new THREE.PlaneGeometry(deep, long, nx, nz);
@@ -135,7 +139,7 @@ export function buildTerrace({x, zc, wallOut = 4.4, far = 18, long = 46, anisotr
   const clay = basic({vertexColors: true}), bark = basic({vertexColors: true});
   const shadowMat = new THREE.MeshBasicMaterial({transparent: true, depthWrite: false, toneMapped: false, map: texture(128, 128, (g, w) => { const s = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); s.addColorStop(0, 'rgba(70,58,44,.55)'); s.addColorStop(1, 'rgba(70,58,44,0)'); g.fillStyle = s; g.fillRect(0, 0, w, w); })});
   const crowns = [];
-  for (const [dz, s, dx] of [[-3.0, 1.3, .85], [.9, 1.0, .7], [3.5, 1.36, .9]]) {
+  for (const [dz, s, dx] of trees) {
     const tree = new THREE.Group(); tree.position.set(x - wallOut + dx - .1, 0, zc + dz); tree.scale.setScalar(s); group.add(tree);
     const terracotta = hex('#c67d52'), soil = hex('#4a3a2c');
     const pot = shade(new THREE.LatheGeometry([[0, 0], [.37, 0], [.52, .82], [.56, .84], [.56, .95], [.47, .95], [.45, .9], [0, .9]].map(([a, b]) => new THREE.Vector2(a, b)), 28), null, {lo: .66, hi: 1.08, tone: p => p.y > .89 && Math.hypot(p.x, p.z) < .46 ? soil : terracotta});
