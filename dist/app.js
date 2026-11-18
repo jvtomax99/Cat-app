@@ -1463,6 +1463,13 @@ function idleLife(t) {
   if (treeUp()) options.push('tree', 'tree', 'tree', 'treeHide', 'treeHide', 'xmasBox', 'xmasBox', 'treePaw', 'treePaw');
   options.push('meow');
   if (pet.happiness > 50) options.push('meow');
+  // Now and then, off to the other room (a little more often at night, and
+  // from the study when the Christmas tree is up in the kitchen).
+  if (t > (brain.nextTrip ??= t + rand(60, 120))) {
+    options.push('otherRoom');
+    if (night) options.push('otherRoom');
+    if (place === room && kitchen?.decor === 'christmas' && kitchen.xmasTree?.root.visible) options.push('otherRoom', 'otherRoom');
+  }
   let choice = pick(options);
   // (The tree, the first time she sees it: nothing else for a while.)
   if (treeUp() && !brain.treeSeen) { brain.treeSeen = true; curiousLook(); return; }
@@ -1496,6 +1503,17 @@ function idleLife(t) {
   if (choice === 'treeHide') treeHide();
   if (choice === 'xmasBox') boxSit();
   if (choice === 'treePaw') treePaw();
+  if (choice === 'otherRoom') {
+    brain.nextTrip = t + rand(90, 180);
+    const to = place === room ? 'kitchen' : 'room';
+    // (With a reason when there is one: a nap on her study bed when she's
+    // tired, the tree when it's up; otherwise a look round.)
+    walkToRoom(to, () => {
+      if (to === 'room' && pet.energy < 50) walkTo(CUSHION_SPOT, () => { setActivity('loaf', rand(8, 14)); setTimeout(slowBlink, 1500); }, false, true);
+      else if (treeUp()) curiousLook();
+      else walkTo(randomRugPoint(), () => setActivity('sit'));
+    });
+  }
   if (choice === 'nap') walkTo(CUSHION_SPOT, () => { setActivity('loaf', rand(8, 14)); setTimeout(slowBlink, 1500); }, false, true);
   if (choice === 'bowl') {
     inKitchen(() => walkTo(EAT_SPOT, () => { setActivity('beg', 3.5); meow('mew'); say(pick(['Is it snack o’clock?', 'This bowl looks very empty…'])); }, false, true));
@@ -2452,6 +2470,8 @@ function pawAt(x, y) {
 // Care actions
 // ---------------------------------------------------------------------------
 function setMode(mode, seconds = Infinity) {
+  // (Anything new she's asked to do ends a walk to another room.)
+  brain.crossing = null; brain.toRoom = null;
   brain.mode = mode;
   brain.modeStart = clockNow;
   brain.modeUntil = clockNow + seconds;
@@ -3782,6 +3802,9 @@ function crossOver(id) {
   view.goal.yaw = wrapYaw(view.goal.yaw);
   usePlace(next);
   cat.root.position.set(brain.pos.x, cat.root.position.y, brain.pos.z); cat.root.rotation.y = brain.heading;
+  // Not following her: the view glides into the room she went to, and a
+  // note says where she is.
+  if (view.mode !== 'follow') { view.glideUntil = clockNow + 3.4; CAMERA_VIEWS.room(); toast(`${pet.name} went to the ${house.ROOMS[id].name}`); }
   pet.place = id;
   save();
   refresh();
@@ -3792,10 +3815,20 @@ $('#place-options').addEventListener('click', e => {
   const id = b.dataset.place;
   $('#decor-dialog').close();
   if (place.id === id) return;
-  toast(id === 'kitchen' ? 'Off to the kitchen…' : 'Back to the study…');
-  host.classList.add('moving');
-  setTimeout(() => { goTo(id); setTimeout(() => host.classList.remove('moving'), 120); }, 320);
+  callToRoom(id === 'kitchen' ? 'kitchen' : 'room');
 });
+// The room picker calls her: she walks there through the doorway (no jump).
+// (Asleep, she stays put; whatever she's doing ends first.)
+function callToRoom(id) {
+  if (pet.sleeping) { toast(`Shh, ${pet.name} is asleep.`); return false; }
+  brain.treeStuck = false;
+  if (brain.mode === 'play') endPlay(true);
+  if (brain.mode !== 'idle') setMode('idle');
+  toast(`Calling ${pet.name} to the ${house.ROOMS[id].name}…`);
+  if (!walkToRoom(id, null, true)) return false;
+  brain.nextIdle = clockNow + 20;
+  return true;
+}
 
 function renderDecor() {
   $('#decor-options').innerHTML = Object.entries(DECORS).filter(([id]) => inSeason(id, DECOR_FORCE)).map(([id, d]) => `<button type="button" data-decor="${id}" aria-pressed="${room.decor === id}" style="--tint:var(--accent)"><span class="decor-swatch">${DECOR_SWATCHES[id].map(c => `<i style="background:${c}"></i>`).join('')}</span><strong>${d.name}</strong><small>${d.note}</small></button>`).join('');
