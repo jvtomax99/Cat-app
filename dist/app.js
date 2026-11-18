@@ -4610,7 +4610,7 @@ function updateCamera(dt) {
   const arm = cameraArm(aim(view.pitch + view.rise), view.dist), {d, lift} = arm;
   // (The room's edge coming closer or going away, as a doorway's room
   // changes behind the camera, eases too; zoom follows you as before.)
-  view.armFree = view.armFree === undefined || Math.abs(arm.dFree - view.dist) < 1e-3 && Math.abs(view.armFree - view.dist) < .02 ? arm.dFree : damp(view.armFree, arm.dFree, 4, dt);
+  view.armFree = view.armFree === undefined || Math.abs(arm.dFree - view.dist) < 1e-3 && Math.abs(view.armFree - view.dist) < .02 ? arm.dFree : damp(view.armFree, arm.dFree, arm.dFree < view.armFree ? 1.5 : 4, dt);
   const dFree = Math.min(view.armFree, view.dist);
   // (Only the dodging eases; zoom and turning follow you as before.)
   const cut = arm.dFree - d;

@@ -30,7 +30,7 @@ async function watch(name, done, max = 500) {
     const dp = Math.hypot(s.p[0] - prev.p[0], s.p[1] - prev.p[1]), dc = Math.hypot(s.c[0] - prev.c[0], s.c[1] - prev.c[1], s.c[2] - prev.c[2]);
     if (s.id !== prev.id) { r.switches++; r.herJump = Math.max(r.herJump, dp - r.normal); r.camAtSwitch = Math.max(r.camAtSwitch, dc); await shot(`${name}-switch`); }
     else r.normal = dp;
-    r.camWorst = Math.max(r.camWorst, dc);
+    if (dc > r.camWorst) { r.camWorst = dc; r.camWhere = `step ${i}, her ${s.p.map(f)}, camera ${s.c.map(f)} (was ${prev.c.map(f)}), ${s.id}`; }
     if (i === 60) await shot(`${name}-walking`);
     prev = r.end = s;
     if (await page.evaluate(done)) break;
@@ -47,7 +47,7 @@ let r = await watch('1-mochi-to-kitchen', () => kitten.placeId(kitten.place) ===
 await shot('1-mochi-in-kitchen');
 ok('Mochi mode: she walks study to kitchen', r.end.id === 'kitchen' && r.switches === 1, `in the ${r.end.id}, ${r.switches} change of room`);
 ok('no jump as she changes room', r.herJump < .1, `her house position jumped ${f(r.herJump)} m beyond her walking step`);
-ok('the camera comes with her, no jump', r.end.view === 'follow' && r.camAtSwitch < .4 && r.camWorst < 1.2, `mode ${r.end.view}; camera moved ${f(r.camAtSwitch)} m at the change, at most ${f(r.camWorst)} m per .2 s`);
+ok('the camera comes with her, no jump', r.end.view === 'follow' && r.camAtSwitch < .4 && r.camWorst < 1.2, `mode ${r.end.view}; camera moved ${f(r.camAtSwitch)} m at the change, at most ${f(r.camWorst)} m per .2 s (${r.camWhere})`);
 
 // 2. Explore: back to the study; the view glides into the study, with a note.
 await page.evaluate(() => document.querySelector('[data-cam="room"]')?.click());
