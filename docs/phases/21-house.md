@@ -92,6 +92,14 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    east end it sees the dunes where the study's outer wall will be (step 5).*
 2. **Stairs and landing.** Floors at different heights (`groundAt`), her
    feet on the steps, the camera following her up.
+   *Plan approved by Merlin 2026-11-19: each paw on its own step and her
+   body tilted up the slope; the stairs as the way between the hall and a
+   new place, the landing (over the hall at y 10: stairwell with a railing,
+   a window, a plant, the bedroom and bathroom doors shut until steps 3
+   and 4); the camera rises with her, the upstairs hidden while the camera
+   is below it, the hall seen from upstairs only through the stairwell; her
+   two hall things (sit on a step and look down, race up and down); a save
+   on the stairs opens at their foot.*
 3. **Bathroom** with its three things to do.
 4. **Bedroom** with its two things to do.
 5. **Outside and the House view**: outer walls, roof, front door, tap a room.
@@ -113,8 +121,10 @@ kitchen; saves from before still load.
 - Living room: x -33.05 to -19.05, z -9.9 to 6.1, one storey with its own
   roof; no wall to the kitchen (the kitchen's front wall goes).
 - Upper floor at y 10 (kitchen walls are 9.5, the study's 12: trim to 10).
-- Stairs: two flights of 10 steps with a half landing, at the hall's east end
-  (built as a dog-leg along the hall: `H.stairs` in `dist/hall.js`).
+- Stairs: two flights of 12 steps with a half landing, at the hall's east end
+  (built as a dog-leg along the hall: `H.stairs` in `dist/hall.js`). Merlin,
+  2026-11-19: a real house's slope, about 40 degrees (17 cm risers on 25 cm
+  treads), not the first build's 51; they now start by the front door (x -.4).
 
 ## Risks
 - The living room is the heaviest room to draw (much glazing with the

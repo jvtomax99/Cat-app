@@ -9,7 +9,7 @@
 // units per metre.
 //
 // The stairs: a dog-leg at the east end. The lower flight runs east along
-// the front wall (ten risers of .5 to a half landing at y 5), the upper
+// the front wall (twelve risers of 5/12 to a half landing at y 5), the upper
 // flight comes back west along the kitchen's wall, to the upper floor at
 // y 10 (the phase's "Facts for the build").
 import * as THREE from 'three';
@@ -30,7 +30,9 @@ export const H = {
   bench: {z: 3.2, long: 2.6, deep: .95, seat: 1.05},
   // The stairs: where they start, how deep a tread and how high a riser,
   // each flight's side of the hall, the half landing.
-  stairs: {x0: 1.6, tread: .4, rise: .5, steps: 10, lowZ: [2.6, 5.05], highZ: [0, 2.45], landX: [5.6, 7]},
+  // (Merlin, 2026-11-19: a real house's slope, about 40 degrees, not 51:
+  // 17 cm risers on 25 cm treads.)
+  stairs: {x0: -.4, tread: .5, rise: 5 / 12, steps: 12, lowZ: [2.6, 5.05], highZ: [0, 2.45], landX: [5.6, 7]},
   lamp: {x: -2.15, y: 7.4, z: 2.5},
 };
 // Where she may walk: her centre .65 from the walls, the bench and the
@@ -267,8 +269,8 @@ export class Hall {
     const crown = this.mesh(new THREE.CylinderGeometry(.24, .27, .2, 20), M.mat, west, {cast: false}); crown.rotation.x = Math.PI / 2; crown.position.set(-(B.z - .7 - west.position.z), hy - .12, .3);
     wood.done(); brass.done();
     // The runner, down the middle of the open floor.
-    const rug = this.mesh(new THREE.PlaneGeometry(6.4, 1.9), M.rug, this.group, {cast: false});
-    rug.rotation.x = -Math.PI / 2; rug.position.set(-2.4, .012, 2.55);
+    const rug = this.mesh(new THREE.PlaneGeometry(5.2, 1.9), M.rug, this.group, {cast: false});
+    rug.rotation.x = -Math.PI / 2; rug.position.set(-3.1, .012, 2.55);
     this.rug = rug;
     // The lantern: black iron and glass, on a rod from above.
     const L = H.lamp, lg = new THREE.Group(); lg.position.set(L.x, L.y, L.z); this.group.add(lg);
@@ -285,7 +287,7 @@ export class Hall {
     const at = (x, z) => V(x, 0, z), F = H.frontDoor, C = H.console, B = H.bench, S = H.stairs;
     const box = (x0, x1, z0, z1, y0, y1, tag) => ({kind: 'box', x0, x1, z0, z1, y0, y1, tag});
     return {
-      home: at(-1.2, 2.6), toyHome: V(-.2, .13, 3.1),
+      home: at(-1.6, 2.6), toyHome: V(-1.7, .13, 3.1),
       // The patch of light the fanlight throws, just inside the front door.
       sunSpot: at(F.x, H.front - 1.5),
       // Where she sits to look up the stairs.
