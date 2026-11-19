@@ -6,9 +6,12 @@ room is built (Merlin 2026-11-19: all four): `sofaNap`, `kneadThrow`,
 `fireside`, `seaWatch` in `dist/app.js`; `tools/qa/living-life.mjs` 24 of 24
 (plain and Christmas). Live since 2026-11-19 (build 486, `9c37f1a`).
 
-Next step: ask Merlin what he saw on his phone (the kneading, the speed of
-the joined space) and fix what he finds; then step 2 of phase 21 (the hall
-and stairs), confirmed with him first. Offered, not decided: the mohair and sling chairs and
+Next step (Merlin picked it 2026-11-19): **phase 21, step 2, the hall and
+stairs**. Read step 2 in `docs/phases/21-house.md` and the blueprint
+(`docs/house/blueprint.png`, `tools/house-blueprint.mjs`). It is a big job
+(a new room): tell Merlin in plain words what you will build and how, list
+assumptions, and wait for his OK before building. Also ask once what he saw
+on his phone in the living room (the kneading, the speed). Offered, not decided: the mohair and sling chairs and
 the sofa's back as places for her (spots are ready in `living.layout()`).
 
 ## Done before (build 479, commit `90cc0ce`; live since 2026-11-19, see MILESTONES.md)
