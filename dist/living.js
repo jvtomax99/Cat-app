@@ -625,7 +625,7 @@ export class LivingRoom {
         sofa: {spot: at(S.x + .25, S.z - 2.1), top: S.seat, base: at(S.x + 1.5, S.z - 4.0), face: Math.PI / 2, lane: {x: S.x + .2, z0: S.z - 2.2, z1: S.z + 2.2}},
         // The knitted throw over that end: she faces the arm it hangs
         // over, her front paws on the wool.
-        throw: {spot: at(S.x + .2, S.z - 1.5), top: S.seat + .05, base: at(S.x + 1.5, S.z - 4.0), face: Math.PI},
+        throw: {spot: at(S.x + .6, S.z - 2.0), top: S.seat + .05, base: at(S.x + 1.5, S.z - 4.0), face: Math.PI},
         sofaBack: {spot: at(S.x - .55, S.z - 1.2), top: S.back, via: 'sofa', face: Math.PI / 2},
         // The mohair chair: a round seat to curl up in.
         mohair: {spot: at(L.mohair.x, L.mohair.z), top: L.mohair.seat, base: at(L.mohair.x - 1.6, L.mohair.z - .35), face: L.mohair.ry},

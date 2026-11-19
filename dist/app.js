@@ -1611,7 +1611,8 @@ function kneadThrow() {
     const n = rand(7, 11);
     brain.kneadUntil = clockNow + n; brain.nextIdle = clockNow + n + 1;
     express('bliss', n);
-    setActivity('loaf', n + .5, () => { slowBlink(); setActivity('sit', rand(3, 5)); });
+    // (Sitting up, so her front paws show as they press in turn.)
+    setActivity('sit', n + .5, () => { slowBlink(); setActivity('loaf', rand(5, 8), () => setActivity('sit')); });
     later(2, () => { if (brain.perch === 'throw' && Math.random() < .5) say(pick(['Making biscuits.', 'So soft…', 'Purrrr.']), 2200); });
   }, rand(20, 30));
 }
@@ -3003,7 +3004,7 @@ function invite(name) {
       if (name === 'sill') brain.nextBird = clockNow + rand(3, 8);
       if (name === 'treeHigh' || name === 'xmasBox') setActivity('loaf', rand(5, 8), () => setActivity('sit'));
       if (name === 'sofa') { brain.kneadUntil = clockNow + 3; setActivity('loaf', 3.4, () => setActivity('catnap', rand(10, 18), () => { slowBlink(); setActivity('sit', 4); })); }
-      if (name === 'throw') { brain.kneadUntil = clockNow + 8; brain.nextIdle = clockNow + 9; express('bliss', 8); setActivity('loaf', 8.5, () => { slowBlink(); setActivity('sit', 4); }); }
+      if (name === 'throw') { brain.kneadUntil = clockNow + 8; brain.nextIdle = clockNow + 9; express('bliss', 8); setActivity('sit', 8.5, () => { slowBlink(); setActivity('loaf', 6, () => setActivity('sit')); }); }
       if (name === 'chair') { brain.kneadUntil = clockNow + 3; setActivity('loaf', 3.4, () => setActivity('catnap', rand(10, 18), () => { slowBlink(); setActivity('sit', 4); })); }
     }, rand(25, 40));
   } else setTimeout(() => {

@@ -41,7 +41,7 @@ for (const flags of ['', '&decor=christmas']) {
     ok('  and down again to the floor', d.reached && d.s.y < .05, JSON.stringify(d.s));
   }
   if (ONLY.includes('throw')) {
-    const r = await run(() => kitten.kneadThrow(), s => s.perch === 'throw' && s.knead && s.act === 'loaf');
+    const r = await run(() => kitten.kneadThrow(), s => s.perch === 'throw' && s.knead && s.act === 'sit');
     ok(`${tag}: on the throw, kneading`, r.reached && near(r.s, L.throw, .35), JSON.stringify(r.s));
     await step(50);
     const s = await state(page);
