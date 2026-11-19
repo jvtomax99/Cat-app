@@ -1129,6 +1129,10 @@ export class Kitchen {
   get livingMid() { return {x: (LIVING.sea + LIVING.south) / 2, z: K.front + LIVING.end / 2}; }
   // The sofa and the low table, for things that roll (in this room's frame).
   get livingSolids() { return this.living.layout().keepOut.map(R => ({x0: R.x0 + .5, x1: R.x1 - .5, z0: R.z0 + K.front + .5, z1: R.z1 + K.front - .5, top: R.tag === 'sofa' ? 1.9 : .9})); }
+  // Which half she is in, set at once (she has just arrived somewhere).
+  setHalf(pos) { return this.half = pos.z > (this.treeOn && pos.x < 1 ? 8.2 : K.front) ? 'living' : 'kitchen'; }
+  // The living room's round furniture, for things that roll.
+  get livingRounds() { const L = LIVING, at = (o, r, top) => ({x: o.x, z: o.z + K.front, r, top}); return [at(L.sling, 1.0, 1.9), at(L.mohair, 1.0, 1.7), at(L.cube, .7, 1.1), at(L.lacquer, L.lacquer.r, L.lacquer.h), at(L.lamp, .4, .4)]; }
   get islandSolid() { const I = K.island; return {x0: I.x0, x1: I.x1, z0: I.z0, z1: I.z1, top: I.top}; }
   get counterSolid() { return {x0: K.left, x1: 3.6, z0: K.back, z1: K.counterFront, top: K.counter}; }
   get roundSolids() { return [this.treeOn ? {x: K.xmas.bed.x, z: K.xmas.bed.z, r: .84, top: .3} : {x: TENT.x, z: TENT.z, r: 1.2, top: 1.9}, {x: FOUNTAIN.x, z: FOUNTAIN.z, r: .5, top: .4}, {x: BOWL.x, z: BOWL.z, r: .37, top: .16}, {x: DOCK.x, z: DOCK.z, r: .4, top: .35}]; }
@@ -1326,7 +1330,9 @@ export class Kitchen {
     this.living.update(dt, t, night, {camera, away: true});
     // (Round the Christmas tree, which stands on the line between the two,
     // she counts as in the living room: that view looks at her side of it.)
-    this.half = cat?.pos ? (cat.pos.z > (this.treeOn && cat.pos.x < 1 ? 8.2 : K.front) ? 'living' : 'kitchen') : this.half;
+    // (Back to the kitchen's only a good step past the line, so the view
+    // does not swing to and fro while she potters about on it.)
+    if (cat?.pos) { const edge = this.treeOn && cat.pos.x < 1 ? 8.2 : K.front; this.half = cat.pos.z > edge ? 'living' : cat.pos.z < edge - .8 ? 'kitchen' : this.half; }
     const e = damp(this.materials.shade.emissiveIntensity, night ? 2.6 : .3, 3, dt);
     this.materials.shade.emissiveIntensity = e;
     // By night the window's light on the floor is moonlight: fainter and cool.

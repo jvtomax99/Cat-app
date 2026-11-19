@@ -60,7 +60,11 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    not pass them on yet); a phone speed check of the joined space (Merlin).
    Known rough edges: with her in the living room the kitchen's furniture
    has no sun shadows (`sunOver` in app.js); glance targets in app.js still
-   point near the kitchen's origin.*
+   point near the kitchen's origin; chasing a fallen bauble she always comes
+   at it from the kitchen's middle (`chaseBauble`); seen from the kitchen
+   half on a wide screen the tree's lower part may lie outside the sun's
+   shadow area (not seen in a still). Each QA run of `tree.mjs` takes about
+   35 minutes here.*
 1b. **The hall.** A third room in `ROOMS` and a second doorway in `DOORS`
    (`dist/house.js`); whatever in `app.js` still assumes two rooms
    (`joinRooms`, `cullThroughDoor`, "the other room") becomes a list.

@@ -1827,7 +1827,8 @@ let stuckHinted = false;
 function stuckAtTop() {
   brain.treeStuck = true;
   setActivity('sit');
-  glanceAt(new THREE.Vector3(brain.pos.x + 1, 0, brain.pos.z + 1.5), 2.4);
+  // (Down at the floor in front of the tree, whichever way it is turned.)
+  glanceAt(new THREE.Vector3(brain.pos.x + Math.cos(TREE.ry) + 1.5 * Math.sin(TREE.ry), 0, brain.pos.z - Math.sin(TREE.ry) + 1.5 * Math.cos(TREE.ry)), 2.4);
   later(2.2, () => {
     if (!brain.treeStuck || brain.perch !== 'treeTop' || !treeUp()) return;
     express('surprised', 1.4); twitchEar(0, 1.2); twitchEar(1, 1.2);
@@ -1840,7 +1841,7 @@ function stuckLife() {
   brain.nextIdle = clockNow + rand(3.5, 6);
   const r = Math.random();
   if (r < .55) { glanceAt(camera.position, 2.2); meow(pick(['mew', 'meow']), 'idle'); express('lonely', 2.4); if (Math.random() < .6) say(pick(['Um… how do I get down?', 'Help?', 'It was easier going up.', 'I live here now. Help.']), 2400); }
-  else if (r < .8) { glanceAt(new THREE.Vector3(brain.pos.x + rand(-1, 1.5), 0, brain.pos.z + rand(.5, 2)), 2); setActivity('poise', rand(.8, 1.4), () => setActivity('sit')); }
+  else if (r < .8) { glanceAt(new THREE.Vector3(brain.pos.x + rand(-1, 1.5) * Math.cos(TREE.ry), 0, brain.pos.z + rand(.5, 2) * Math.cos(TREE.ry)), 2); setActivity('poise', rand(.8, 1.4), () => setActivity('sit')); }
   else { setActivity('loaf', rand(3, 5), () => setActivity('sit')); twitchEar(); }
 }
 // You help her down: back to the floor, and thanks.
@@ -3773,6 +3774,8 @@ function goTo(id) {
   setActivity(pet.sleeping ? 'sleep' : 'sit');
   toy.position.copy(TOY_HOME); toyTarget.copy(TOY_HOME);
   const withHer = view.mode === 'follow';
+  // (Which half of the kitchen's open space she arrives in, before the view is fitted.)
+  if (place === kitchen) view.half = kitchen.setHalf(brain.pos);
   CAMERA_VIEWS.room();
   view.focus.copy(view.goal.focus);
   Object.assign(view, {yaw: view.goal.yaw, pitch: view.goal.pitch, dist: view.goal.dist, cut: 0, lift: 0});
