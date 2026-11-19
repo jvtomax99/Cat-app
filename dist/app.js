@@ -702,15 +702,19 @@ const portal = new THREE.Frustum(), doorPts = [0, 1, 2, 3].map(() => new THREE.V
 const SEEN = 0, UNSEEN = 31;
 // (A doorway is named by the room being looked into, `far`, and the room
 // on the camera's side of it, `near`: house.js has its opening.)
-function doorwayInView(far, near) {
+function doorwayBox(far, near) {
   const [a, , c] = house.opening(far, near, -1), [e, , g] = house.opening(far, near, 1);
   doorBox.makeEmpty();
   for (const p of [a, c, e, g]) doorBox.expandByPoint(beyond.set(...p));
-  doorBox.applyMatrix4(roomOf(far).group.matrixWorld);
+  return doorBox.applyMatrix4(roomOf(far).group.matrixWorld);
+}
+function doorwayInView(far, near) {
+  doorwayBox(far, near);
   camera.updateMatrixWorld();
   return doorView.setFromProjectionMatrix(doorPV.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)).intersectsBox(doorBox);
 }
-function cullThroughDoor(far, near) {
+// What the camera sees through a doorway: `portal`.
+function setPortal(far, near) {
   // The opening on the camera's side of the wall, in the world.
   const C = camera.position, M = roomOf(far).group.matrixWorld;
   house.opening(far, near, 1).forEach((p, i) => doorPts[i].set(...p).applyMatrix4(M));
@@ -726,6 +730,9 @@ function cullThroughDoor(far, near) {
   // (A few centimetres' margin, so nothing pops at the opening's edges; a
   // cluster of leaves is tested as the whole cluster, not one leaf.)
   for (const pl of portal.planes) pl.constant += .25;
+}
+function cullThroughDoor(far, near) {
+  setPortal(far, near);
   roomOf(far).group.traverse(o => {
     if (!o.geometry) return;
     if (o.isInstancedMesh && !o.boundingSphere) o.computeBoundingSphere();
@@ -4775,8 +4782,13 @@ function updateRoom(dt, t) {
     // camera's room is in view, and then only what shows through its own.)
     for (const [fid, far] of builtRooms()) {
       if (whole.includes(fid)) continue;
-      let seen = true, near = null;
-      for (let r = fid; seen && !whole.includes(r);) { const n = house.nextRoom(r, whole[0]); near ??= n; seen = !!n && doorwayInView(r, n); r = n; }
+      // (The way there from the camera's room: its first doorway must be
+      // in view, and each one after it must show through the one before.)
+      const way = [fid];
+      while (!whole.includes(way[0])) { const n = house.nextRoom(way[0], whole[0]); if (!n) break; way.unshift(n); }
+      let seen = whole.includes(way[0]) && doorwayInView(way[1], way[0]);
+      for (let j = 2; seen && j < way.length; j++) { setPortal(way[j - 1], way[j - 2]); seen = portal.intersectsBox(doorwayBox(way[j], way[j - 1])); }
+      const near = way[way.length - 2];
       far.group.visible = seen;
       if (seen) cullThroughDoor(fid, near);
     }
