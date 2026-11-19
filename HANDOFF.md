@@ -1,46 +1,45 @@
-# Handoff (2026-11-19): living room things live; next, phase 21 step 2
+# Handoff (2026-11-19): the hall is on the preview; Merlin is testing it on his phone
 
 ## Goal and exact next step
-Phase 21, step 1 (`docs/phases/21-house.md`). What she does in the living
-room is built (Merlin 2026-11-19: all four): `sofaNap`, `kneadThrow`,
-`fireside`, `seaWatch` in `dist/app.js`; `tools/qa/living-life.mjs` 24 of 24
-(plain and Christmas). Live since 2026-11-19 (build 486, `9c37f1a`).
+Phase 21, step 1b, the hall (`docs/phases/21-house.md`). Built and on the
+preview as build 494 (`2e5dea2`), not live. Merlin picked "I'll test on my
+phone" (2026-11-19). Next: ask what he saw (speed with three rooms; she walks
+to the hall from the picker; looks up the stairs or sits by the door; Feed in
+the hall sends her to the kitchen). If smooth and he says "Go live": push
+`2e5dea2` (or later reviewed sha) to `main`, run "Deploy site", check
+`/version.json`, add a row to `MILESTONES.md`. Then step 2: climbing the
+stairs and the landing (a big job: plan first, wait for his OK).
 
-Next step (Merlin picked it 2026-11-19): **phase 21, step 2, the hall and
-stairs**. Read step 2 in `docs/phases/21-house.md` and the blueprint
-(`docs/house/blueprint.png`, `tools/house-blueprint.mjs`). It is a big job
-(a new room): tell Merlin in plain words what you will build and how, list
-assumptions, and wait for his OK before building. Also ask once what he saw
-on his phone in the living room (the kneading, the speed). Offered, not decided: the mohair and sling chairs and
-the sofa's back as places for her (spots are ready in `living.layout()`).
+## Done (commits c4dfd38 to 2e5dea2)
+- `dist/hall.js`: the room (front door, console and mirror, bench, runner,
+  lantern, fig, dog-leg stairs as scenery). `dist/house.js`: `ROOMS.hall`, a
+  second doorway, `nextRoom`, `opening`. Kitchen's right wall has the doorway
+  (`K.hallDoor`).
+- `dist/app.js`: rooms as a list (`roomOf`, `builtRooms`, `layoutOf`),
+  room-by-room walks, drawing through up to two doorways, hall life
+  (`stairsLook`, `doorSit`), `toBed` (no bed in the hall).
+- Review fixes: the camera-room test only counts beside a doorway; out of one
+  doorway's lane before the next. Own fix: a walk that reaches the
+  kitchen-living seam crosses it (`kitchen.route`).
+- Tests: `tools/qa/hall.mjs` 14 of 14, `house-walk.mjs` 12 of 12, `join.mjs`
+  13 of 13, `npm run check` passes. Stills: `tools/qa/hall-look.mjs`.
 
-## Done before (build 479, commit `90cc0ce`; live since 2026-11-19, see MILESTONES.md)
-- The living room, joined to the kitchen (`tools/qa/join.mjs`, 13 of 13).
-- The Christmas tree at the join, sea side, her round bed beside it;
-  fountain and bowl stay put (`tools/qa/tree.mjs`, `tools/qa/tree-place.mjs`
-  24 of 24).
-- The Room view glides to the half she is in (`kitchen.half`, `view.half`
-  in app.js); the living half's fit starts from `frame().from`.
-
-## Left in step 1
-- A real-phone speed check of the joined space (Merlin).
-- Rough edges: listed in `docs/phases/21-house.md`, step 1.
+## Left
+- Merlin's phone check of build 494, then "Go live".
+- Rough edge: on a wide screen, past the hall's east end the view shows dunes
+  where the study's outer wall will be (step 5).
+- The deploy run sometimes fails with "No artifacts named github-pages"
+  (a GitHub hiccup): start a fresh run, don't re-run (the re-run sat queued).
 
 ## Decisions not yet in SPEC.md
-None: the tree's place and her Christmas bed are in SPEC.md.
+None: the hall's line is in SPEC.md (house section).
 
 ## Rules learned
-- Commit messages must not carry an AI model name; no "Co-Authored-By"
-  line. A "Claude-Session:" link line is what earlier commits end with.
-- The browser tests are slow here: `tree.mjs` about 35 minutes,
-  `tree-place.mjs` and `join.mjs` about 12 to 15. Run one at a time, in the
-  background, with no short timeout. For a quick look, a throwaway script
-  with `open()` from `tools/qa/lib.mjs` and one still takes 3 to 4 minutes.
-- In the fork a push does not publish: run the "Deploy site" workflow
-  (`pages.yml` on `main`), then check `/preview/version.json`. The same after
-  "Go live": a push to `main` does not start it either.
+- Commit messages: no AI model name, no "Co-Authored-By" line; end with the
+  "Claude-Session:" link line.
+- Browser tests are slow here (`hall.mjs` about 40 min, `join.mjs` and
+  `house-walk.mjs` 12 to 15). Run them one at a time in the background.
 
 ## Files to look at first
-`docs/phases/21-house.md`, `docs/ARCHITECTURE.md` (rows `living.js`,
-`kitchen.js`), `dist/living.js` (`layout`, `L`), `dist/kitchen.js`
-(`layout`, `frame`), `SPEC.md` (the living room lines near line 238).
+`docs/phases/21-house.md` (step 1b, step 2), `docs/ARCHITECTURE.md` (row
+`hall.js`), `dist/hall.js` (`H`, `H.stairs`, `layout`), `dist/house.js`.
