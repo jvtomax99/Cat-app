@@ -110,10 +110,11 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    Reviewer's finds fixed (gallery edge, toy and taps upstairs, the picker,
    tail on the steps). Rough edges: at the foot of the stairs, facing away
    from them, her body sits about 3 cm high; from the landing's Room view the
-   hall shows under the landing's front edge. Still to do: Merlin's phone
-   check (speed with the landing).*
-3. **Bathroom** with its three things to do.
-4. **Bedroom** with its two things to do.
+   hall shows under the landing's front edge. Merlin's phone check of the
+   live build (506), 2026-11-19: smooth.*
+3. **Bedroom** with its two things to do. (Merlin, 2026-11-19: bedroom
+   before bathroom, since the bathroom is reached only through it.)
+4. **Bathroom** with its three things to do.
 5. **Outside and the House view**: outer walls, roof, front door, tap a room.
 Stop rule: if a real phone stutters after a step, fix speed before the next.
 

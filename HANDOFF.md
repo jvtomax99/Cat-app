@@ -4,7 +4,7 @@
 Step 2 of phase 21 (`docs/phases/21-house.md`): Mochi climbs the hall
 stairs to a new landing. **Live since 2026-11-19, build 506 (`62a295e`).** Merlin
 hasn't said yet how it runs on his phone: ask.
-Next after that: step 3, the bathroom (big job: look at similar apps first,
+Next: step 3, the bedroom (Merlin swapped it with the bathroom; big job: look at similar apps first,
 plan, wait for his OK).
 
 ## Done (commits 5fc10e2 to the route fix)
