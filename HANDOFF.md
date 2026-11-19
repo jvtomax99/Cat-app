@@ -2,9 +2,8 @@
 
 ## Goal and exact next step
 Phase 21, step 1b, the hall (`docs/phases/21-house.md`): **live since
-2026-11-19, build 494 (`2e5dea2`)**. Merlin said "Go live" without reporting
-a phone check: ask once whether three rooms run smoothly on his phone (the
-phase's stop rule: fix speed before the next step if it stutters).
+2026-11-19, build 494 (`2e5dea2`)**. Merlin, 2026-11-19: on his phone it
+runs smoothly with three rooms.
 Next: step 2, climbing the stairs and the landing. A big job: look at 2 or 3
 similar apps, plan in plain words, list assumptions, wait for his OK.
 
@@ -23,7 +22,6 @@ similar apps, plan in plain words, list assumptions, wait for his OK.
   13 of 13, `npm run check` passes. Stills: `tools/qa/hall-look.mjs`.
 
 ## Left
-- Merlin's phone check of the live hall (not reported yet).
 - Rough edge: on a wide screen, past the hall's east end the view shows dunes
   where the study's outer wall will be (step 5).
 - The deploy run sometimes fails with "No artifacts named github-pages"
