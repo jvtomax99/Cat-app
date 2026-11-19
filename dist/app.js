@@ -885,6 +885,13 @@ function walkTo(point, then = null, run = false, anywhere = false) {
   // Mid-jump: go there once she lands. Up on a perch: hop down first.
   if (brain.jump) { brain.jump.then = () => walkTo(point, then, run, anywhere); return; }
   if (brain.perch) { brain.climbGoal = 'floor'; jumpDown(() => walkTo(point, then, run, anywhere)); return; }
+  // In the hall: a spot on the other floor (by its height: the landing's
+  // are at 10, the toy's on the hall floor), or any spot with her on the
+  // stairs, by way of the stairs.
+  if (place === hall && !stairWalk) {
+    const y = brain.elevation, up = point.y > 5 ? true : point.y > .05 ? false : hall.onStairs(y) ? y > 5 : null;
+    if (up !== null && (hall.onStairs(y) || (hall.level === 'up') !== up)) { climbTo(up, () => walkTo(point, then, run, anywhere), run); return; }
+  }
   // (A spot in the lane to a doorway is fine as it is: house.js.)
   const lane = laneAt(placeId(place), point), target = anywhere || lane ? point.clone() : onRug(point.clone());
   // Into or out of a lane, by its mouth: straight down the middle of it,
@@ -911,7 +918,78 @@ function walkTo(point, then = null, run = false, anywhere = false) {
 }
 // Jumping: a crouch and a little wiggle while she sizes it up, then an arc to
 // the new spot and height, and a soft landing.
-const groundAt = p => Math.hypot(p.x - bed.position.x, p.z - bed.position.z) < place.bedRadius ? place.bedTop : 0;
+const groundAt = p => place.rampAt ? place.groundAt(p.x, p.z, brain.elevation) : Math.hypot(p.x - bed.position.x, p.z - bed.position.z) < place.bedRadius ? place.bedTop : 0;
+// The stairs (phase 21, step 2). Her hips are about this far behind her
+// root; her body takes this much of the stairs' slope.
+const HIPS_BACK = .55, STAIR_TILT = .85;
+// The hall's floor changed under her (she's come up to the landing, or
+// gone down): its spots, the camera's box and limits; the Room view glides there.
+function applyLevel() {
+  const L = layoutOf(hall);
+  HOME = L.home; SUN_SPOT = L.sunSpot;
+  LIMITS = L.limits; CAM_BOX = L.camBox; CAM_SOLIDS = L.camSolids; CAM_BLOCKS = L.camBlocks || [];
+  if (view.mode === 'room') { view.glideUntil = clockNow + 3.4; CAMERA_VIEWS.room(); }
+}
+// The hall's floor at (x, z), for walkTo (a height just off 0 says
+// downstairs: see walkTo).
+const hallFloor = (x, z) => new THREE.Vector3(x, .1, z);
+// Her two things on the stairs: a sit on a step, looking down into the
+// hall; a race up them and straight back down. And upstairs: a look down
+// the stairs from the top, or out of the landing's window.
+function stairSit() {
+  if (place !== hall || pet.sleeping) return false;
+  const spot = hall.treadSpot(Math.floor(rand(3, 10))), foot = hall.stairFoot;
+  const sit = () => {
+    brain.faceAt = new THREE.Vector3(foot.x - 3, 0, foot.z);
+    setActivity(pick(['sit', 'sit', 'loaf']), rand(8, 14));
+    later(1.2, () => { if (brain.mode === 'idle') glanceAt(new THREE.Vector3(rand(-5, -1), .3, rand(1, 4)), 2.5); });
+    if (Math.random() < .3) later(2, () => say(pick(['Best seat in the house.', 'I can see everything from here.']), 2200));
+  };
+  // (From the hall's floor, or coming down from the landing.)
+  if (hall.level === 'up') climbTo(false, sit, false, spot);
+  else walkTo(foot, () => walkPath([spot], sit, false), false, true);
+  return true;
+}
+function stairRace() {
+  if (place !== hall || hall.level === 'up' || hall.onStairs(brain.elevation)) return false;
+  express('excited', 3); say(pick(['Race you!', 'Nyoom!', 'Up! Down!']), 1400);
+  climbTo(true, () => {
+    setActivity('sit', 1.5);
+    later(rand(.6, 1.4), () => { if (place === hall && brain.mode === 'idle') climbTo(false, () => setActivity(pick(['sit', 'loaf']), rand(3, 6)), 2.0); });
+  }, 2.0);
+  return true;
+}
+function upstairsLook(which) {
+  if (place !== hall || pet.sleeping) return false;
+  const L = layoutOf(hall), S = L[which];
+  walkTo(S.at, () => {
+    brain.faceAt = S.look.clone().setY(0);
+    setActivity(pick(['sit', 'sit', 'loaf']), rand(7, 12));
+    glanceAt(S.look, 3);
+    if (which === 'windowSpot' && Math.random() < .35) later(1.5, () => say(pick(['I can see the sea from up here.', 'Birds…']), 2200));
+  });
+  return true;
+}
+// Up or down the stairs to the other floor (or, from a step, to the end
+// she's going to): to the foot (or the top) first, then step by step.
+let stairWalk = false;
+function climbTo(up, then = null, run = false, stop = null) {
+  const path = hall.stairPath(up);
+  path.at(-1).y = up ? hall.up : 0; path[0].y = up ? 0 : hall.up;
+  // (Stopping on a step of the lower flight on the way down: there.)
+  if (stop && !up) { path.splice(path.length - 1, 1, stop); }
+  const go = rest => walkPath(rest, then, run);
+  if (hall.onStairs(brain.elevation)) {
+    let i = 0;
+    path.forEach((p, k) => { if (Math.hypot(p.x - brain.pos.x, p.z - brain.pos.z) < Math.hypot(path[i].x - brain.pos.x, path[i].z - brain.pos.z)) i = k; });
+    // (Nearest point already behind her: on to the next.)
+    const n = path[i + 1];
+    if (n && Math.hypot(n.x - brain.pos.x, n.z - brain.pos.z) < Math.hypot(n.x - path[i].x, n.z - path[i].z)) i++;
+    go(path.slice(i)); return;
+  }
+  stairWalk = true;
+  try { walkTo(path[0], () => go(path.slice(1)), run, true); } finally { stairWalk = false; }
+}
 // How long a jump takes and how high it arcs: she falls at a cat's pace
 // (gravity for her size), clears the higher end by a little (more over a
 // long gap), and never crosses the floor faster than a sprint.
@@ -1000,13 +1078,14 @@ function backToSpot(then) {
 }
 // Walking up on something (a shelf, the counter, the island): point to point,
 // at the height she's at.
-function walkPath(points, then) {
+function walkPath(points, then, run) {
+  if (run !== undefined) brain.run = run;
   // (Out of the sink first: she doesn't walk through its sides.)
   if (inSink() && !brain.jump) { outOfSink(() => walkPath(points, then)); return; }
   const [p, ...rest] = points;
   if (!p) { then?.(); return; }
   brain.target = p.clone();
-  setActivity('walk', 3 + Math.hypot(p.x - brain.pos.x, p.z - brain.pos.z) / .4, () => walkPath(rest, then));
+  setActivity('walk', 3 + Math.hypot(p.x - brain.pos.x, p.z - brain.pos.z) / .3, () => walkPath(rest, then, run));
 }
 // Her own finds (salmon off the island, a drink from the tap, a cup sent
 // flying, a ride) count toward her needs, shown like your care is.
@@ -1104,7 +1183,8 @@ function updateCat(dt, t) {
     const facing = Math.abs(Math.atan2(Math.sin(desiredHeading - brain.heading), Math.cos(desiredHeading - brain.heading)));
     // (Running: a trot. A dash or zoomies, 2.6, is flat out: a gallop.)
     // (A dash takes off and pulls up harder than a walk or a trot.)
-    const top = typeof brain.run === 'number' ? brain.run : brain.run ? 2.1 : .65, flat = top >= 2.5;
+    // (On the stairs a walk is slower, a step at a time.)
+    const top0 = typeof brain.run === 'number' ? brain.run : brain.run ? 2.1 : .65, top = place.onStairs?.(brain.elevation) && !brain.run ? Math.min(top0, .45) : top0, flat = top >= 2.5;
     // (She eases right down as she arrives, and the last of her speed dies
     // away over a couple of centimetres below: stopping dead from a walk or a
     // run is a jolt through her whole body.)
@@ -1264,7 +1344,16 @@ function updateCat(dt, t) {
     brain.turnRate = Math.abs(brain.turnRate) < .01 ? 0 : damp(brain.turnRate, 0, 12, dt);
     brain.heading += brain.turnRate * dt;
   }
-  if (!J) brain.elevation = damp(brain.elevation, brain.perch ? perchTop() : groundAt(brain.pos), 8, dt);
+  if (!J && place.rampAt && !brain.perch) {
+    // In the hall, on the stairs or either floor: her body's height is the
+    // stairs' line under her hips (behind her root), and she tilts by the
+    // slope from there to her shoulders; each paw finds its own step.
+    const sn = Math.sin(brain.heading), cs = Math.cos(brain.heading), ref = brain.elevation;
+    const hy = place.rampAt(brain.pos.x - sn * HIPS_BACK, brain.pos.z - cs * HIPS_BACK, ref), fy = place.rampAt(brain.pos.x + sn * .15, brain.pos.z + cs * .15, ref);
+    brain.elevation = Math.abs(hy - ref) > .6 ? damp(ref, hy, 8, dt) : hy;
+    brain.slope = damp(brain.slope || 0, Math.atan2(fy - hy, HIPS_BACK + .15) * STAIR_TILT, 10, dt);
+    if (place === hall && hall.setLevel(hall.levelAt(brain.elevation))) applyLevel();
+  } else if (!J) { brain.elevation = damp(brain.elevation, brain.perch ? perchTop() : groundAt(brain.pos), 8, dt); brain.slope = 0; }
   cat.root.position.set(brain.pos.x, brain.elevation, brain.pos.z);
   cat.root.rotation.y = brain.heading;
 
@@ -1438,6 +1527,8 @@ function updateCat(dt, t) {
     // In her bed, her tail stays inside the rim.
     tailBounds: !brain.perch && brain.elevation > .05 && Math.hypot(brain.pos.x - bed.position.x, brain.pos.z - bed.position.z) < place.bedRadius ? {x: bed.position.x, z: bed.position.z, r: place.bedRadius} : null,
     tailSolids: tailSolids(),
+    // (On the hall's stairs: the step under each paw, and the slope.)
+    ground: place.rampAt && !J && !brain.perch ? stairGround : null, slope: brain.slope || 0,
   });
 
   // Screen anchor above the head for particles, and the face's rough
@@ -1451,6 +1542,7 @@ function updateCat(dt, t) {
   Object.assign(faceBox, {cx, cy, l: cx - r, r: cx + r, t: Math.min(headScreen.y, cy - r), b: cy + r * .9});
 }
 const faceBox = {cx: 0, cy: 0, l: 0, r: 0, t: 0, b: 0};
+const stairGround = (x, z) => place.groundAt(x, z, brain.elevation);
 
 // Put the speech bubble above her head, or beside it when there's no room
 // above; never over her face.
@@ -1483,7 +1575,7 @@ function idleLife(t) {
   brain.nextIdle = t + (night ? rand(2.5, 5) : rand(4, 8));
   if (brain.perch) { perchLife(t); return; }
   if (night && Math.random() < .75 && nightLife()) return;
-  const perchChoices = place === room ? ['window', 'window', 'chair'] : place === hall ? ['stairsLook', 'stairsLook', 'doorSit'] : ['shelf', 'shelf', 'shelfHigh', 'shelfHigh', 'salmonRaid', 'faucet', 'faucet', 'pendant', 'sofa', 'throw', 'fireside', 'seaWatch'].concat(pet.energy < 50 ? ['sofa', 'fireside'] : [], pet.food < 75 ? ['salmonRaid'] : [], pet.water < 85 ? ['faucet', 'faucet'] : []);
+  const perchChoices = place === room ? ['window', 'window', 'chair'] : place === hall ? (hall.level === 'up' ? ['topLook', 'topLook', 'windowLook', 'windowLook', 'goDown', 'goDown'] : ['stairsLook', 'doorSit', 'stairSit', 'stairSit', 'goUp']) : ['shelf', 'shelf', 'shelfHigh', 'shelfHigh', 'salmonRaid', 'faucet', 'faucet', 'pendant', 'sofa', 'throw', 'fireside', 'seaWatch'].concat(pet.energy < 50 ? ['sofa', 'fireside'] : [], pet.food < 75 ? ['salmonRaid'] : [], pet.water < 85 ? ['faucet', 'faucet'] : []);
   const options = ['glance', 'twitch', 'tilt', 'wander', 'wander', 'groom', ...perchChoices, 'sunbeam'];
   if (pet.energy > 35) options.push('solo', 'solo', 'dash');
   if (pet.happiness > 60) options.push('slowBlink', 'zoomies');
@@ -1512,7 +1604,7 @@ function idleLife(t) {
   // app, then every half a minute or so. A tired kitten picks the calm ones.
   if (t > brain.nextShow) {
     brain.nextShow = t + rand(25, 40);
-    const shows = place === room ? ['window', 'chair', 'sunbeam', 'mantel', 'mantel'] : place === hall ? ['stairsLook', 'sunbeam', 'doorSit'] : ['counter', 'shelf', 'shelfHigh', 'pendant', 'pendant', 'sunbeam', 'sofa', 'throw', 'fireside', 'seaWatch'];
+    const shows = place === room ? ['window', 'chair', 'sunbeam', 'mantel', 'mantel'] : place === hall ? (hall.level === 'up' ? ['topLook', 'windowLook'] : ['stairsLook', 'sunbeam', 'doorSit', 'stairSit', 'stairRace', 'stairRace']) : ['counter', 'shelf', 'shelfHigh', 'pendant', 'pendant', 'sunbeam', 'sofa', 'throw', 'fireside', 'seaWatch'];
     if (pet.energy > 35) shows.push('solo', 'solo', 'zoomies');
     choice = pick(shows);
     if (treeUp() && Math.random() < .6) choice = pick(['tree', 'tree', 'treeHide', 'xmasBox']);
@@ -1552,6 +1644,11 @@ function idleLife(t) {
   }
   // In the hall: a look up the stairs, or a sit on the mat by the front door.
   if (choice === 'stairsLook') { const S = place.layoutCache.stairsSpot; walkTo(S.at, () => { setActivity('sit', rand(6, 10)); glanceAt(S.look, 3.5); express('curious', 2); }); }
+  if (choice === 'stairSit') stairSit();
+  if (choice === 'stairRace' && pet.energy > 30) stairRace();
+  if (choice === 'topLook' || choice === 'goUp' && Math.random() < .5) upstairsLook('topSpot');
+  else if (choice === 'windowLook' || choice === 'goUp') upstairsLook('windowSpot');
+  if (choice === 'goDown') walkTo(hallFloor(rand(-5, -2), rand(1.6, 3.4)), () => setActivity(pick(['sit', 'loaf']), rand(4, 8)));
   if (choice === 'doorSit') walkTo(SUN_SPOT, () => { brain.heading = Math.PI; setActivity(pick(['sit', 'loaf']), rand(7, 12)); if (Math.random() < .4) say(pick(['Anyone coming?', 'I heard something outside.']), 2200); });
   if (choice === 'nap') toBed(() => { setActivity('loaf', rand(8, 14)); setTimeout(slowBlink, 1500); });
   if (choice === 'bowl') {
@@ -3831,28 +3928,35 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.b
 // Room decor: the furniture stays put, only the look changes (decor.js).
 const DECOR_SWATCHES = {classic: ['#3f472b', '#1e2536', '#5a3a22', '#e6dcc0'], thanksgiving: ['#d8cbb3', '#96a380', '#e0995e', '#b58a3c'], halloween: ['#d98b45', '#38332f', '#455d7a', '#efe5d2'], christmas: ['#2d4a27', '#7c1426', '#e9d6a6', '#efe7d6']};
 // What to tap to invite her up, in the room she's in.
-function perchHint() { return place === room ? 'the sill, chair or mantel' : place === hall ? 'the stairs (soon)' : 'a shelf, a cup, the tap, the vacuum or the big lamp'; }
+function perchHint() { return place === room ? 'the sill, chair or mantel' : place === hall ? 'nothing yet: call her up the stairs from the rooms menu' : 'a shelf, a cup, the tap, the vacuum or the big lamp'; }
 // Rooms she can be in. The kitchen is built the first time she goes there.
 const PLACES = {
   study: {name: 'The study', note: 'Fireplace, window seat and the bird', swatch: ['#9a5a34', '#5a6b38', '#e7d3b2', '#1d3f9a']},
   kitchen: {name: 'The kitchen', note: 'Shelves to climb, cups to pat, a vacuum to ride', swatch: ['#4b2e1c', '#efe3d0', '#cfd0cc', '#d8c3a5']},
   hall: {name: 'The hall', note: 'The front door and the stairs', swatch: ['#34424f', '#efe3d0', '#7a3a36', '#a9824f']},
+  landing: {name: 'The landing', note: 'Up the stairs, by the window', swatch: ['#a9824f', '#efe3d0', '#7a3a36', '#ece4d6']},
 };
+// (The landing is the hall's upper floor: which of the two she's on.)
+const pickedPlace = () => place === hall && hall.level === 'up' ? 'landing' : place.id;
 function renderPlaces() {
-  $('#place-options').innerHTML = Object.entries(PLACES).map(([id, d]) => `<button type="button" data-place="${id}" aria-pressed="${place.id === id}" style="--tint:var(--accent)"><span class="decor-swatch">${d.swatch.map(c => `<i style="background:${c}"></i>`).join('')}</span><strong>${d.name}</strong><small>${d.note}</small></button>`).join('');
+  $('#place-options').innerHTML = Object.entries(PLACES).map(([id, d]) => `<button type="button" data-place="${id}" aria-pressed="${pickedPlace() === id}" style="--tint:var(--accent)"><span class="decor-swatch">${d.swatch.map(c => `<i style="background:${c}"></i>`).join('')}</span><strong>${d.name}</strong><small>${d.note}</small></button>`).join('');
 }
 // Take her (and the camera) to another room.
 function goTo(id) {
   if (id !== 'room' && !kitchen) buildKitchen();
   brain.treeStuck = false;
+  // (The landing: the hall, upstairs.)
+  const upstairs = id === 'landing'; if (upstairs) id = 'hall';
   const target = roomOf(id);
-  if (target === place) return;
+  if (target === place && (target !== hall || (hall.level === 'up') === upstairs)) return;
+  if (target === hall) hall.setLevel(upstairs ? 'up' : 'down');
   if (brain.mode === 'play') endPlay(true);
   if (brain.mode !== 'idle') setMode('idle');
   Object.assign(brain, {perch: null, jump: null, target: null, pounce: null});
   usePlace(target);
   brain.pos.copy(pet.sleeping && !place.noBed ? CUSHION_SPOT : HOME);
-  brain.elevation = pet.sleeping ? place.bedTop : 0;
+  brain.elevation = pet.sleeping ? place.bedTop : place === hall && upstairs ? hall.up : 0;
+  if (place === hall && upstairs) brain.pos.copy(HOME).setY(0);
   brain.heading = pet.sleeping ? place.layoutCache.sleepHeading ?? .6 : 0;
   setActivity(pet.sleeping ? 'sleep' : 'sit');
   toy.position.copy(TOY_HOME); toyTarget.copy(TOY_HOME);
@@ -3875,6 +3979,8 @@ function goTo(id) {
 function walkToRoom(id, then = null, run = false) {
   const from = placeId(place), hop = house.nextRoom(from, id);
   if (!hop) return false;
+  // (Upstairs, or on the stairs: down them first.)
+  if (place === hall && (hall.level === 'up' || hall.onStairs(brain.elevation))) { climbTo(false, () => { if (!walkToRoom(id, then, run)) setActivity('sit'); }, run); return true; }
   if (!kitchen) { buildKitchen(); joinRooms(); placeBowls(); }
   // (Not next door: by way of the room between, one doorway at a time.)
   if (hop !== id) return walkToRoom(hop, () => { if (!walkToRoom(id, then, run)) setActivity('sit'); }, run);
@@ -3935,8 +4041,8 @@ $('#place-options').addEventListener('click', e => {
   const id = b.dataset.place;
   $('#decor-dialog').close();
   const to = id === 'study' ? 'room' : id;
-  if (place.id === id && !brain.toRoom) return;
-  callToRoom(to);
+  if (pickedPlace() === id && !brain.toRoom) return;
+  if (to === 'landing') callToLanding(); else callToRoom(to);
 });
 // The room picker calls her: she walks there through the doorway (no jump).
 // (Asleep, she stays put; whatever she's doing ends first.)
@@ -3950,6 +4056,19 @@ function callToRoom(id) {
   if (placeId(place) === id) { endTrip(); brain.target = null; brain.after = null; setActivity('sit'); return true; }
   if (!walkToRoom(id, null, true)) return false;
   brain.nextIdle = clockNow + 20;
+  return true;
+}
+
+// Up to the landing: to the hall, then up the stairs.
+function callToLanding() {
+  if (pet.sleeping) { toast(`Shh, ${pet.name} is asleep.`); return false; }
+  brain.treeStuck = false;
+  if (brain.mode === 'play') endPlay(true);
+  if (brain.mode !== 'idle') setMode('idle');
+  toast(`Calling ${pet.name} up to the landing…`);
+  const up = () => climbTo(true, () => { setActivity('sit', rand(4, 7)); express('curious', 2); });
+  if (place === hall) up(); else if (!walkToRoom('hall', up, true)) return false;
+  brain.nextIdle = clockNow + 25;
   return true;
 }
 
@@ -5034,7 +5153,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, callToRoom, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, sofaNap, kneadThrow, fireside, seaWatch, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, get hall() { return hall; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, callToRoom, climbTo, callToLanding, applyLevel, stairSit, stairRace, upstairsLook, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, sofaNap, kneadThrow, fireside, seaWatch, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, get hall() { return hall; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });

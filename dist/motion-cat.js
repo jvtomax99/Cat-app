@@ -159,6 +159,9 @@ export class MotionCat {
     const cat = this.cat, root = cat.root, rig = this.rig;
     root.updateMatrixWorld(true);
     const rootPos = root.getWorldPosition(new THREE.Vector3()), heading = root.rotation.y;
+    // What each paw stands on: her root's height, or on stairs (ctl.ground,
+    // a function of the world x and z) the step under that paw.
+    const gy = ctl.ground ? p => ctl.ground(p.x, p.z) : () => rootPos.y;
     // How she's moving (from where the app has put her).
     if (this.prev && dt > 0) {
       const v = rootPos.clone().sub(this.prev.pos).divideScalar(dt);
@@ -271,7 +274,7 @@ export class MotionCat {
           if (early ? u >= 1 : !walking && u >= 1 || walking && !near) {
             // Down: where the leg will be upright mid-stance. (A quick step
             // that lands late in its own swing window counts as that swing.)
-            pw.pos.copy(pw.swing.to || pw.pos).setY(rootPos.y); pw.swing = null;
+            pw.pos.copy(pw.swing.to || pw.pos); pw.pos.y = gy(pw.pos); pw.swing = null;
             if (early && inSwing && (p - duty) / (1 - duty) > .6) pw.sat = true;
           } else {
             // (Galloping, a front paw lands a little nearer: reaching as far as
@@ -285,13 +288,17 @@ export class MotionCat {
             // ran out of leg before its next swing.)
             const dist = early ? ahead * speed : ((1 - u) * (1 - duty) + duty / 2) * stride * (front ? 1 - .3 * runW : 1) * (speed / Math.max(gait, .05));
             const to = rootPos.clone().addScaledVector(speed > .05 ? this.vel.clone().divideScalar(speed) : fwdW, walking ? dist : 0)
-              .add(local.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw)).setY(rootPos.y);
+              .add(local.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw));
+            to.y = gy(to);
             pw.swing.to = to; pw.swing.u = u;
             const e = smoother(clamp((u - .05) / .9, 0, 1));
             pw.pos.copy(pw.swing.from).lerp(to, e);
             // (Every step clears the floor, even a short one.)
             const H = (front ? .08 : .075 * HIND_LIFT) * clamp(pw.swing.from.distanceTo(to) / .5, .7, 1) * (1 + trotW * .25 + runW * .9);
-            pw.pos.y = rootPos.y + H * Math.pow(Math.sin(Math.PI * Math.pow(u, .8)), 1.3);
+            // (Up or down a step: it rises over the step's edge first, and
+            // comes down on to it.)
+            const fy = pw.swing.from.y, rise = Math.abs(to.y - fy);
+            pw.pos.y = lerp(fy, to.y, smoother(clamp((u - .1) / .7, 0, 1))) + (H + .7 * rise) * Math.pow(Math.sin(Math.PI * Math.pow(u, .8)), 1.3);
             pw.pitch = front ? -1.1 * Math.sin(Math.PI * clamp(u * 1.25, 0, 1)) * (1 - u) : -.7 * Math.sin(Math.PI * clamp(u * 1.3, 0, 1)) * (1 - u);
             sw[k] = Math.sin(Math.PI * u);
             continue;
@@ -299,7 +306,7 @@ export class MotionCat {
         }
         // (Planted, it rises or sinks with her, as standing: stepping up into
         // her bed, a paw left at floor height would pull its leg out straight.)
-        pw.pos.y = rootPos.y;
+        pw.pos.y = gy(pw.pos);
         pw.pitch = 0;
         continue;
       }
@@ -307,14 +314,15 @@ export class MotionCat {
       // well away from where it belongs (one paw at a time).
       if (pw.swing) {
         const u = Math.min(1, (t - pw.swing.t0) / pw.swing.dur);
-        pw.pos.copy(pw.swing.from).lerp(homeW.setY(rootPos.y), smoother(u));
-        pw.pos.y = rootPos.y + pw.swing.h * Math.sin(Math.PI * u);
+        const fy = pw.swing.from.y, ty = gy(homeW);
+        pw.pos.copy(pw.swing.from).lerp(homeW, smoother(u));
+        pw.pos.y = lerp(fy, ty, smoother(u)) + (pw.swing.h + .7 * Math.abs(ty - fy)) * Math.sin(Math.PI * u);
         pw.pitch = -.5 * Math.sin(Math.PI * u);
         sw[k] = Math.sin(Math.PI * u);
-        if (u >= 1) { pw.swing = null; pw.pos.y = rootPos.y; }
+        if (u >= 1) { pw.swing = null; pw.pos.y = ty; }
         continue;
       }
-      pw.pos.y = rootPos.y;
+      pw.pos.y = gy(pw.pos);
       pw.pitch = 0;
       // (Off to the side shows more than off forward or back.)
       const offL = root.worldToLocal(pw.pos.clone()).sub(home), off = Math.hypot(offL.x / .55, offL.z);
@@ -387,7 +395,7 @@ export class MotionCat {
     // both ways): set straight to the arc's slope, her whole body snapped
     // round by up to 30 degrees in one frame at take-off and at landing.
     {
-      const k = ctl.air, up = ctl.airUp ?? 1, goal = k >= 0 ? (ctl.airTilt != null ? ctl.airTilt : (up > 0 ? .3 : -.25) * Math.cos(Math.PI * k)) : 0;
+      const k = ctl.air, up = ctl.airUp ?? 1, goal = k >= 0 ? (ctl.airTilt != null ? ctl.airTilt : (up > 0 ? .3 : -.25) * Math.cos(Math.PI * k)) : ctl.slope || 0;
       const W = 16, d = (this.tilt || 0) - goal, v = this.tiltV || 0, e = Math.exp(-W * dt), n = v + W * d;
       this.tilt = goal + (d + n * dt) * e; this.tiltV = (v - W * n * dt) * e;
       pelvis.pitch += this.tilt;
@@ -469,7 +477,9 @@ export class MotionCat {
     // Soft contact on her support surface (not mid-air).
     // (Nothing to stand on under her paws when she's in the air or hanging.)
     const unsupported = air || name === 'drape';
-    rig.floorU.floorY.value = unsupported ? -1e3 : rootPos.y;
+    // (On stairs: the lowest step under her, so nothing of her is pressed
+    // flat on a step her paws stand above.)
+    rig.floorU.floorY.value = unsupported ? -1e3 : ctl.ground ? Math.min(...PAWS.map(k => this.paws[k].pos ? gy(this.paws[k].pos) : rootPos.y)) : rootPos.y;
     // (Contact whenever she's not walking or in the air: resting, crouching,
     // landing on a cushion. Walking, her legs carry her clear of it.)
     // (And for a moment after a landing: the speed she came down with reads

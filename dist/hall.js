@@ -34,7 +34,28 @@ export const H = {
   // 17 cm risers on 25 cm treads.)
   stairs: {x0: -.4, tread: .5, rise: 5 / 12, steps: 12, lowZ: [2.6, 5.05], highZ: [0, 2.45], landX: [5.6, 7]},
   lamp: {x: -2.15, y: 7.4, z: 2.5},
+  // Upstairs (phase 21 step 2): the landing, the hall's upper floor at
+  // y 10, round the stairwell; its walls 9.5 high (as the kitchen's). The
+  // window over the front door, the bedroom's door in the kitchen's wall.
+  up: 10, upH: 9.5, well: 2.45,
+  window: {x: -2.15, w: 2.6, sill: 2.2, h: 4.4},
+  bedDoor: {x: -4.6, w: 2.2, h: 5.0},
 };
+// (Where the upper flight comes out on the landing; the half landing's height.)
+const HALF = H.stairs.steps * H.stairs.rise, UPX = H.stairs.landX[0] - H.stairs.steps * H.stairs.tread;
+// Upstairs, where she may walk: the landing's main floor (west of the top
+// step), and the gallery along the front wall over the lower flight.
+const UPFLOOR = {x0: H.west + .7, x1: UPX - .7, z0: .7, z1: H.front - .65, gz0: H.well + .65};
+// The tops she can stand on at (x, z): the floor, a tread, the half
+// landing, the landing upstairs.
+function tops(x, z) {
+  const S = H.stairs, [l0] = S.landX, out = [0];
+  if (z >= S.lowZ[0] - .08 && z <= S.lowZ[1] && x >= S.x0 && x < l0) out.push((Math.floor((x - S.x0) / S.tread) + 1) * S.rise);
+  if (x >= l0 && x <= H.east + .5) out.push(HALF);
+  if (z <= S.highZ[1] + .08 && x >= UPX && x < l0) out.push(HALF + (Math.floor((l0 - x) / S.tread) + 1) * S.rise);
+  if (x < UPX || z > H.well) out.push(H.up);
+  return out;
+}
 // Where she may walk: her centre .65 from the walls, the bench and the
 // stairs' first riser (her head turned to look at something reaches that far).
 const FLOOR = {x0: H.west + 1.6, x1: H.stairs.x0 - .7, z0: .7, z1: H.front - .7};
@@ -55,6 +76,8 @@ export class Hall {
     this.bed = new THREE.Object3D(); this.bed.position.set(0, -50, 400); this.group.add(this.bed);
     this.bedTop = 0; this.bedRadius = 0; this.noBed = true;
     this.lampSpot = V(H.lamp.x, H.lamp.y - 1.1, H.lamp.z);
+    this.upLampSpot = V(-3.2, H.up + 6, 2.5);
+    this.level = 'down';
     this.build(plaster, floor);
   }
 
@@ -109,6 +132,7 @@ export class Hall {
     this.buildFrontDoor();
     this.buildStairs();
     this.buildFurniture();
+    this.buildUpstairs();
   }
 
   // Floor, plaster walls, the doorway to the kitchen.
@@ -130,8 +154,21 @@ export class Hall {
     wall(d0 - H.west, T, (H.west + d0) / 2, T / 2, H.back, 0);
     wall(d1 - d0, T - H.doorTop, (d0 + d1) / 2, (T + H.doorTop) / 2, H.back, 0);
     wall(H.east - d1, T, (d1 + H.east) / 2, T / 2, H.back, 0);
-    // (And up past its top, where the upper floor will be: no sky over it.)
-    wall(H.east - H.west, 30, 0, T + 15, H.back, 0);
+    // Upstairs (the landing): the kitchen's wall with the bedroom's doorway,
+    // the front wall with the window. (The end walls go up the two floors.)
+    const U = H.up, UT = U + H.upH, B = H.bedDoor, W = H.window;
+    this.upWalls = [
+      wall(B.x - B.w / 2 - H.west, H.upH, (H.west + B.x - B.w / 2) / 2, U + H.upH / 2, H.back, 0),
+      wall(B.w, H.upH - B.h, B.x, U + (H.upH + B.h) / 2, H.back, 0),
+      wall(H.east - B.x - B.w / 2, H.upH, (B.x + B.w / 2 + H.east) / 2, U + H.upH / 2, H.back, 0),
+    ];
+    const w0 = W.x - W.w / 2, w1 = W.x + W.w / 2;
+    this.upFront = [
+      wall(w0 - H.west, H.upH, (H.west + w0) / 2, U + H.upH / 2, H.front, Math.PI),
+      wall(W.w, W.sill, W.x, U + W.sill / 2, H.front, Math.PI),
+      wall(W.w, H.upH - W.sill - W.h, W.x, (U + W.sill + W.h + UT) / 2, H.front, Math.PI),
+      wall(H.east - w1, H.upH, (w1 + H.east) / 2, U + H.upH / 2, H.front, Math.PI),
+    ];
     // The front wall, round the front door and its fanlight.
     this.frontWalls = [
       wall(f0 - H.west, T, (H.west + f0) / 2, T / 2, H.front, Math.PI),
@@ -140,6 +177,8 @@ export class Hall {
     ];
     this.westWall = wall(H.front - H.back, T, H.west, T / 2, (H.back + H.front) / 2, Math.PI / 2);
     this.eastWall = wall(H.front - H.back, T, H.east, T / 2, (H.back + H.front) / 2, -Math.PI / 2);
+    this.upWest = wall(H.front - H.back, H.upH, H.west, U + H.upH / 2, (H.back + H.front) / 2, Math.PI / 2);
+    this.upEast = wall(H.front - H.back, H.upH, H.east, U + H.upH / 2, (H.back + H.front) / 2, -Math.PI / 2);
     // A slim limestone skirting.
     const skirt = this.batch(new THREE.MeshStandardMaterial({color: '#d8ccb6', roughness: .6}), {cast: false});
     skirt.box(H.west, d0, 0, .14, H.back, H.back + .04).box(d1, H.stairs.x0, 0, .14, H.back, H.back + .04);
@@ -199,9 +238,7 @@ export class Hall {
       tread.box(x, x + S.tread + .04, top - lip, top, b0, b1 + .03);
       run.box(x, x + S.tread + .05, top - S.rise + .01, top + .012, mid(S.highZ) - RW / 2, mid(S.highZ) + RW / 2);
     }
-    // (Where it lands upstairs: a short piece of the floor to come.)
     const upX = l0 - n * S.tread;
-    body.box(upX - 1.2, upX, 2 * half - .4, 2 * half - lip, b0, b1); tread.box(upX - 1.2, upX, 2 * half - lip, 2 * half, b0, b1 + .03);
     // The handrails: along each flight's open side, between newel posts.
     const slope = Math.atan2(S.rise, S.tread), len = Math.hypot(n * S.tread, half), RH = 2.1;
     const newel = (x, y, z, h = RH + .25) => { post.box(x - .09, x + .09, y, y + h, z - .09, z + .09); rail.add(new THREE.SphereGeometry(.13, 12, 10), x, y + h + .1, z); };
@@ -212,17 +249,15 @@ export class Hall {
     };
     flight(S.x0, 0, l0, a0 + .1); newel(S.x0 - .05, 0, a0 + .1); newel(l0 + .05, half, a0 + .1);
     flight(l0, half, upX, b1 - .1); newel(l0 + .05, half, b1 - .1); newel(upX - .05, 2 * half, b1 - .1);
-    // (And along the edge of the floor to come, so the top doesn't end in thin air.)
-    rail.box(upX - 1.2, upX, 2 * half + RH - .06, 2 * half + RH + .06, b1 - .18, b1 - .02);
-    for (const x of [upX - .4, upX - .8, upX - 1.15]) post.box(x - .025, x + .025, 2 * half, 2 * half + RH, b1 - .125, b1 - .075);
     this.stairs = [tread.done(), body.done(), run.done(), rail.done(), post.done()];
     // Under the upper flight: a fiddle-leaf fig in a stone pot.
     this.buildPlant(3.0, 1.15);
+    this.downPlant = this.plant;
   }
 
-  buildPlant(x, z) {
+  buildPlant(x, z, y = 0) {
     const M = this.materials, g = new THREE.Group();
-    g.position.set(x, 0, z); this.group.add(g);
+    g.position.set(x, y, z); this.group.add(g);
     const pot = this.mesh(new THREE.CylinderGeometry(.55, .42, .9, 20), M.pot, g); pot.position.y = .45;
     const stem = this.mesh(new THREE.CylinderGeometry(.04, .06, 2.6, 6), M.iron, g); stem.position.y = 2.1;
     const leaves = [], leaf = new THREE.SphereGeometry(.34, 8, 6); leaf.scale(1, .08, .62);
@@ -233,6 +268,50 @@ export class Hall {
     }
     this.mesh(mergeGeometries(leaves), M.leaf, g);
     this.plant = g;
+  }
+
+  // The landing: an oak floor round the stairwell (the hall's ceiling
+  // under it), the window over the front door, the bedroom's door (shut
+  // until that room is built), a runner and a second fig.
+  buildUpstairs() {
+    const M = this.materials, U = H.up, W = H.window, B = H.bedDoor;
+    const oak = this.batch(M.oak), white = this.batch(M.white, {cast: false});
+    for (const [x0, x1, z0, z1] of [[H.west, UPX, H.back, H.front], [UPX, H.east, H.well, H.front]]) {
+      oak.box(x0, x1, U - .06, U, z0, z1);
+      white.box(x0, x1, U - .45, U - .06, z0, z1);
+    }
+    // (The stairwell's edges: a white fascia.)
+    white.box(UPX, H.east, U - .5, U - .06, H.well - .02, H.well + .02);
+    // Round the stairwell: a handrail along the gallery's edge, over the upper flight.
+    const rail = this.batch(M.walnut), post = this.batch(M.iron), gz = H.well + .08, RH = 2.1;
+    rail.box(UPX + .05, H.east, U + RH - .06, U + RH + .06, gz - .08, gz + .08);
+    for (let x = UPX + .3; x < H.east - .1; x += .3) post.box(x - .025, x + .025, U, U + RH, gz - .025, gz + .025);
+    post.box(UPX - .04, UPX + .14, U, U + RH + .25, gz - .09, gz + .09); rail.add(new THREE.SphereGeometry(.13, 12, 10), UPX + .05, U + RH + .35, gz);
+    this.landing = [oak.done(), white.done(), rail.done(), post.done()];
+    // The window: the day's light in its glass, white bars, a deep sill.
+    const g = new THREE.Group(); g.position.set(W.x, U, H.front); this.group.add(g);
+    const add = (geo, mat, x, y, z, cast = false) => { const m = this.mesh(geo, mat, g, {cast}); m.position.set(x, y, z); return m; };
+    const glass = add(new THREE.PlaneGeometry(W.w, W.h), M.glass, 0, W.sill + W.h / 2, -.02); glass.rotation.y = Math.PI;
+    for (const x of [-W.w / 2, 0, W.w / 2]) add(new THREE.BoxGeometry(.1, W.h, .12), M.white, x, W.sill + W.h / 2, -.06);
+    for (const y of [W.sill, W.sill + W.h * .62, W.sill + W.h]) add(new THREE.BoxGeometry(W.w + .1, .1, .12), M.white, 0, y, -.06);
+    add(new THREE.BoxGeometry(W.w + .4, .1, .5), M.white, 0, W.sill - .05, -.25, true);
+    this.upWindow = g;
+    // The bedroom's door, shut: white, four panels, a brass knob.
+    const d = new THREE.Group(); d.position.set(B.x, U, H.back); this.group.add(d);
+    const dd = (geo, mat, x, y, z) => { const m = this.mesh(geo, mat, d, {cast: false}); m.position.set(x, y, z); return m; };
+    for (const sx of [-1, 1]) dd(new THREE.BoxGeometry(.14, B.h + .1, .2), M.white, sx * (B.w / 2 - .07), (B.h + .1) / 2, .06);
+    dd(new THREE.BoxGeometry(B.w, .14, .2), M.white, 0, B.h + .03, .06);
+    dd(new THREE.BoxGeometry(B.w - .28, B.h, .1), M.white, 0, B.h / 2, .04);
+    const pw = (B.w - .28) / 2 - .2;
+    for (const sx of [-1, 1]) for (const [y0, y1] of [[.4, 2.3], [2.6, 4.6]]) dd(roundedBox(pw, y1 - y0, .04, .03), M.white, sx * (pw / 2 + .07), (y0 + y1) / 2, .1);
+    dd(new THREE.SphereGeometry(.09, 16, 12), M.brass, B.w / 2 - .4, 2.4, .16);
+    this.bedDoorGroup = d;
+    // A runner along the landing, and a fig in the corner by the window.
+    const rug = this.mesh(new THREE.PlaneGeometry(4.6, 1.6), M.rug, this.group, {cast: false});
+    rug.rotation.x = -Math.PI / 2; rug.position.set(-3.6, U + .012, 2.3);
+    this.upRug = rug;
+    this.buildPlant(H.west + .8, H.front - .8, U);
+    this.upPlant = this.plant;
   }
 
   // A walnut console with a lamp and a bowl, under a round mirror; a
@@ -275,7 +354,7 @@ export class Hall {
     // The lantern: black iron and glass, on a rod from above.
     const L = H.lamp, lg = new THREE.Group(); lg.position.set(L.x, L.y, L.z); this.group.add(lg);
     const iron = M.iron;
-    const rod = this.mesh(new THREE.CylinderGeometry(.025, .025, 6, 6), iron, lg, {cast: false}); rod.position.y = 3.6;
+    const rod = this.mesh(new THREE.CylinderGeometry(.025, .025, 2.2, 6), iron, lg, {cast: false}); rod.position.y = 1.65;
     for (const [x, z] of [[-.3, -.3], [.3, -.3], [.3, .3], [-.3, .3]]) { const p = this.mesh(new THREE.BoxGeometry(.04, 1.1, .04), iron, lg, {cast: false}); p.position.set(x, 0, z); }
     for (const y of [-.55, .55]) { const r = this.mesh(new THREE.BoxGeometry(.68, .04, .68), iron, lg, {cast: false}); r.position.y = y; }
     const glow = this.mesh(new THREE.CylinderGeometry(.1, .1, .5, 10), M.shade, lg, {cast: false}); glow.position.y = -.15;
@@ -286,7 +365,32 @@ export class Hall {
   layout() {
     const at = (x, z) => V(x, 0, z), F = H.frontDoor, C = H.console, B = H.bench, S = H.stairs;
     const box = (x0, x1, z0, z1, y0, y1, tag) => ({kind: 'box', x0, x1, z0, z1, y0, y1, tag});
+    const U = H.up, mu = (S.highZ[0] + S.highZ[1]) / 2;
+    // The landing's two spots: at the top of the stairs, looking down them;
+    // at the window. (At the landing's height: walkTo knows them by it.)
+    const upSpots = {
+      topSpot: {at: V(UPX - .75, U, mu), look: V(3, U - 3, mu)},
+      windowSpot: {at: V(H.window.x, U, H.front - 1.1), look: V(H.window.x, U + 4, H.front + 3)},
+    };
+    // (Upstairs, the camera and the spots are the landing's.)
+    if (this.level === 'up') return {
+      ...upSpots,
+      // (Spots up here are at the landing's height: walkTo knows them by it.)
+      home: V(-3.2, U, 2.4), toyHome: V(-1.7, .13, 3.1),
+      sunSpot: V(H.window.x, U, H.front - 1.3),
+      perches: {}, perchTargets: [],
+      tailSolids: [
+        box(H.west - .5, H.west + .05, H.back, H.front, U, U + H.upH), box(H.west, H.east, H.front - .05, H.front + .5, U, U + H.upH),
+        box(H.west, H.east, H.back - .5, H.back + .05, U, U + H.upH), box(UPX, H.east, H.back, H.well + .1, U - 5, U + 2.2),
+        {kind: 'cyl', x: H.west + .8, z: H.front - .8, r: .55, y0: U, y1: U + .9},
+      ],
+      limits: {dist: [1.1, 21], pitch: [.04, 1.25], x: [H.west + .6, H.east - .6], z: [.4, H.front - .4], y: [U + .08, U + 6.5]},
+      camBox: {x: [H.west + .2, H.east - .2], y: [U + .4, U + 12], z: [.2, 24]},
+      camSolids: [[H.west + .8, H.front - .8, .7, U + 4.2]],
+      camBlocks: [],
+    };
     return {
+      ...upSpots,
       home: at(-1.6, 2.6), toyHome: V(-1.7, .13, 3.1),
       // The patch of light the fanlight throws, just inside the front door.
       sunSpot: at(F.x, H.front - 1.5),
@@ -301,9 +405,10 @@ export class Hall {
         box(S.x0, H.east, S.lowZ[0], S.lowZ[1], 0, S.rise), box(S.x0 + S.tread, H.east, S.lowZ[0], S.lowZ[1], S.rise, 5),
         {kind: 'cyl', x: 3.0, z: 1.15, r: .55, y0: 0, y1: .9},
       ],
-      limits: {dist: [1.1, 21], pitch: [.04, 1.25], x: [H.west + .6, H.east - .6], z: [.4, H.front - .4], y: [.08, 6.5]},
+      limits: {dist: [1.1, 21], pitch: [.04, 1.25], x: [H.west + .6, H.east - .6], z: [.4, H.front - .4], y: [.08, 8.5]},
       // (The camera may stand back past the front wall, which hides.)
-      camBox: {x: [H.west + .2, H.east - .2], y: [.2, 12], z: [.2, 24]},
+      // (Below the landing's floor: up there, the hall's ceiling hides it.)
+      camBox: {x: [H.west + .2, H.east - .2], y: [.2, U - .6], z: [.2, 24]},
       camSolids: [[3.0, 1.15, .7, 4.2]],
       camBlocks: [[S.x0 - .2, S.landX[0], S.lowZ[0] - .2, H.front + .2, 5.4], [S.landX[0] - .2, H.east, H.back, H.front + .2, 5.5]],
     };
@@ -313,7 +418,18 @@ export class Hall {
   // outside the front wall, looking in. Phones: the doorway, the front
   // door's side and the foot of the stairs; the bench is a drag away.
   frame(wide) {
-    const S = H.stairs, C = H.console;
+    const S = H.stairs, C = H.console, U = H.up;
+    // (Upstairs: the landing from outside its front wall, the top of the
+    // stairs on one side, the bedroom's door ahead.)
+    if (this.level === 'up') return {
+      yaw: wide ? .12 : -.3,
+      from: [-2, U + 1.5, 2.5],
+      across: wide
+        ? [[H.west + .4, U + 1, 4.4], [H.bedDoor.x, U + 5, .1], [UPX, U + .5, 1.2], [H.east - .5, U + 2.2, 2.5], [H.window.x, U + 1, 4.9]]
+        : [[H.bedDoor.x - 1, U + 2.5, .1], [-5.6, U + .1, 3.4], [UPX + .8, U + .3, 1.2], [UPX + 1.5, U + 2.2, 2.5]],
+      bottom: [[-3, U, 4.4], [UPX, U, 4.6]],
+      top: [[H.bedDoor.x, U + 5.6, .1], [UPX, U + 2.4, 2.5]],
+    };
     return {
       yaw: wide ? .12 : -.3,
       from: wide ? [0, 1.5, 2.5] : [-.6, 1.5, 2.5],
@@ -325,21 +441,71 @@ export class Hall {
     };
   }
 
-  activate(lamp) { lamp.position.copy(this.lampSpot); }
+  activate(lamp) { this.lamp = lamp; lamp.position.copy(this.level === 'up' ? this.upLampSpot : this.lampSpot); }
+
+  // Which floor she's on (the app sets it from her height): the hall's
+  // or the landing's. The Room view, the camera's box, where she walks and
+  // the lamp follow it; while she's downstairs the upstairs isn't drawn.
+  setLevel(level) {
+    if (level === this.level) return false;
+    this.level = level; this.layoutCache = null;
+    if (this.lamp) this.lamp.position.copy(level === 'up' ? this.upLampSpot : this.lampSpot);
+    return true;
+  }
+  levelAt(y) { return y > HALF + 2.5 ? 'up' : 'down'; }
+  // Between the floors (on a step or the half landing).
+  onStairs(y) { return y > .05 && y < H.up - .05; }
+  // What a paw at (x, z) stands on, for her at height `ref`: the highest
+  // top there that she could step on to (not the floor over her head).
+  groundAt(x, z, ref) { let best = 0; for (const t of tops(x, z)) if (t <= ref + 1.2 && t > best) best = t; return best; }
+  // Her body's height there: smooth up a flight, along the line through
+  // the middles of its treads (each step's paw height), else the floor.
+  rampAt(x, z, ref) {
+    const S = H.stairs, [l0] = S.landX, k = S.rise / S.tread;
+    if (ref < HALF + .6 && z >= S.lowZ[0] - .3 && x > S.x0 - S.tread / 2 && x < l0) return Math.min(HALF, (x - S.x0 + S.tread / 2) * k);
+    if (ref > HALF - .6 && ref < H.up + .6 && z <= S.highZ[1] + .3 && x > UPX - S.tread / 2 && x < l0) return Math.min(H.up, HALF + (l0 - x + S.tread / 2) * k);
+    return this.groundAt(x, z, ref);
+  }
+  // The way up the stairs (or down: the same, backwards): from the foot,
+  // up the middle of the lower flight, round on the half landing, up the
+  // upper flight and on to the landing.
+  stairPath(up) {
+    const S = H.stairs, [l0] = S.landX, ml = (S.lowZ[0] + S.lowZ[1]) / 2, mu = (S.highZ[0] + S.highZ[1]) / 2, lx = (l0 + H.east) / 2;
+    const pts = [V(S.x0 - .9, 0, ml), V(l0 - .2, 0, ml), V(lx, 0, ml - .8), V(lx, 0, mu + .8), V(l0 - .2, 0, mu), V(UPX - .9, 0, mu)];
+    return up ? pts : pts.reverse();
+  }
+  get up() { return H.up; }
+  // The middle of the lower flight's tread i (0 at the bottom), at its height.
+  treadSpot(i) { const S = H.stairs; return V(S.x0 + (i + .5) * S.tread, (i + 1) * S.rise, (S.lowZ[0] + S.lowZ[1]) / 2); }
+  get stairFoot() { return this.stairPath(true)[0]; }
+  get stairTop() { return this.stairPath(true).at(-1); }
 
   // Walking: the open floor west of the stairs, round the console.
   clampFloor(v) {
+    if (this.level === 'up') {
+      const F = UPFLOOR;
+      v.x = Math.min(H.east - .7, Math.max(F.x0, v.x)); v.z = Math.min(F.z1, Math.max(F.z0, v.z));
+      if (v.x > F.x1 && v.z < F.gz0) { if (F.gz0 - v.z < v.x - F.x1) v.z = F.gz0; else v.x = F.x1; }
+      return v;
+    }
     v.x = Math.min(FLOOR.x1, Math.max(FLOOR.x0, v.x)); v.z = Math.min(FLOOR.z1, Math.max(FLOOR.z0, v.z));
     const R = KEEP_OUT;
     if (v.x > R.x0 && v.x < R.x1 && v.z < R.z1) { if (R.z1 - v.z < Math.min(v.x - R.x0, R.x1 - v.x)) v.z = R.z1; else v.x = v.x - R.x0 < R.x1 - v.x ? R.x0 : R.x1; }
     return v;
   }
   randomFloorPoint(pad = 0) {
+    const F = UPFLOOR;
+    if (this.level === 'up') return this.clampFloor(Math.random() < .3 ? V(rand(F.x1, H.east - .7 - pad), 0, rand(F.gz0, F.z1)) : V(rand(F.x0 + pad, F.x1 - pad), 0, rand(F.z0 + pad, F.z1 - pad)));
     return this.clampFloor(V(rand(FLOOR.x0 + pad, FLOOR.x1 - pad), 0, rand(KEEP_OUT.z1, FLOOR.z1 - pad)));
   }
   pushOut(v) { return v; }
   // (Round the console's corner when it lies between: by the nearest one.)
   route(from, to) {
+    if (this.level === 'up') {
+      // (Between the landing and the gallery: round the stairwell's corner.)
+      const F = UPFLOOR, c = V(F.x1 - .2, 0, (F.gz0 + F.z1) / 2), g = p => p.x > F.x1 + .05;
+      return g(from) !== g(to) && Math.min(from.z, to.z) < F.gz0 && c.distanceTo(from) > .2 && c.distanceTo(to) > .2 ? [c] : [];
+    }
     const R = KEEP_OUT, inX = p => p.x > R.x0 - .01 && p.x < R.x1 + .01;
     if (Math.min(from.z, to.z) >= R.z1 - .01 || (from.x <= R.x0 && to.x <= R.x0) || (from.x >= R.x1 && to.x >= R.x1)) return [];
     if (!inX(from) && !inX(to) && Math.max(from.z, to.z) < R.z1) return [V(from.x < to.x ? R.x0 : R.x1, 0, R.z1 + .05), V(from.x < to.x ? R.x1 : R.x0, 0, R.z1 + .05)].filter(p => p.distanceTo(from) > .2);
@@ -356,6 +522,11 @@ export class Hall {
         const n = V(0, 0, 1).applyQuaternion(w.quaternion);
         w.visible = V(0, 0, 0).subVectors(eye, w.position).dot(n) > -.05;
       }
+      // (Upstairs is drawn only with her up there, the camera above its floor.)
+      const up = this.level === 'up';
+      for (const m of [...this.upWalls, ...this.upFront, this.upWest, this.upEast, ...this.landing, this.upWindow, this.bedDoorGroup, this.upRug, this.upPlant]) if (m && !up) m.visible = false;
+      if (up) for (const m of [...this.landing, this.upWindow, this.bedDoorGroup, this.upRug, this.upPlant]) m.visible = true;
+      this.upWindow.visible = up && this.upFront[1].visible;
       // (The front door goes with its wall; the skirting with the kitchen's.)
       this.frontDoor.visible = this.frontWalls[0].visible;
       this.skirting.visible = this.walls[0].visible;
