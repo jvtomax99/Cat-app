@@ -1251,7 +1251,9 @@ export class Kitchen {
   // and her on top of it).
   route(from, to, pad = 0) {
     if (pad) return this.routeKitchen(from, to, pad);
-    const a = this.inLiving(from), b = this.inLiving(to), shift = (p, d) => V(p.x, 0, p.z + d);
+    // (Standing on the seam itself she is already across: the next leg is
+    // the far side's alone, not another step along the seam.)
+    const b = this.inLiving(to), a = Math.abs(from.z - SEAM) < .03 ? b : this.inLiving(from), shift = (p, d) => V(p.x, 0, p.z + d);
     const there = (p, q) => this.living.route(shift(p, -K.front), shift(q, -K.front)).map(w => shift(w, K.front));
     if (!a && !b) return this.routeKitchen(from, to);
     if (a && b) return there(from, to);
