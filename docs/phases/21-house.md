@@ -100,6 +100,18 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    is below it, the hall seen from upstairs only through the stairwell; her
    two hall things (sit on a step and look down, race up and down); a save
    on the stairs opens at their foot.*
+   *Built 2026-11-19 (`tools/qa/stairs.mjs` 8 of 8): she climbs and comes
+   down step by step, each paw on its step (`ctl.ground`), body tilted
+   (`ctl.slope`); the landing is the hall's upper floor (`hall.level`), with
+   the window, the bedroom's door (shut), runner, fig, railing; one door, not
+   two: the bathroom is reached through the bedroom (blueprint). Things:
+   `stairSit`, `stairRace`, `upstairsLook` (top of the stairs, window);
+   "The landing" in the room picker. A save opens downstairs in the hall.
+   Reviewer's finds fixed (gallery edge, toy and taps upstairs, the picker,
+   tail on the steps). Rough edges: at the foot of the stairs, facing away
+   from them, her body sits about 3 cm high; from the landing's Room view the
+   hall shows under the landing's front edge. Still to do: Merlin's phone
+   check (speed with the landing).*
 3. **Bathroom** with its three things to do.
 4. **Bedroom** with its two things to do.
 5. **Outside and the House view**: outer walls, roof, front door, tap a room.

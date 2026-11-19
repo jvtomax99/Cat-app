@@ -1,41 +1,40 @@
-# Handoff (2026-11-19): the hall is live; next, phase 21 step 2 (the stairs)
+# Handoff (2026-11-19): phase 21 step 2 (stairs and landing) on the preview
 
 ## Goal and exact next step
-Phase 21, step 1b, the hall (`docs/phases/21-house.md`): **live since
-2026-11-19, build 494 (`2e5dea2`)**. Merlin, 2026-11-19: on his phone it
-runs smoothly with three rooms.
-Next: step 2, climbing the stairs and the landing. A big job: look at 2 or 3
-similar apps, plan in plain words, list assumptions, wait for his OK.
+Step 2 of phase 21 (`docs/phases/21-house.md`): Mochi climbs the hall
+stairs to a new landing. **Built and on the preview; waiting for Merlin to
+try it on his phone** (speed, how the climb looks), then his "Go live".
+Next after that: step 3, the bathroom (big job: look at similar apps first,
+plan, wait for his OK).
 
-## Done (commits c4dfd38 to 2e5dea2)
-- `dist/hall.js`: the room (front door, console and mirror, bench, runner,
-  lantern, fig, dog-leg stairs as scenery). `dist/house.js`: `ROOMS.hall`, a
-  second doorway, `nextRoom`, `opening`. Kitchen's right wall has the doorway
-  (`K.hallDoor`).
-- `dist/app.js`: rooms as a list (`roomOf`, `builtRooms`, `layoutOf`),
-  room-by-room walks, drawing through up to two doorways, hall life
-  (`stairsLook`, `doorSit`), `toBed` (no bed in the hall).
-- Review fixes: the camera-room test only counts beside a doorway; out of one
-  doorway's lane before the next. Own fix: a walk that reaches the
-  kitchen-living seam crosses it (`kitchen.route`).
-- Tests: `tools/qa/hall.mjs` 14 of 14, `house-walk.mjs` 12 of 12, `join.mjs`
-  13 of 13, `npm run check` passes. Stills: `tools/qa/hall-look.mjs`.
+## Done (commits 5fc10e2 to the route fix)
+- Stairs made gentler first (Merlin's pick): 12 + 12 steps of 17 cm on 25 cm
+  treads, about 40 degrees.
+- Each paw on its own step, body tilted (`motion-cat.js`: `ctl.ground`,
+  `ctl.slope`). Landing = the hall's upper floor (`hall.level`), see
+  ARCHITECTURE row `hall.js`.
+- Reviewer subagent ran; its 8 real finds fixed. Own find: hall routes
+  returned one point, which walkTo ignores (she cut across the stairwell;
+  downstairs, the console's corner): routes now end with the goal.
+- Tests: `tools/qa/stairs.mjs` 8 of 8. `hall.mjs` rerun after the route fix:
+  see the latest commit message or rerun it.
 
 ## Left
-- Rough edge: on a wide screen, past the hall's east end the view shows dunes
-  where the study's outer wall will be (step 5).
-- The deploy run sometimes fails with "No artifacts named github-pages"
-  (a GitHub hiccup): start a fresh run, don't re-run (the re-run sat queued).
+- Merlin's phone check of the preview; "Go live" when he's happy.
+- Rough edges: 3 cm high at the stairs' foot facing away; the hall shows
+  under the landing's front edge in its Room view.
 
 ## Decisions not yet in SPEC.md
-None: the hall's line is in SPEC.md (house section).
+None (stairs slope and the single bedroom door are in the phase brief).
 
 ## Rules learned
-- Commit messages: no AI model name, no "Co-Authored-By" line; end with the
+- Commit messages: no AI model name, no "Co-Authored-By"; end with the
   "Claude-Session:" link line.
-- Browser tests are slow here (`hall.mjs` about 40 min, `join.mjs` and
-  `house-walk.mjs` 12 to 15). Run them one at a time in the background.
+- Browser tests are slow (stairs.mjs about 30 min, hall.mjs about 40): one at
+  a time, in the background.
+- A place's `route()` must return the whole way with the goal last: walkTo
+  follows only routes of two or more points.
 
 ## Files to look at first
-`docs/phases/21-house.md` (step 1b, step 2), `docs/ARCHITECTURE.md` (row
-`hall.js`), `dist/hall.js` (`H`, `H.stairs`, `layout`), `dist/house.js`.
+`docs/phases/21-house.md` (step 2), `docs/ARCHITECTURE.md` (row `hall.js`),
+`dist/hall.js` (`tops`, `rampAt`, `stairPath`, `level`), app.js `climbTo`.
