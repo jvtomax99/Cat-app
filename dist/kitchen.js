@@ -967,6 +967,8 @@ export class Kitchen {
     const t = this.bed, kitchen = this;
     t.updateMatrixWorld(true);
     const at = (x, z) => V(x, 0, z);
+    // (The living room's places, in this room's frame.)
+    const LV = this.living.layout(), far = p => p.clone().setZ(p.z + K.front);
     return {
       home: at(-1.0, 3.5), toyHome: V(.2, .13, 3.5),
       bowl: {p: at(BOWL.x, BOWL.z), ry: BOWL.ry}, fountain: {p: at(FOUNTAIN.x, FOUNTAIN.z), ry: FOUNTAIN.ry},
@@ -979,6 +981,10 @@ export class Kitchen {
       sink: {laneZ: -2.95, y: this.sink.y + .01, drinkAt: at(this.stream.position.x + .34, this.stream.position.z - .03), sitAt: at(-2.0, -3.45), drink: V(this.stream.position.x, this.sink.y + .14, this.stream.position.z), x0: this.sink.x0 + .3, x1: this.sink.x1 - .3},
       // Where she sits to watch the bird at the garden doors.
       windowSpot: at(-5.0, .4),
+      // In the living room: at the glazing, watching the sea; and stretched
+      // out in front of the fire.
+      seaSpot: {at: far(LV.windowSpot), look: far(LV.seaLook)},
+      fireSpot: {at: far(LV.fireSpot.at), look: far(LV.fireLook)},
       // Floor -> stepping perch -> back counter -> lower shelf -> upper
       // shelf, all at the left end, well away from the range.
       perches: {
@@ -1014,6 +1020,9 @@ export class Kitchen {
           for (const o of round) { const d = Math.hypot(best.x - o.x, best.z - o.z); if (d < o.r + ROOM && d > 1e-3) { best.x = o.x + (best.x - o.x) / d * (o.r + ROOM); best.z = o.z + (best.z - o.z) / d * (o.r + ROOM); } }
           return kitchen.clampFloor(best);
         }},
+        // The living room's sofa, and the throw over its near end. (No
+        // lane: she doesn't stroll along the seat.)
+        ...Object.fromEntries(['sofa', 'throw'].map(n => { const {lane, ...P} = LV.perches[n]; return [n, {...P, spot: far(P.spot), base: far(P.base)}]; })),
       },
       // What her tail keeps out of (clearTail in motion.js), as it is on
       // the floor: the island (its base pieces and top), the stools (legs,
@@ -1043,7 +1052,7 @@ export class Kitchen {
         for (const o of this.living.layout().tailSolids) list.push(o.kind === 'box' ? {...o, z0: o.z0 + K.front, z1: o.z1 + K.front} : {...o, z: o.z + K.front});
         return list;
       })(),
-      perchTargets: [['step', this.steps[0]], ['stepMid', this.steps[1]], ['stepTop', this.steps[2]], ['counter', this.counterGroup], ['shelf', this.shelves[0]], ['shelfHigh', this.shelves[1]], ['vacuum', this.vacuum], ['pendant', this.shades[0]], ['salmon', this.foodPlate]],
+      perchTargets: [['step', this.steps[0]], ['stepMid', this.steps[1]], ['stepTop', this.steps[2]], ['counter', this.counterGroup], ['shelf', this.shelves[0]], ['shelfHigh', this.shelves[1]], ['vacuum', this.vacuum], ['pendant', this.shades[0]], ['salmon', this.foodPlate], ['throw', this.living.throw], ['sofa', this.living.sofa]],
       // In the tent she lies along it, facing out of the open front.
       // Curled up inside, her back to the closed end (her tail lying along
       // it, clear of the canvas) and her face to the doorway; a little

@@ -617,10 +617,15 @@ export class LivingRoom {
       // Where she sits to watch the sea, and where she lies by the fire.
       windowSpot: at(-5.1, 5.6), endWindowSpot: at(6.5, 13.1),
       fireSpot: {at: at(L.south - F.deep - 1.75, F.z), face: Math.PI / 2},
+      // What she looks at from each: far out over the water; the flames.
+      seaLook: V(L.sea - 30, 1.4, 5.6), fireLook: V(L.south - F.deep * .5, .45, F.z),
       perches: {
         // Up onto the sofa from its kitchen end; along the seat; and from
         // the seat up onto the back.
         sofa: {spot: at(S.x + .25, S.z - 2.1), top: S.seat, base: at(S.x + 1.5, S.z - 4.0), face: Math.PI / 2, lane: {x: S.x + .2, z0: S.z - 2.2, z1: S.z + 2.2}},
+        // The knitted throw over that end: she faces the arm it hangs
+        // over, her front paws on the wool.
+        throw: {spot: at(S.x + .2, S.z - 1.5), top: S.seat + .05, base: at(S.x + 1.5, S.z - 4.0), face: Math.PI},
         sofaBack: {spot: at(S.x - .55, S.z - 1.2), top: S.back, via: 'sofa', face: Math.PI / 2},
         // The mohair chair: a round seat to curl up in.
         mohair: {spot: at(L.mohair.x, L.mohair.z), top: L.mohair.seat, base: at(L.mohair.x - 1.6, L.mohair.z - .35), face: L.mohair.ry},
@@ -651,7 +656,7 @@ export class LivingRoom {
         if (tentIn && this.alone) list.push({kind: 'rbox', x: L.tent.x, z: L.tent.z, ry: L.tent.ry, hx: 1.32, hz: 1.02, y0: 0, y1: 1.95, tag: 'bed'});
         return list;
       })(),
-      perchTargets: [['sofa', this.sofa], ['mohair', this.mohairChair], ['sling', this.slingChair]],
+      perchTargets: [['throw', this.throw], ['sofa', this.sofa], ['mohair', this.mohairChair], ['sling', this.slingChair]],
       // In the tent she lies along it, facing out of the open front.
       sleepHeading: L.tent.ry,
       bedOffset: V(Math.sin(L.tent.ry) * .15, 0, Math.cos(L.tent.ry) * .15),

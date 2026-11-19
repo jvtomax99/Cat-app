@@ -1454,7 +1454,7 @@ function idleLife(t) {
   brain.nextIdle = t + (night ? rand(2.5, 5) : rand(4, 8));
   if (brain.perch) { perchLife(t); return; }
   if (night && Math.random() < .75 && nightLife()) return;
-  const perchChoices = place === room ? ['window', 'window', 'chair'] : ['shelf', 'shelf', 'shelfHigh', 'shelfHigh', 'salmonRaid', 'faucet', 'faucet', 'pendant'].concat(pet.food < 75 ? ['salmonRaid'] : [], pet.water < 85 ? ['faucet', 'faucet'] : []);
+  const perchChoices = place === room ? ['window', 'window', 'chair'] : ['shelf', 'shelf', 'shelfHigh', 'shelfHigh', 'salmonRaid', 'faucet', 'faucet', 'pendant', 'sofa', 'throw', 'fireside', 'seaWatch'].concat(pet.energy < 50 ? ['sofa', 'fireside'] : [], pet.food < 75 ? ['salmonRaid'] : [], pet.water < 85 ? ['faucet', 'faucet'] : []);
   const options = ['glance', 'twitch', 'tilt', 'wander', 'wander', 'groom', ...perchChoices, 'sunbeam'];
   if (pet.energy > 35) options.push('solo', 'solo', 'dash');
   if (pet.happiness > 60) options.push('slowBlink', 'zoomies');
@@ -1483,7 +1483,7 @@ function idleLife(t) {
   // app, then every half a minute or so. A tired kitten picks the calm ones.
   if (t > brain.nextShow) {
     brain.nextShow = t + rand(25, 40);
-    const shows = place === room ? ['window', 'chair', 'sunbeam', 'mantel', 'mantel'] : ['counter', 'shelf', 'shelfHigh', 'pendant', 'pendant', 'sunbeam'];
+    const shows = place === room ? ['window', 'chair', 'sunbeam', 'mantel', 'mantel'] : ['counter', 'shelf', 'shelfHigh', 'pendant', 'pendant', 'sunbeam', 'sofa', 'throw', 'fireside', 'seaWatch'];
     if (pet.energy > 35) shows.push('solo', 'solo', 'zoomies');
     choice = pick(shows);
     if (treeUp() && Math.random() < .6) choice = pick(['tree', 'tree', 'treeHide', 'xmasBox']);
@@ -1540,6 +1540,10 @@ function idleLife(t) {
     setActivity('loaf', 2.5, () => setActivity('catnap', rand(10, 20), () => { yawn(); setActivity('sit', 3); }));
   }, false, true);
   if (choice === 'pendant') ridePendant();
+  if (choice === 'sofa') sofaNap();
+  if (choice === 'throw') kneadThrow();
+  if (choice === 'fireside') fireside();
+  if (choice === 'seaWatch') seaWatch();
   if (choice === 'solo') startSolo();
   if (choice === 'salmonRaid' && !stealSalmon()) setActivity('sit');
   if (choice === 'faucet' && place === kitchen) drinkFaucet();
@@ -1559,7 +1563,7 @@ function nightLife() {
   const options = ['zoomies', 'zoomies', 'zoomies', 'shadow', 'shadow', 'shadow', 'moonbeam'];
   if (place === room) options.push('fireside', 'fireside', 'window');
   else {
-    options.push('raid', 'raid', 'shelf', 'pendant');
+    options.push('raid', 'raid', 'shelf', 'pendant', 'fireside', 'fireside', 'sofa');
     if (kitchen.vac.state === 'docked' && !kitchen.vac.rider) options.push('dock', 'dock');
   }
   const choice = pick(options);
@@ -1570,21 +1574,60 @@ function nightLife() {
     express('bliss', 2);
     setActivity('loaf', 3, () => setActivity('catnap', rand(8, 14), () => { glanceAt(camera.position, 2); slowBlink(); setActivity('sit', 3); }));
   }, false, true);
-  if (choice === 'fireside') {
-    // Stretched out on the warm hearth, slow-blinking at the flames.
-    const f = room.fireplace, fire = f.localToWorld(new THREE.Vector3(0, .4, 0)), spot = f.localToWorld(new THREE.Vector3(rand(-.4, .4), 0, 1.05)).setY(0);
-    walkTo(spot, () => {
-      brain.faceAt = fire;
-      setActivity('loaf', rand(10, 18), () => setActivity('groom', 2, () => setActivity('sit', 2)));
-      later(3, slowBlink); later(rand(6, 9), slowBlink);
-    }, false, true);
-  }
+  if (choice === 'fireside') fireside();
+  if (choice === 'sofa') sofaNap();
   if (choice === 'window') jumpTo('sill', () => { setActivity('sit'); brain.nextBird = clockNow + rand(1, 4); }, rand(20, 35));
   if (choice === 'raid') { if (!(Math.random() < .6 && stealSalmon())) drinkFaucet(); }
   if (choice === 'shelf') jumpTo(pick(['shelf', 'shelfHigh']), () => { later(rand(.8, 2), () => { if (brain.perch && brain.mode === 'idle') stroll(); }); setActivity('sit'); }, rand(20, 35));
   if (choice === 'dock') dockHunt();
   if (choice === 'pendant') ridePendant();
   return true;
+}
+// Stretched out on the warm hearth, slow-blinking at the flames: the
+// study's fire, or the living room's.
+function fireside() {
+  const F = place === kitchen ? place.layoutCache.fireSpot : null, f = room.fireplace;
+  const fire = F ? F.look : f.localToWorld(new THREE.Vector3(0, .4, 0));
+  const spot = F ? F.at.clone().add(new THREE.Vector3(0, 0, rand(-.4, .4))) : f.localToWorld(new THREE.Vector3(rand(-.4, .4), 0, 1.05)).setY(0);
+  walkTo(spot, () => {
+    const n = rand(12, 20);
+    brain.faceAt = fire; brain.nextIdle = clockNow + n + 2;
+    express('bliss', 2.5);
+    setActivity('loaf', n, () => setActivity('groom', 2, () => setActivity('sit', 2)));
+    later(3, slowBlink); later(rand(6, 9), slowBlink);
+    later(4.5, () => { if (brain.activity === 'loaf' && Math.random() < .4) say(pick(['Toasty.', 'Warm paws…', 'Best spot in the house.']), 2200); });
+  }, false, true);
+}
+// The living room's sofa: up by its near end, a turn of kneading, and a nap.
+function sofaNap() {
+  jumpTo('sofa', () => {
+    brain.kneadUntil = clockNow + 3;
+    setActivity('loaf', 3.4, () => setActivity('catnap', rand(14, 24), () => { slowBlink(); setActivity('sit', 4); }));
+  }, rand(30, 45));
+}
+// The knitted throw over the sofa's arm: biscuits, purring, eyes half shut.
+function kneadThrow() {
+  jumpTo('throw', () => {
+    const n = rand(7, 11);
+    brain.kneadUntil = clockNow + n; brain.nextIdle = clockNow + n + 1;
+    express('bliss', n);
+    setActivity('loaf', n + .5, () => { slowBlink(); setActivity('sit', rand(3, 5)); });
+    later(2, () => { if (brain.perch === 'throw' && Math.random() < .5) say(pick(['Making biscuits.', 'So soft…', 'Purrrr.']), 2200); });
+  }, rand(20, 30));
+}
+// At the living room's glazing: sitting to watch the sea, ears forward,
+// a look along the shore now and then.
+function seaWatch() {
+  const S = place.layoutCache.seaSpot;
+  if (!S) { setActivity('sit'); return; }
+  walkTo(S.at, () => {
+    const n = rand(12, 20), out = () => S.look.clone().add(new THREE.Vector3(0, rand(-.6, 1.2), rand(-9, 9)));
+    brain.faceAt = S.look; brain.nextIdle = clockNow + n;
+    setActivity('sit', n);
+    glanceAt(out(), 3.5); express('curious', 2);
+    later(4, () => { if (brain.faceAt === S.look) { glanceAt(out(), 3); twitchEar(); } });
+    later(8, () => { if (brain.faceAt === S.look) { glanceAt(out(), 3); if (Math.random() < .5) meow('chirp', 'idle'); if (Math.random() < .4) say(pick(night ? ['The sea is loud tonight.', 'Something is out there.'] : ['So much water.', 'Birds. Far away birds.', 'I could watch this all day.']), 2400); } });
+  }, false, true);
 }
 // The neighbour's dog, on the terrace outside the kitchen doors. She spots
 // it, trots over to the glass and sits staring, tail lashing, chattering at
@@ -2959,6 +3002,8 @@ function invite(name) {
       setActivity('sit');
       if (name === 'sill') brain.nextBird = clockNow + rand(3, 8);
       if (name === 'treeHigh' || name === 'xmasBox') setActivity('loaf', rand(5, 8), () => setActivity('sit'));
+      if (name === 'sofa') { brain.kneadUntil = clockNow + 3; setActivity('loaf', 3.4, () => setActivity('catnap', rand(10, 18), () => { slowBlink(); setActivity('sit', 4); })); }
+      if (name === 'throw') { brain.kneadUntil = clockNow + 8; brain.nextIdle = clockNow + 9; express('bliss', 8); setActivity('loaf', 8.5, () => { slowBlink(); setActivity('sit', 4); }); }
       if (name === 'chair') { brain.kneadUntil = clockNow + 3; setActivity('loaf', 3.4, () => setActivity('catnap', rand(10, 18), () => { slowBlink(); setActivity('sit', 4); })); }
     }, rand(25, 40));
   } else setTimeout(() => {
@@ -4924,7 +4969,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, sofaNap, kneadThrow, fireside, seaWatch, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });

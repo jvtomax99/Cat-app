@@ -54,10 +54,15 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    living room's glazing, one floor, plaster and sea terrace for both. It is
    part of the kitchen's place, not a third room (see ARCHITECTURE,
    `living.js`). The Christmas tree moved to the join 2026-11-19, sea side, her round bed
-   beside it; fountain and bowl stay put (`tools/qa/tree.mjs`). Still to do
-   in this step: what she does there (sofa, fire, throw, watching the sea:
-   `living.layout()` has perch spots ready, the kitchen's `layout()` does
-   not pass them on yet); a phone speed check of the joined space (Merlin).
+   beside it; fountain and bowl stay put (`tools/qa/tree.mjs`). What she does
+   there (2026-11-19, Merlin: all four; `tools/qa/living-life.mjs`): a nap
+   on the sofa (`sofaNap`), kneading the throw (`kneadThrow`), lying by the
+   fire (`fireside`, also at night), watching the sea at the glazing
+   (`seaWatch`); a tap on the sofa or the throw sends her up. The kitchen's
+   `layout()` passes on the perches `sofa` and `throw` and the spots
+   `seaSpot` and `fireSpot`. Not passed on yet: the sofa's back, the mohair
+   and sling chairs, the far end's glazing. Still to do in this step: a
+   phone speed check of the joined space (Merlin).
    Known rough edges: with her in the living room the kitchen's furniture
    has no sun shadows (`sunOver` in app.js); glance targets in app.js still
    point near the kitchen's origin; chasing a fallen bauble she always comes
