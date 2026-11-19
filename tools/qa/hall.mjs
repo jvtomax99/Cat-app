@@ -19,7 +19,7 @@ const f = n => n.toFixed(2);
 const snap = () => page.evaluate(() => {
   const H = kitten.house, id = kitten.placeId(kitten.place), b = kitten.brain, c = kitten.camera.position;
   const p = H.toHouse(id, b.pos), cp = H.toHouse(id, c);
-  return {id, p: [p.x, p.z], own: [b.pos.x, b.pos.z], c: [cp.x, c.y, cp.z], act: b.activity, walk: !!b.target, trip: b.toRoom?.to || null, view: kitten.view.mode, toast: document.querySelector('#toast').textContent};
+  return {id, p: [p.x, p.z], own: [b.pos.x, b.pos.z], y: b.elevation, c: [cp.x, c.y, cp.z], act: b.activity, walk: !!b.target, trip: b.toRoom?.to || null, view: kitten.view.mode, toast: document.querySelector('#toast').textContent};
 });
 // Steps until done() (or max), measuring her and the camera between samples (.2 s).
 async function watch(name, done, max = 600) {
@@ -30,8 +30,9 @@ async function watch(name, done, max = 600) {
     const dp = Math.hypot(s.p[0] - prev.p[0], s.p[1] - prev.p[1]), dc = Math.hypot(s.c[0] - prev.c[0], s.c[1] - prev.c[1], s.c[2] - prev.c[2]);
     if (s.id !== prev.id) { r.switches++; r.rooms.push(s.id); r.herJump = Math.max(r.herJump, dp - r.normal); r.camAtSwitch = Math.max(r.camAtSwitch, dc); await shot(`${name}-switch-${r.switches}`); }
     else r.normal = dp;
-    // (In the hall: inside its walls, west of the stairs, clear of the bench.)
-    if (s.id === 'hall' && (s.own[0] < -5.5 || s.own[0] > 1.0 || s.own[1] > 4.45 || (s.own[1] < .6 && Math.abs(s.own[0] + 2.15) > .6))) r.offFloor++;
+    // (In the hall, on its floor: inside its walls, west of the stairs,
+    // clear of the bench. On the stairs or the landing, stairs.mjs checks.)
+    if (s.id === 'hall' && s.y < .05 && (s.own[0] < -5.5 || s.own[0] > -1.0 || s.own[1] > 4.45 || (s.own[1] < .6 && Math.abs(s.own[0] + 2.15) > .6))) r.offFloor++;
     prev = r.end = s;
     if (await page.evaluate(done)) break;
   }
@@ -42,7 +43,7 @@ const settled = id => `kitten.placeId(kitten.place) === '${id}' && !kitten.brain
 // 1. The picker lists the hall and calls her there from the kitchen.
 await page.evaluate(() => { document.querySelector('#decor-btn').click(); });
 const places = await page.evaluate(() => [...document.querySelectorAll('#place-options [data-place]')].map(b => b.dataset.place));
-ok('the room picker lists the hall', places.join() === 'study,kitchen,hall', places.join());
+ok('the room picker lists the hall', places.join() === 'study,kitchen,hall,landing', places.join());
 await page.evaluate(() => document.querySelector('#place-options [data-place="hall"]').click());
 await step(2);
 const called = await snap();
