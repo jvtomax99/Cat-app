@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {canvasTexture, drawLinen, drawWood, roundedBox} from './room.js';
+import {Bedroom} from './bedroom.js';
 
 const {damp} = THREE.MathUtils;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -50,6 +51,8 @@ const UPFLOOR = {x0: H.west + .7, x1: UPX - .7, z0: .7, z1: H.front - .65, gz0: 
 // landing, the landing upstairs.
 function tops(x, z) {
   const S = H.stairs, [l0] = S.landX, out = [0];
+  // (Past the kitchen's wall: the bedroom's floor up there, and its doorway.)
+  if (z < -.05) { out.push(H.up); return out; }
   if (z >= S.lowZ[0] - .08 && z <= S.lowZ[1] && x >= S.x0 && x < l0) out.push((Math.floor((x - S.x0) / S.tread) + 1) * S.rise);
   if (x >= l0 && x <= H.east + .5) out.push(HALF);
   if (z <= S.highZ[1] + .08 && x >= UPX && x < l0) out.push(HALF + (Math.floor((l0 - x) / S.tread) + 1) * S.rise);
@@ -78,6 +81,9 @@ export class Hall {
     this.lampSpot = V(H.lamp.x, H.lamp.y - 1.1, H.lamp.z);
     this.upLampSpot = V(-3.2, H.up + 6, 2.5);
     this.level = 'down';
+    // (Upstairs: on the landing, or through its door in the bedroom.)
+    this.wing = 'landing';
+    this.bedLampSpot = V(0, H.up + 6.5, -8.5);
     this.build(plaster, floor);
   }
 
@@ -133,6 +139,7 @@ export class Hall {
     this.buildStairs();
     this.buildFurniture();
     this.buildUpstairs();
+    this.bedroom = new Bedroom(this);
   }
 
   // Floor, plaster walls, the doorway to the kitchen.
@@ -301,11 +308,15 @@ export class Hall {
     const dd = (geo, mat, x, y, z) => { const m = this.mesh(geo, mat, d, {cast: false}); m.position.set(x, y, z); return m; };
     for (const sx of [-1, 1]) dd(new THREE.BoxGeometry(.14, B.h + .1, .2), M.white, sx * (B.w / 2 - .07), (B.h + .1) / 2, .06);
     dd(new THREE.BoxGeometry(B.w, .14, .2), M.white, 0, B.h + .03, .06);
-    dd(new THREE.BoxGeometry(B.w - .28, B.h, .1), M.white, 0, B.h / 2, .04);
-    const pw = (B.w - .28) / 2 - .2;
-    for (const sx of [-1, 1]) for (const [y0, y1] of [[.4, 2.3], [2.6, 4.6]]) dd(roundedBox(pw, y1 - y0, .04, .03), M.white, sx * (pw / 2 + .07), (y0 + y1) / 2, .1);
-    dd(new THREE.SphereGeometry(.09, 16, 12), M.brass, B.w / 2 - .4, 2.4, .16);
     this.bedDoorGroup = d;
+    // (Its leaf stands open into the bedroom, against the east jamb: phase 21 step 3.)
+    const leaf = new THREE.Group(); leaf.position.set(B.x + B.w / 2 - .19, U, -.45); leaf.rotation.y = Math.PI / 2; this.group.add(leaf);
+    const lw = B.w - .28, lf = (geo, mat, x, y, z) => { const m = this.mesh(geo, mat, leaf, {cast: false}); m.position.set(x, y, z); return m; };
+    lf(new THREE.BoxGeometry(lw, B.h, .1), M.white, lw / 2, B.h / 2, 0);
+    const pw = lw / 2 - .2;
+    for (const sx of [-1, 1]) for (const [y0, y1] of [[.4, 2.3], [2.6, 4.6]]) for (const sz of [-1, 1]) lf(roundedBox(pw, y1 - y0, .04, .03), M.white, lw / 2 + sx * (pw / 2 + .07), (y0 + y1) / 2, sz * .06);
+    for (const sz of [-1, 1]) lf(new THREE.SphereGeometry(.09, 16, 12), M.brass, lw - .4, 2.4, sz * .12);
+    this.bedLeaf = leaf;
     // A runner along the landing, and a fig in the corner by the window.
     const rug = this.mesh(new THREE.PlaneGeometry(4.6, 1.6), M.rug, this.group, {cast: false});
     rug.rotation.x = -Math.PI / 2; rug.position.set(-3.6, U + .012, 2.3);
@@ -379,23 +390,40 @@ export class Hall {
       topSpot: {at: V(UPX - .75, U, mu), look: V(3, U - 3, mu)},
       windowSpot: {at: V(H.window.x, U, H.front - 1.1), look: V(H.window.x, U + 4, H.front + 3)},
     };
-    // (Upstairs, the camera and the spots are the landing's.)
-    if (this.level === 'up') return {
+    // (Upstairs: the landing's or the bedroom's camera and spots, by which
+    // side of its door she's on; the bedroom's two perches either way.)
+    const BL = this.bedroom.layout();
+    if (this.level === 'up' && this.wing === 'bedroom') {
+      const landing = {...this.upLayout(upSpots, stairSolids, BL)};
+      return {...landing, home: BL.home, sunSpot: BL.sunSpot, limits: BL.limits, camBox: BL.camBox, camSolids: BL.camSolids, camBlocks: BL.camBlocks};
+    }
+    if (this.level === 'up') return this.upLayout(upSpots, stairSolids, BL);
+    return this.downLayout(upSpots, stairSolids);
+  }
+  upLayout(upSpots, stairSolids, BL) {
+    const U = H.up, box = (x0, x1, z0, z1, y0, y1) => ({kind: 'box', x0, x1, z0, z1, y0, y1});
+    return {
       ...upSpots,
+      seatLook: BL.seatLook, bedroomHome: BL.home,
       // (Spots up here are at the landing's height: walkTo knows them by it.)
       home: V(-3.2, U, 2.4), toyHome: V(-1.7, .13, 3.1),
       sunSpot: V(H.window.x, U, H.front - 1.3),
-      perches: {}, perchTargets: [],
+      perches: BL.perches, perchTargets: [],
       tailSolids: [
         box(H.west - .5, H.west + .05, H.back, H.front, U, U + H.upH), box(H.west, H.east, H.front - .05, H.front + .5, U, U + H.upH),
-        box(H.west, H.east, H.back - .5, H.back + .05, U, U + H.upH), ...stairSolids,
+        box(H.west, H.bedDoor.x - H.bedDoor.w / 2, H.back - .5, H.back + .05, U, U + H.upH), box(H.bedDoor.x + H.bedDoor.w / 2, H.east, H.back - .5, H.back + .05, U, U + H.upH), ...stairSolids,
         {kind: 'cyl', x: H.west + .8, z: H.front - .8, r: .55, y0: U, y1: U + .9},
+        ...BL.tailSolids,
       ],
       limits: {dist: [1.1, 21], pitch: [.04, 1.25], x: [H.west + .6, H.east - .6], z: [.4, H.front - .4], y: [U + .08, U + 6.5]},
       camBox: {x: [H.west + .2, H.east - .2], y: [U + .4, U + 12], z: [.2, 24]},
       camSolids: [[H.west + .8, H.front - .8, .7, U + 4.2]],
       camBlocks: [],
     };
+  }
+  downLayout(upSpots, stairSolids) {
+    const at = (x, z) => V(x, 0, z), F = H.frontDoor, C = H.console, B = H.bench, S = H.stairs;
+    const box = (x0, x1, z0, z1, y0, y1, tag) => ({kind: 'box', x0, x1, z0, z1, y0, y1, tag});
     return {
       ...upSpots,
       home: at(-1.6, 2.6), toyHome: V(-1.7, .13, 3.1),
@@ -428,6 +456,7 @@ export class Hall {
     const S = H.stairs, C = H.console, U = H.up;
     // (Upstairs: the landing from outside its front wall, the top of the
     // stairs on one side, the bedroom's door ahead.)
+    if (this.level === 'up' && this.wing === 'bedroom') return this.bedroom.frame(wide);
     if (this.level === 'up') return {
       yaw: wide ? .12 : -.3,
       from: [-2, U + 1.5, 2.5],
@@ -448,7 +477,8 @@ export class Hall {
     };
   }
 
-  activate(lamp) { this.lamp = lamp; lamp.position.copy(this.level === 'up' ? this.upLampSpot : this.lampSpot); }
+  activate(lamp) { this.lamp = lamp; lamp.position.copy(this.lampFor()); }
+  lampFor() { return this.level !== 'up' ? this.lampSpot : this.wing === 'bedroom' ? this.bedLampSpot : this.upLampSpot; }
 
   // Which floor she's on (the app sets it from her height): the hall's
   // or the landing's. The Room view, the camera's box, where she walks and
@@ -456,9 +486,19 @@ export class Hall {
   setLevel(level) {
     if (level === this.level) return false;
     this.level = level; this.layoutCache = null;
-    if (this.lamp) this.lamp.position.copy(level === 'up' ? this.upLampSpot : this.lampSpot);
+    if (level !== 'up') this.wing = 'landing';
+    if (this.lamp) this.lamp.position.copy(this.lampFor());
     return true;
   }
+  // Upstairs, which side of the bedroom's door she's on (a little past the
+  // middle of the wall either way, so a cat in the doorway doesn't flip it).
+  setWing(wing) {
+    if (wing === this.wing) return false;
+    this.wing = wing; this.layoutCache = null;
+    if (this.lamp) this.lamp.position.copy(this.lampFor());
+    return true;
+  }
+  wingAt(p) { return this.level !== 'up' ? 'landing' : p.z < (this.wing === 'bedroom' ? .1 : -.6) ? 'bedroom' : 'landing'; }
   levelAt(y) { return y > HALF + 2.5 ? 'up' : 'down'; }
   // Between the floors (on a step or the half landing).
   onStairs(y) { return y > .05 && y < H.up - .05; }
@@ -473,7 +513,7 @@ export class Hall {
     // of the upper flight passes under the gallery's edge.)
     if (ref > H.up - .3 && tops(x, z).includes(H.up)) return H.up;
     if (ref < HALF + .6 && z >= S.lowZ[0] - .3 && x > S.x0 - S.tread / 2 && x < l0) return Math.min(HALF, (x - S.x0 + S.tread / 2) * k);
-    if (ref > HALF - .6 && ref < H.up + .6 && z <= S.highZ[1] + .3 && x > UPX - S.tread / 2 && x < l0) return Math.min(H.up, HALF + (l0 - x + S.tread / 2) * k);
+    if (ref > HALF - .6 && ref < H.up + .6 && z > -.05 && z <= S.highZ[1] + .3 && x > UPX - S.tread / 2 && x < l0) return Math.min(H.up, HALF + (l0 - x + S.tread / 2) * k);
     return this.groundAt(x, z, ref);
   }
   // The way up the stairs (or down: the same, backwards): from the foot,
@@ -494,6 +534,8 @@ export class Hall {
   clampFloor(v) {
     if (this.level === 'up') {
       const F = UPFLOOR;
+      // (Through the bedroom's door, or in there.)
+      if (v.z < F.z0 && (v.z < -.225 || this.bedroom.inLane(v))) return this.bedroom.clampFloor(v);
       v.x = Math.min(H.east - .7, Math.max(F.x0, v.x)); v.z = Math.min(F.z1, Math.max(F.z0, v.z));
       if (v.x > F.x1 && v.z < F.gz0) { if (F.gz0 - v.z < v.x - F.x1) v.z = F.gz0; else v.x = F.x1; }
       return v;
@@ -505,6 +547,7 @@ export class Hall {
   }
   randomFloorPoint(pad = 0) {
     const F = UPFLOOR;
+    if (this.level === 'up' && this.wing === 'bedroom') return this.bedroom.randomFloorPoint(pad);
     if (this.level === 'up') return this.clampFloor(Math.random() < .3 ? V(rand(F.x1, H.east - .7 - pad), 0, rand(F.gz0, F.z1)) : V(rand(F.x0 + pad, F.x1 - pad), 0, rand(F.z0 + pad, F.z1 - pad)));
     return this.clampFloor(V(rand(FLOOR.x0 + pad, FLOOR.x1 - pad), 0, rand(KEEP_OUT.z1, FLOOR.z1 - pad)));
   }
@@ -513,9 +556,14 @@ export class Hall {
   // The whole way, the goal last: walkTo follows a route of two or more.)
   route(from, to) {
     if (this.level === 'up') {
-      // (Between the landing and the gallery: round the stairwell's corner.)
-      const F = UPFLOOR, c = V(F.x1 - .2, 0, (F.gz0 + F.z1) / 2), g = p => p.x > F.x1 + .05;
-      return g(from) !== g(to) && Math.min(from.z, to.z) < F.gz0 && c.distanceTo(from) > .2 && c.distanceTo(to) > .2 ? [c, to.clone()] : [];
+      // (Between the landing and the bedroom: by the doorway, each side's
+      // way round what stands there.)
+      const bed = p => p.z < -.225, a = bed(from), b = bed(to);
+      if (a && b) { const p = this.bedroom.path(from, to); return p.length ? [...p, to.clone()] : []; }
+      if (!a && !b) { const p = this.landingPath(from, to); return p.length ? [...p, to.clone()] : []; }
+      const dl = V(H.bedDoor.x, 0, UPFLOOR.z0 + .2), db = this.bedroom.doorSpot;
+      const pts = a ? [...this.bedroom.path(from, db), db, dl, ...this.landingPath(dl, to)] : [...this.landingPath(from, dl), dl, db, ...this.bedroom.path(db, to)];
+      return pts.filter(p => p.distanceTo(from) > .2).concat([to.clone()]);
     }
     const R = KEEP_OUT, inX = p => p.x > R.x0 - .01 && p.x < R.x1 + .01;
     if (Math.min(from.z, to.z) >= R.z1 - .01 || (from.x <= R.x0 && to.x <= R.x0) || (from.x >= R.x1 && to.x >= R.x1)) return [];
@@ -524,6 +572,13 @@ export class Hall {
     if (inX(low) || low.z >= R.z1) return [];
     const c = V(low.x <= R.x0 ? R.x0 : R.x1, 0, R.z1 + .05);
     return c.distanceTo(from) > .2 && c.distanceTo(to) > .2 ? [c, to.clone()] : [];
+  }
+
+  // On the landing: round the stairwell's corner, between the main floor
+  // and the gallery (the corner, or nothing).
+  landingPath(from, to) {
+    const F = UPFLOOR, c = V(F.x1 - .2, 0, (F.gz0 + F.z1) / 2), g = p => p.x > F.x1 + .05;
+    return g(from) !== g(to) && Math.min(from.z, to.z) < F.gz0 && c.distanceTo(from) > .2 && c.distanceTo(to) > .2 ? [c] : [];
   }
 
   update(dt, t, night, {camera = null, lamp = null, away = false} = {}) {
@@ -539,6 +594,8 @@ export class Hall {
       for (const m of [...this.upFront, this.upWest, this.upEast, ...this.landing, this.upWindow, this.upRug, this.upPlant]) if (m && !up) m.visible = false;
       if (up) for (const m of [...this.landing, this.upWindow, this.upRug, this.upPlant]) m.visible = true;
       this.bedDoorGroup.visible = this.upWalls[1].visible;
+      this.bedroom.group.visible = up; this.bedLeaf.visible = up;
+      if (up) this.bedroom.update(camera);
       this.upWindow.visible = up && this.upFront[1].visible;
       // (The front door goes with its wall; the skirting with the kitchen's.)
       this.frontDoor.visible = this.frontWalls[0].visible;
