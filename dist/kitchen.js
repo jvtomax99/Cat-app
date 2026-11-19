@@ -1040,7 +1040,8 @@ export class Kitchen {
       camSolids: [[-2.6, .7, 1.45, 2.3], [.2, .7, 1.45, 2.3]].concat(this.treeOn ? [] : [[K.tent.x, K.tent.z, 1.4, 2.0]]),
       // Tops the camera mustn't sink into (it would see through them): over
       // the island or the back counter it stays a little above the surface.
-      camBlocks: [[K.island.x0 - .3, K.island.x1 + .3, K.island.z0 - .3, K.island.z1 + .3, K.island.top + .35], [K.left, K.right, K.back, K.counterFront + .3, K.counter + .35]],
+      // (Not in front of the doorway: the camera follows her through it.)
+      camBlocks: [[K.island.x0 - .3, K.island.x1 + .3, K.island.z0 - .3, K.island.z1 + .3, K.island.top + .35], [K.left, K.door[0], K.back, K.counterFront + .3, K.counter + .35], [K.door[1], K.right, K.back, K.counterFront + .3, K.counter + .35]],
     };
   }
 
