@@ -102,7 +102,10 @@ export function duneHeight(u, z) {
 // `wall`: where the wall runs from and to along the glazing, measured from
 // `zc` (the whole length unless given: the living room's two terraces meet
 // at a corner, and each wall stops there). `trees`: [along, size, out] each.
-export function buildTerrace({x, zc, wallOut = 4.4, far = 18, long = 46, anisotropy = 4, wall = [-long / 2, long / 2], trees = [[-3.0, 1.3, .85], [.9, 1.0, .7], [3.5, 1.36, .9]]}) {
+// `span`: where the dunes run from and to along the glazing, from `zc`
+// (the kitchen's run on behind the living room; the dunes in front of the
+// kitchen stay as they were). `tufts`: how many tufts of grass.
+export function buildTerrace({x, zc, wallOut = 4.4, far = 18, long = 46, anisotropy = 4, span = [-long / 2, long / 2], wall = span, tufts: tuftCount = 760, trees = [[-3.0, 1.3, .85], [.9, 1.0, .7], [3.5, 1.36, .9]]}) {
   const group = new THREE.Group(), tinted = [], r = rng(77);
   const basic = o => { const m = new THREE.MeshBasicMaterial({toneMapped: false, ...o}); tinted.push(m); return m; };
   const add = (geo, mat, px = 0, py = 0, pz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(px, py, pz); group.add(m); return m; };
@@ -118,17 +121,18 @@ export function buildTerrace({x, zc, wallOut = 4.4, far = 18, long = 46, anisotr
   add(shade(new THREE.BoxGeometry(.52, .1, wallLong), hex('#ece1c9'), {lo: .86, hi: 1.05}), basic({vertexColors: true}), wx, .85, wallZ);
 
   // The dunes.
-  const deep = far - wallOut - .4, nx = 44, nz = 110, ground = new THREE.PlaneGeometry(deep, long, nx, nz);
+  const spanLong = span[1] - span[0], spanMid = (span[0] + span[1]) / 2;
+  const deep = far - wallOut - .4, nx = 44, nz = Math.round(110 * spanLong / 46), ground = new THREE.PlaneGeometry(deep, spanLong, nx, nz);
   ground.rotateX(-Math.PI / 2);
   const gp = ground.attributes.position;
-  for (let i = 0; i < gp.count; i++) gp.setY(i, duneHeight(deep / 2 - gp.getX(i), gp.getZ(i)));
+  for (let i = 0; i < gp.count; i++) gp.setY(i, duneHeight(deep / 2 - gp.getX(i), gp.getZ(i) + spanMid));
   const sandLo = hex('#d9bf88'), sandHi = hex('#f3e4bb'), mix = new THREE.Color();
   shade(ground, null, {lo: .5, hi: 1.12, sun: new THREE.Vector3(-.8, .55, -.25).normalize(), tone: p => mix.copy(sandLo).lerp(sandHi, Math.min(1, p.y / 1.8)).multiplyScalar(.97 + .06 * Math.sin(p.x * 31.7 + p.z * 17.3) * Math.sin(p.z * 23.1))});
-  add(ground, basic({vertexColors: true}), wx - .2 - deep / 2, 0, zc);
+  add(ground, basic({vertexColors: true}), wx - .2 - deep / 2, 0, zc + spanMid);
   // Beach grass: crossed cards, thick on the crests and thin in the hollows.
   const tufts = [], shades = [[1, 1, 1], [.84, .9, .74], [1.12, 1.02, .78], [.74, .8, .62], [1.1, .96, .7], [.95, 1, .85]];
-  while (tufts.length < 760) {
-    const u = .5 + r() * (deep - .6), z = (r() - .5) * (long - 2), h = duneHeight(u, z);
+  while (tufts.length < tuftCount) {
+    const u = .5 + r() * (deep - .6), z = span[0] + 1 + r() * (spanLong - 2), h = duneHeight(u, z);
     if (r() > .12 + h * .45) continue;
     tufts.push([wx - .2 - u, h - .04, zc + z, .4 + r() * r() * .9, r() * 3.14, shades[Math.floor(r() * 6)], (r() - .5) * .5]);
   }

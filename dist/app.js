@@ -498,6 +498,11 @@ sun.position.copy(SUN_HOME);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, {left: -6, right: 6, top: 6, bottom: -6, far: 25});
+// (In the living room the sun's shadow is laid over that room instead: a
+// wider patch, moved along. sunOver: where it is aimed, in her room's frame.)
+const sunOver = new THREE.Vector3(), sunAt = new THREE.Vector3();
+let sunWide = false;
+scene.add(sun.target);
 sun.shadow.bias = -.0005;
 sun.shadow.normalBias = .02;
 scene.add(sun);
@@ -674,7 +679,7 @@ function joinRooms() {
   room.group.visible = true; camRoom = null;
   if (!kitchen) return;
   room.floorPatch ??= floorPatch(room.floor, room.walls.left, room.walls.right, room.walls.back, 8.6);
-  kitchen.floorPatch ??= floorPatch(kitchen.floor, -6, kitchen.right, -4.65, 14);
+  kitchen.floorPatch ??= floorPatch(kitchen.floor, -6, kitchen.right, -4.65, kitchen.farEnd);
   for (const [id, r] of [['room', room], ['kitchen', kitchen]]) {
     const here = r === place, j = placeOf(id, placeId(place));
     r.group.visible = true;
@@ -3266,7 +3271,8 @@ function doubleTap() {
 const tallScreen = () => camera.aspect < .9;
 function lookAtSpot(pos, {dist = 2.6, pitch = .42, y = .25} = {}) {
   // View the spot from the open middle of the room, so walls stay behind it.
-  const yaw = Math.atan2(.3 - pos.x, 3.2 - pos.z);
+  // (In the living room: from the middle of that room.)
+  const far = place === kitchen && pos.z > 9.8, yaw = far ? Math.atan2(kitchen.livingMid.x + 2 - pos.x, kitchen.livingMid.z - 3 - pos.z) : Math.atan2(.3 - pos.x, 3.2 - pos.z);
   Object.assign(view.goal, {yaw, pitch, dist: dist * (tallScreen() ? 1.35 : 1)});
   view.goal.focus.set(pos.x, y, pos.z);
   setCamMode('spot');
@@ -4653,7 +4659,14 @@ function updateRoom(dt, t) {
   // (The clock turning dusk or dawn while you watch.)
   if (Math.floor(t / 5) !== Math.floor((t - dt) / 5) && isNight() !== night) refresh();
   sun.intensity = damp(sun.intensity, night ? .05 : 3.2, 3, dt);
-  if (sun.position.distanceToSquared(SUN_HOME) > 1e-6) sun.position.lerp(SUN_HOME, 1 - Math.exp(-.8 * dt));
+  {
+    const wide = place === kitchen && kitchen.half === 'living', mid = wide ? kitchen.livingMid : null;
+    sunOver.lerp(sunAt.set(mid ? mid.x : 0, 0, mid ? mid.z : 0), 1 - Math.exp(-1.2 * dt));
+    sun.target.position.copy(sunOver);
+    sunAt.copy(SUN_HOME).add(sunOver);
+    if (sun.position.distanceToSquared(sunAt) > 1e-6) sun.position.lerp(sunAt, 1 - Math.exp(-.8 * dt));
+    if (wide !== sunWide) { sunWide = wide; const s = wide ? 9.5 : 6; Object.assign(sun.shadow.camera, {left: -s, right: s, top: s, bottom: -s, far: wide ? 32 : 25}); sun.shadow.camera.updateProjectionMatrix(); }
+  }
   ambient.intensity = damp(ambient.intensity, night ? .35 : 1.5, 3, dt);
   rim.intensity = damp(rim.intensity, night ? 0 : 1.8, 3, dt);
   moon.intensity = damp(moon.intensity, night ? .45 : 0, 3, dt);

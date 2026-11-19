@@ -71,18 +71,21 @@ export class LivingRoom {
   // Still to settle at the join: layout() has no `bowl` (it stays in the
   // kitchen); `bed` is only there after adopt(); decor.js's seasonal
   // plaster and floor colours know only the kitchen.
-  constructor(scene, room, {alone = true, floor = true, floorMaterial = null, seaTerrace = true} = {}) {
+  constructor(scene, room, {alone = true, floor = true, floorMaterial = null, plasterMaterial = null, seaTerrace = true} = {}) {
     this.scene = scene;
     this.room = room;
     this.id = 'living';
     this.alone = alone;
     this.seaTerrace = seaTerrace;
+    // (Joined to the kitchen, her floor runs on to meet the kitchen's: the
+    // seam is 2.6 before this room's own start.)
+    this.floorBox = {...FLOOR, z0: alone ? FLOOR.z0 : -2.6};
     this.group = new THREE.Group();
     this.group.visible = false;
     scene.add(this.group);
     this.clickables = [];
     this.walls = [];
-    this.build({floor, floorMaterial});
+    this.build({floor, floorMaterial, plasterMaterial});
   }
 
   mesh(geo, material, parent = this.group, {cast = true, receive = true} = {}) {
@@ -121,12 +124,12 @@ export class LivingRoom {
     return api;
   }
 
-  build({floor, floorMaterial}) {
+  build({floor, floorMaterial, plasterMaterial}) {
     const R = this.room?.materials ?? {};
     const wood = (colors, seed, grain, planks = 1) => canvasTexture(512, 512, (g, w, h) => drawWood(g, w, h, {planks, colors, seed, grain}));
     const M = this.materials = {
       floor: floorMaterial ?? new THREE.MeshStandardMaterial({map: canvasTexture(1024, 1024, drawLimestone), roughness: .55}),
-      plaster: new THREE.MeshStandardMaterial({map: canvasTexture(512, 512, (g, w, h) => drawNoise(g, w, h, {base: '#efe3d0', blobs: [['rgba(255,250,240,.06)', 260, 20, 90], ['rgba(160,125,85,.035)', 220, 20, 80]], seed: 31})), roughness: .95}),
+      plaster: plasterMaterial ?? new THREE.MeshStandardMaterial({map: canvasTexture(512, 512, (g, w, h) => drawNoise(g, w, h, {base: '#efe3d0', blobs: [['rgba(255,250,240,.06)', 260, 20, 90], ['rgba(160,125,85,.035)', 220, 20, 80]], seed: 31})), roughness: .95}),
       frame: new THREE.MeshStandardMaterial({color: '#1d1c1a', metalness: .3, roughness: .5}),
       brass: new THREE.MeshStandardMaterial({color: '#b58a3c', metalness: .85, roughness: .3}),
       bronze: new THREE.MeshStandardMaterial({color: '#4a3524', metalness: .7, roughness: .38}),
@@ -162,6 +165,8 @@ export class LivingRoom {
       candle: new THREE.MeshStandardMaterial({color: '#c98634', emissive: '#ff9a3a', emissiveIntensity: .5, roughness: .2}),
       leaf: R.leaf ?? new THREE.MeshStandardMaterial({color: '#6d7d4c', side: THREE.DoubleSide, roughness: .7}),
     };
+    // (A borrowed plaster may repeat its picture: lay it on to match.)
+    this.plasterPer = PLASTER * (M.plaster.map?.repeat.x ?? 1);
     this.buildShell(floor);
     this.buildGlazing();
     this.buildOutdoors();
@@ -195,7 +200,7 @@ export class LivingRoom {
     // and tall pieces match the wide ones.)
     const wall = (w, h, x, y, z, ry) => {
       const geo = new THREE.PlaneGeometry(w, h), uv = geo.attributes.uv;
-      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / PLASTER + x * .37 + z * .61, uv.getY(i) * h / PLASTER);
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / this.plasterPer + x * .37 + z * .61, uv.getY(i) * h / this.plasterPer);
       const m = this.mesh(geo, M.plaster, this.group, {cast: false});
       m.position.set(x, y, z); m.rotation.y = ry;
       this.walls.push(m);
@@ -517,8 +522,8 @@ export class LivingRoom {
     this.fireplace = g;
     const W = F.wide, D = F.deep, OW = F.open, OH = F.openH, H = L.wallH;
     const breast = this.batch(M.plaster, g);
-    for (const s of [-1, 1]) breast.add(sizedBox((W - OW) / 2, H, D, PLASTER), s * (OW / 2 + (W - OW) / 4), H / 2, D / 2);
-    breast.add(sizedBox(OW, H - OH, D, PLASTER), 0, (H + OH) / 2, D / 2);
+    for (const s of [-1, 1]) breast.add(sizedBox((W - OW) / 2, H, D, this.plasterPer), s * (OW / 2 + (W - OW) / 4), H / 2, D / 2);
+    breast.add(sizedBox(OW, H - OH, D, this.plasterPer), 0, (H + OH) / 2, D / 2);
     breast.done();
     // The surround: flat slips of limestone round the opening, a plain
     // shelf over them, and the hearth slab on the floor.
@@ -638,9 +643,10 @@ export class LivingRoom {
           box(L.south - F.deep, L.south, F.z - F.wide / 2, F.z + F.wide / 2, 0, L.wallH), box(L.south - F.deep - 1.0, L.south - F.deep, F.z - F.wide / 2 - .05, F.z + F.wide / 2 + .05, 0, .1),
           // The walls and both glazings.
           box(L.sea - .5, L.sea + .14, L.join, L.end, 0, L.wallH), box(L.sea, L.south, L.end - .14, L.end + .5, 0, L.wallH), box(L.south - .05, L.south + .5, L.join, L.end, 0, L.wallH),
-          cyl(FOUNTAIN.x, FOUNTAIN.z, .55, 0, .23), cyl(FOUNTAIN.x, FOUNTAIN.z, .23, .23, .38),
         ];
-        if (tentIn) list.push({kind: 'rbox', x: L.tent.x, z: L.tent.z, ry: L.tent.ry, hx: 1.32, hz: 1.02, y0: 0, y1: 1.95, tag: 'bed'});
+        // (Joined, the kitchen lists her fountain and tent itself.)
+        if (this.alone) list.push(cyl(FOUNTAIN.x, FOUNTAIN.z, .55, 0, .23), cyl(FOUNTAIN.x, FOUNTAIN.z, .23, .23, .38));
+        if (tentIn && this.alone) list.push({kind: 'rbox', x: L.tent.x, z: L.tent.z, ry: L.tent.ry, hx: 1.32, hz: 1.02, y0: 0, y1: 1.95, tag: 'bed'});
         return list;
       })(),
       perchTargets: [['sofa', this.sofa], ['mohair', this.mohairChair], ['sling', this.slingChair]],
@@ -648,10 +654,10 @@ export class LivingRoom {
       sleepHeading: L.tent.ry,
       bedOffset: V(Math.sin(L.tent.ry) * .15, 0, Math.cos(L.tent.ry) * .15),
       bedFace: L.tent.ry,
-      floor: {...FLOOR}, keepOut: KEEP_OUT.map(r => ({...r})), obstacles: OBSTACLES.map(o => ({...o})), tentDoor: TENT_DOOR.clone(),
+      floor: {...this.floorBox}, keepOut: KEEP_OUT.map(r => ({...r})), obstacles: OBSTACLES.map(o => ({...o})), tentDoor: TENT_DOOR.clone(),
       limits: {dist: [1.1, 20], pitch: [.04, 1.25], x: [L.sea + .4, L.south - .6], z: [.4, L.end - .6], y: [.08, 5.8]},
       camBox: {x: [L.sea + .2, L.south - .2], y: [.2, 9.2], z: [-16, L.end - .2]}, // open to the kitchen side
-      camSolids: [[S.x, S.z - 1.6, 1.3, 2.1], [S.x, S.z + 1.6, 1.3, 2.1], [L.sling.x, L.sling.z, 1.1, 2.1], [L.mohair.x, L.mohair.z, 1.05, 1.9]].concat(tentIn ? [[L.tent.x, L.tent.z, 1.4, 2.0]] : []),
+      camSolids: [[S.x, S.z - 1.6, 1.3, 2.1], [S.x, S.z + 1.6, 1.3, 2.1], [L.sling.x, L.sling.z, 1.1, 2.1], [L.mohair.x, L.mohair.z, 1.05, 1.9]].concat(tentIn && this.alone ? [[L.tent.x, L.tent.z, 1.4, 2.0]] : []),
       // Tops the camera mustn't sink into.
       camBlocks: [[T.x - T.wide / 2 - .3, T.x + T.wide / 2 + .3, T.z - T.long / 2 - .3, T.z + T.long / 2 + .3, T.top + .35], [L.south - B.deep - .4, L.south, B.z - B.long / 2 - .3, B.z + B.long / 2 + .3, B.top + .35]],
     };
@@ -673,7 +679,7 @@ export class LivingRoom {
   }
 
   clampFloor(v) {
-    const F = FLOOR, clampF = () => { v.x = Math.min(F.x1, Math.max(F.x0, v.x)); v.z = Math.min(F.z1, Math.max(F.z0, v.z)); };
+    const F = this.floorBox, clampF = () => { v.x = Math.min(F.x1, Math.max(F.x0, v.x)); v.z = Math.min(F.z1, Math.max(F.z0, v.z)); };
     clampF();
     for (let pass = 0; pass < 3; pass++) { this.pushOutOnce(v, .05); }
     clampF();
@@ -695,7 +701,7 @@ export class LivingRoom {
     for (let i = 0; i < 40; i++) {
       const v = V(FLOOR.x0 + .3 + Math.random() * (FLOOR.x1 - FLOOR.x0 - .6), 0, FLOOR.z0 + .3 + Math.random() * (FLOOR.z1 - FLOOR.z0 - .6));
       if (KEEP_OUT.some(R => v.x > R.x0 - pad && v.x < R.x1 + pad && v.z > R.z0 - pad && v.z < R.z1 + pad)) continue;
-      if (OBSTACLES.some(c => Math.hypot(v.x - c.x, v.z - c.z) < c.r + .3 + pad * .5)) continue;
+      if (OBSTACLES.some(c => this.blocks(c) && Math.hypot(v.x - c.x, v.z - c.z) < c.r + .3 + pad * .5)) continue;
       return v;
     }
     return V(6.4, 0, 7.2);
@@ -749,7 +755,7 @@ export class LivingRoom {
       const m = .2, nodes = [A, B];
       for (const R of rects) nodes.push(V(R.x0 - m, 0, R.z0 - m), V(R.x1 + m, 0, R.z0 - m), V(R.x1 + m, 0, R.z1 + m), V(R.x0 - m, 0, R.z1 + m));
       for (const c of circles) for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; nodes.push(V(c.x + Math.cos(a) * (c.r + m), 0, c.z + Math.sin(a) * (c.r + m))); }
-      const F = {x0: FLOOR.x0 - .15, x1: FLOOR.x1 + .15, z0: FLOOR.z0 - .6, z1: FLOOR.z1 + .15};
+      const B0 = this.floorBox, F = {x0: B0.x0 - .15, x1: B0.x1 + .15, z0: B0.z0 - .6, z1: B0.z1 + .15};
       const ok = nodes.filter((p, i) => i < 2 || (p.x >= F.x0 && p.x <= F.x1 && p.z >= F.z0 && p.z <= F.z1 && !circles.some(c => inside(p, c)) && !rects.some(R => inRect(p, R))));
       // Dijkstra over the points that can see each other.
       const dist = ok.map((_, i) => i ? Infinity : 0), prev = ok.map(() => -1), done = ok.map(() => false);

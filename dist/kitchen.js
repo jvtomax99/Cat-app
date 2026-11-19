@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import {buildTerrace} from './terrace.js';
 import {Room, MOONLIGHT, DAYLIGHT, rng, canvasTexture, drawNoise, drawLinen, drawWood, roundedBox, lathe} from './room.js';
 import {TREE} from './xmas-tree.js';
+import {LivingRoom, L as LIVING} from './living.js';
 
 const {damp} = THREE.MathUtils;
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -29,7 +30,8 @@ const K = {
   back: -4.2, left: -6, right: 10, front: 9.8, door: [3.8, 6.2], doorTop: 5.4, wallH: 9.5,
   counter: 2.2, counterFront: -2.72, shelf1: 4.1, shelf2: 5.5, shelfX: [-5.2, 3.4], shelfD: .9,
   island: {x0: -3.9, x1: 1.5, z0: -.55, z1: 1.95, top: 2.25},
-  tent: {x: 4.75, z: .75, ry: -.45},
+  // (Her tent stands in the living room, by the glazing; living.js has its place.)
+  tent: {x: LIVING.tent.x, z: 9.8 + LIVING.tent.z, ry: LIVING.tent.ry},
   // At Christmas the tree stands right of the doorway and the tent is put
   // away for a round bed beside it; her fountain and bowl stay put.
   xmas: {bed: {x: 8.4, z: 1.7}, fountain: {x: 3.0, z: 1.55, ry: .3}, bowl: {x: 4.55, z: 2.6, ry: -.5}},
@@ -37,7 +39,10 @@ const K = {
 // Where she may walk: the open floor, keeping clear of the island.
 // (Her centre .6 from the window wall and the counter: her head turned
 // to look at something reaches that far.)
-const FLOOR = {x0: -5.25, x1: 9.3, z0: -2.15, z1: 4.3};
+// (To the seam: from there on the floor is the living room's, living.js.)
+const SEAM = 7.2, FLOOR = {x0: -5.25, x1: 9.3, z0: -2.15, z1: SEAM};
+// Her fountain's place in the living room, in this room's frame.
+const FOUNTAIN_HOME = {x: LIVING.fountain.x, z: 9.8 + LIVING.fountain.z, ry: LIVING.fountain.ry};
 // The island and its stools, kept clear (the stools stand in front of it):
 // her centre this far out keeps her head and hips (each about .6 from it)
 // out of the island's base and the stools' legs (which reach .7 in front
@@ -52,7 +57,7 @@ const TENT = {x: K.tent.x, z: K.tent.z, r: 1.55};
 // (The vacuum's moves with it.)
 const VAC = {x: 3.15, z: -2.0, r: .7};
 // (Her fountain and bowl move at Christmas: setTree.)
-const FOUNTAIN = {x: 3.0, z: 1.55, r: .9, ry: .3}, BOWL = {x: 4.55, z: 2.6, r: .7, ry: -.5};
+const FOUNTAIN = {...FOUNTAIN_HOME, r: .9}, BOWL = {x: 4.55, z: 2.6, r: .7, ry: -.5};
 const OBSTACLES = [FOUNTAIN, BOWL, TENT, VAC];
 // At Christmas: the tree's foot and the open box (setTree).
 const TREE_FOOT = {x: TREE.x, z: TREE.z, r: TREE.ring}, TREE_BOX = {x: TREE.box.spot[0], z: TREE.box.spot[1], r: .65};
@@ -80,6 +85,9 @@ export class Kitchen {
     // Things Mochi will play with, each remembering where it belongs.
     this.props = {cups: [], plates: [], glasses: []};
     this.build();
+    this.living.bed = this.bed; this.living.fountain = true;
+    this.livingLamp = this.living.lampSpot.clone().add(V(0, 0, K.front));
+    this.half = 'kitchen';
   }
 
   // The bird: the same visitor as in the study's window.
@@ -137,6 +145,11 @@ export class Kitchen {
     M.stone.map.repeat.set(.22, .22);
     this.buildShell();
     this.buildWindows();
+    // The living room, opening off the front: one space with this one, in
+    // this room's frame, 9.8 along. It shares the plaster (the seasons tint
+    // it), stands on this room's floor and looks out on this room's terrace.
+    const living = this.living = new LivingRoom(this.scene, this.room, {alone: false, floor: false, seaTerrace: false, plasterMaterial: M.plaster});
+    this.group.add(living.group); living.group.position.z = K.front; living.group.visible = true;
     this.buildCounter();
     this.buildShelves();
     this.buildIsland();
@@ -167,19 +180,14 @@ export class Kitchen {
     wall(d1 - d0, H - K.doorTop, (d0 + d1) / 2, (H + K.doorTop) / 2, K.back, 0);
     wall(K.right - d1, H, (d1 + K.right) / 2, H / 2, K.back, 0);
     wall(14, H, K.right, H / 2, 2.8, -Math.PI / 2);
-    // The front wall, where the right wall ends (so the camera can turn all
-    // the way round); hidden while the camera stands in front of the room.
-    // (Where the living room will join on later.)
-    wall(K.right - K.left, H, (K.left + K.right) / 2, H / 2, K.front, Math.PI);
+    // (No front wall: the living room opens off the kitchen there.)
     // The window wall: plaster round the tall window.
     const wz0 = -3.7, wz1 = 3.9, wy0 = 0, wy1 = 8.0;
     wall(wz0 - K.back, H, K.left, H / 2, (K.back + wz0) / 2, Math.PI / 2);
-    wall(11.5 - wz1, H, K.left, H / 2, (wz1 + 11.5) / 2, Math.PI / 2);
-    // (On past where the room's own camera looks: from the study's doorway
-    // the eye runs along this wall, and the outdoors must not show past its end.)
-    for (let z = 11.5; z < 61; z += 12.4) wall(12.4, H, K.left, H / 2, z + 6.2, Math.PI / 2);
-    // (And up past its top, the whole length: no ceiling hides the sky there.)
-    for (let z = K.back; z < 61; z += 13.1) wall(13.1, 30, K.left, H + 15, z + 6.55, Math.PI / 2);
+    // (As far as the living room, whose own wall and glazing carry on.)
+    wall(K.front - wz1, H, K.left, H / 2, (wz1 + K.front) / 2, Math.PI / 2);
+    // (And up past its top: no ceiling hides the sky there.)
+    wall(K.front - K.back, 30, K.left, H + 15, (K.back + K.front) / 2, Math.PI / 2);
     wall(wz1 - wz0, H - wy1, K.left, (H + wy1) / 2, (wz0 + wz1) / 2, Math.PI / 2);
     this.windowRect = {z0: wz0, z1: wz1, y0: wy0, y1: wy1};
     // Deep plaster reveals round the opening.
@@ -203,11 +211,15 @@ export class Kitchen {
     // dunes and, far off, the sea. The paving is wide enough outside the
     // doors for a visitor to walk by.
     const out = 1.4, wallOut = 4.4;
-    this.terrace = buildTerrace({x: K.left, zc: (z0 + z1) / 2, wallOut, anisotropy: this.room?.outside?.material.uniforms.uFar.value.anisotropy ?? 4});
+    // (It runs on behind the living room's sea glazing, to the corner where
+    // the terrace at the living room's far end meets it; three more trees.)
+    const zc0 = (z0 + z1) / 2, corner = K.front + LIVING.end + wallOut + .46 - zc0, run = [-23, K.front + 34 - zc0];
+    this.terrace = buildTerrace({x: K.left, zc: zc0, wallOut, anisotropy: this.room?.outside?.material.uniforms.uFar.value.anisotropy ?? 4,
+      span: run, wall: [run[0], corner], tufts: Math.round(760 * (run[1] - run[0]) / 46), trees: [[-3.0, 1.3, .85], [.9, 1.0, .7], [3.5, 1.36, .9], [12.3, 1.2, .9], [19.4, 1.0, .7], [26.3, 1.3, .85]]});
     this.group.add(this.terrace.group);
     this.terraceView = this.terrace.view; this.glass = this.terraceView.mesh;
-    this.paving = this.mesh(new THREE.PlaneGeometry(wallOut + .05, 46), new THREE.MeshBasicMaterial({color: '#e2d6c0', toneMapped: false}), this.group, {cast: false, receive: false});
-    this.paving.rotation.x = -Math.PI / 2; this.paving.position.set(K.left - wallOut / 2, -.001, (z0 + z1) / 2);
+    this.paving = this.mesh(new THREE.PlaneGeometry(wallOut + .05, run[1] - run[0]), new THREE.MeshBasicMaterial({color: '#e2d6c0', toneMapped: false}), this.group, {cast: false, receive: false});
+    this.paving.rotation.x = -Math.PI / 2; this.paving.position.set(K.left - wallOut / 2, -.001, zc0 + (run[0] + run[1]) / 2);
     this.outside = {x: K.left - out * .55, z0: z0 - 2.5, z1: z1 + 2.5, door: (z0 + z1) / 2};
     const zc = (z0 + z1) / 2, H = y1 - y0, T = 6.5;
     const v = (w, y0b, y1b, z) => this.box(.12, y1b - y0b, w, x + .04, (y0b + y1b) / 2, z, M.frame, this.group, {cast: false});
@@ -1012,7 +1024,7 @@ export class Kitchen {
           box(I.x0, I.x1, I.z0, I.z1, baseH, I.top),
           box(K.left, 3.6, K.back, K.counterFront, 0, K.counter, 'counter'),
           box(2.84, 3.46, -2.72, -2.52, 0, .34),
-          box(K.left - .5, K.left + .12, K.back, FLOOR.z1 + 1, 0, K.wallH), box(K.right - .05, K.right + .5, K.back, FLOOR.z1 + 1, 0, K.wallH),
+          box(K.left - .5, K.left + .12, K.back, K.front, 0, K.wallH), box(K.right - .05, K.right + .5, K.back, K.front, 0, K.wallH),
           box(K.left, K.door[0], K.back - .5, K.back + .05, 0, K.wallH), box(K.door[1], K.right, K.back - .5, K.back + .05, 0, K.wallH),
           cyl(FOUNTAIN.x, FOUNTAIN.z, .55, 0, .23), cyl(FOUNTAIN.x, FOUNTAIN.z, .23, .23, .38), cyl(BOWL.x, BOWL.z, .37, 0, .16),
         ];
@@ -1023,6 +1035,8 @@ export class Kitchen {
           for (const s of [-1, 1]) list.push(box(x + s * .26 - .06, x + s * .26 + .06, z - .25, z + .25, 0, 1.56));
           list.push(box(x - .28, x + .28, z + .14, z + .18, .53, .57), cyl(x, z, .42, 1.55, 1.69));
         }
+        // (And the living room's furniture and walls.)
+        for (const o of this.living.layout().tailSolids) list.push(o.kind === 'box' ? {...o, z0: o.z0 + K.front, z1: o.z1 + K.front} : {...o, z: o.z + K.front});
         return list;
       })(),
       perchTargets: [['step', this.steps[0]], ['stepMid', this.steps[1]], ['stepTop', this.steps[2]], ['counter', this.counterGroup], ['shelf', this.shelves[0]], ['shelfHigh', this.shelves[1]], ['vacuum', this.vacuum], ['pendant', this.shades[0]], ['salmon', this.foodPlate]],
@@ -1035,18 +1049,24 @@ export class Kitchen {
       bedOffset: this.treeOn ? null : V(Math.sin(K.tent.ry) * .15, 0, Math.cos(K.tent.ry) * .15),
       // Awake in the tent she faces out of the doorway (where it's tallest).
       bedFace: this.treeOn ? -.8 : K.tent.ry,
-      limits: {dist: [1.1, 16], pitch: [.04, 1.25], x: [-5.6, K.right - .6], z: [-3.6, 4.6], y: [.08, 5.8]},
-      camBox: {x: [-5.8, K.right - .2], y: [.2, 9.2], z: [-3.9, 26]}, // open to the front: the living area will be there
-      camSolids: [[-2.6, .7, 1.45, 2.3], [.2, .7, 1.45, 2.3]].concat(this.treeOn ? [] : [[K.tent.x, K.tent.z, 1.4, 2.0]]),
+      limits: {dist: [1.1, 16], pitch: [.04, 1.25], x: [-5.6, K.right - .6], z: [-3.6, K.front + LIVING.end - .6], y: [.08, 5.8]},
+      camBox: {x: [-5.8, K.right - .2], y: [.2, 9.2], z: [-3.9, K.front + LIVING.end - .2]}, // through the living room to its far glazing
+      camSolids: [[-2.6, .7, 1.45, 2.3], [.2, .7, 1.45, 2.3]].concat(this.treeOn ? [] : [[K.tent.x, K.tent.z, 1.4, 2.0]], this.living.layout().camSolids.map(([x, z, r, h]) => [x, z + K.front, r, h])),
       // Tops the camera mustn't sink into (it would see through them): over
       // the island or the back counter it stays a little above the surface.
       // (Not in front of the doorway: the camera follows her through it.)
-      camBlocks: [[K.island.x0 - .3, K.island.x1 + .3, K.island.z0 - .3, K.island.z1 + .3, K.island.top + .35], [K.left, K.door[0], K.back, K.counterFront + .3, K.counter + .35], [K.door[1], K.right, K.back, K.counterFront + .3, K.counter + .35]],
+      camBlocks: [[K.island.x0 - .3, K.island.x1 + .3, K.island.z0 - .3, K.island.z1 + .3, K.island.top + .35], [K.left, K.door[0], K.back, K.counterFront + .3, K.counter + .35], [K.door[1], K.right, K.back, K.counterFront + .3, K.counter + .35]].concat(this.living.layout().camBlocks.map(([x0, x1, z0, z1, top]) => [x0, x1, z0 + K.front, z1 + K.front, top])),
     };
   }
 
   // What the Room view keeps in frame (see roomFrame in app.js).
   frame(wide) {
+    // (In the living room: its own view, from the kitchen's side looking
+    // down the room, the sea on the left.)
+    if (this.half === 'living') {
+      const f = this.living.frame(wide), on = list => list.map(([x, y, z]) => [x, y, z + K.front]);
+      return {yaw: Math.PI - (wide ? .35 : .2), across: on(f.across), bottom: on(f.bottom), top: on(f.top)};
+    }
     const I = K.island;
     return {
       // Wide screens look nearly straight at the back wall, from a little
@@ -1072,7 +1092,9 @@ export class Kitchen {
     on = !!on;
     for (const o of [TREE_FOOT, TREE_BOX]) { const i = OBSTACLES.indexOf(o); if (on && i < 0) OBSTACLES.push(o); if (!on && i >= 0) OBSTACLES.splice(i, 1); }
     const t = OBSTACLES.indexOf(TENT); if (on && t >= 0) OBSTACLES.splice(t, 1); if (!on && t < 0) OBSTACLES.push(TENT);
-    Object.assign(FOUNTAIN, on ? K.xmas.fountain : {x: 3.0, z: 1.55, ry: .3});
+    Object.assign(FOUNTAIN, on ? K.xmas.fountain : FOUNTAIN_HOME);
+    // (The living room keeps clear of her tent and fountain while they stand there.)
+    this.living.bed = on ? null : this.bed; this.living.fountain = on ? null : true;
     Object.assign(BOWL, on ? K.xmas.bowl : {x: 4.55, z: 2.6, ry: -.5});
     const B = on ? K.xmas.bed : K.tent;
     this.bed.position.set(B.x, 0, B.z); this.bed.rotation.y = on ? 0 : K.tent.ry;
@@ -1085,13 +1107,22 @@ export class Kitchen {
   // Solids for things that roll: the island, the back counter, and the
   // round things on the floor (tent, fountain, bowl, the vacuum's dock).
   get right() { return K.right; }
+  // How far the floor runs (to the living room's far glazing), and the
+  // middle of the living room: for the floor seen from the study, and the sun.
+  get farEnd() { return K.front + LIVING.end; }
+  get livingMid() { return {x: (LIVING.sea + LIVING.south) / 2, z: K.front + LIVING.end / 2}; }
   get islandSolid() { const I = K.island; return {x0: I.x0, x1: I.x1, z0: I.z0, z1: I.z1, top: I.top}; }
   get counterSolid() { return {x0: K.left, x1: 3.6, z0: K.back, z1: K.counterFront, top: K.counter}; }
   get roundSolids() { return [this.treeOn ? {x: K.xmas.bed.x, z: K.xmas.bed.z, r: .84, top: .3} : {x: TENT.x, z: TENT.z, r: 1.2, top: 1.9}, {x: FOUNTAIN.x, z: FOUNTAIN.z, r: .5, top: .4}, {x: BOWL.x, z: BOWL.z, r: .37, top: .16}, {x: DOCK.x, z: DOCK.z, r: .4, top: .35}]; }
 
   // Walking: the open floor, kept clear of the island; a walk that would
   // cross the island goes round it, by the nearest corner(s).
+  // The living room's half of the floor (past the seam) is living.js's to
+  // work out, in its own frame.
+  inLiving(v) { return v.z > SEAM; }
+  viaLiving(v, fn) { v.z -= K.front; fn(v); v.z += K.front; return v; }
   clampFloor(v) {
+    if (this.inLiving(v)) return this.viaLiving(v, q => this.living.clampFloor(q));
     v.x = Math.min(FLOOR.x1, Math.max(FLOOR.x0, v.x)); v.z = Math.min(FLOOR.z1, Math.max(FLOOR.z0, v.z));
     const R = KEEP_OUT;
     // (A few passes: out of the island's margin can be into the vacuum's
@@ -1119,6 +1150,8 @@ export class Kitchen {
     return v;
   }
   randomFloorPoint(pad = 0) {
+    // (Half her wanders are in the living room; the vacuum keeps to the kitchen.)
+    if (!pad && Math.random() < .5) { const p = this.living.randomFloorPoint(); p.z += K.front; return p; }
     const t = this.bed.position;
     for (let i = 0; i < 30; i++) {
       const v = V(-4.8 + Math.random() * (FLOOR.x1 - .7 + 4.8), 0, -2.1 + Math.random() * 6.2);
@@ -1135,6 +1168,7 @@ export class Kitchen {
   // enough that her body stays clear too. Into the tent only along its
   // doorway; riding the vacuum, it doesn't count.
   pushOut(v, {riding = false} = {}) {
+    if (!riding && this.inLiving(v)) return this.viaLiving(v, q => this.living.pushOut(q));
     // (A few passes: pushed clear of one thing can mean pushed into another,
     // e.g. between the vacuum and the island.)
     for (let pass = 0; pass < 3; pass++) this.pushOutOnce(v, riding);
@@ -1174,6 +1208,18 @@ export class Kitchen {
   // pad: extra room all round (the robot vacuum, its body round its middle,
   // and her on top of it).
   route(from, to, pad = 0) {
+    if (pad) return this.routeKitchen(from, to, pad);
+    const a = this.inLiving(from), b = this.inLiving(to), shift = (p, d) => V(p.x, 0, p.z + d);
+    const there = (p, q) => this.living.route(shift(p, -K.front), shift(q, -K.front)).map(w => shift(w, K.front));
+    if (!a && !b) return this.routeKitchen(from, to);
+    if (a && b) return there(from, to);
+    // Across the seam: by the point where the straight line crosses it
+    // (the floor is open all along it), each half by its own room's way.
+    const t = (SEAM - from.z) / (to.z - from.z), w = V(Math.min(8.0, Math.max(-4.8, from.x + (to.x - from.x) * t)), 0, SEAM);
+    const w0 = V(w.x, 0, SEAM - .01), w1 = V(w.x, 0, SEAM + .01);
+    return a ? [...there(from, w1), ...this.routeKitchen(w0, to)] : [...this.routeKitchen(from, w0), ...there(w1, to)];
+  }
+  routeKitchen(from, to, pad = 0) {
     const inside = (p, c) => Math.hypot(p.x - c.x, p.z - c.z) < c.r;
     let A = from, B = to;
     const pre = [], post = [];
@@ -1256,6 +1302,11 @@ export class Kitchen {
       }
     }
     if (lamp) lamp.intensity = damp(lamp.intensity, night ? 30 : 3, 3, dt);
+    // (The lamp light is over whichever half she's in: the pendant, or the
+    // living room's arc lamp. It drifts across as she crosses.)
+    if (lamp && cat?.pos) lamp.position.lerp(cat.pos.z > K.front ? this.livingLamp : this.lampSpot, 1 - Math.exp(-1.6 * dt));
+    this.living.update(dt, t, night, {camera, away: true});
+    this.half = cat?.pos ? (cat.pos.z > K.front ? 'living' : 'kitchen') : this.half;
     const e = damp(this.materials.shade.emissiveIntensity, night ? 2.6 : .3, 3, dt);
     this.materials.shade.emissiveIntensity = e;
     // By night the window's light on the floor is moonlight: fainter and cool.
