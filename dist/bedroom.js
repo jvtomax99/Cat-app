@@ -314,7 +314,9 @@ export class Bedroom {
       const opts = [[r.x0 - v.x, 0], [r.x1 - v.x, 0], [0, r.z0 - v.z], [0, r.z1 - v.z]]
         .filter(([dx, dz]) => { const x = v.x + dx, z = v.z + dz; return x >= FLOOR.x0 - .01 && x <= FLOOR.x1 + .01 && z >= FLOOR.z0 - .01 && z <= FLOOR.z1 + .01; });
       if (!opts.length) continue;
-      const [dx, dz] = opts.reduce((a, b) => Math.hypot(...a) < Math.hypot(...b) ? a : b);
+      // (Where two patches overlap, a side that isn't in the other one.)
+      const free = opts.filter(([dx, dz]) => { const q = V(v.x + dx + Math.sign(dx) * .02, 0, v.z + dz + Math.sign(dz) * .02); return !KEEP.some(o => inside(q, o)); });
+      const [dx, dz] = (free.length ? free : opts).reduce((a, b) => Math.hypot(...a) < Math.hypot(...b) ? a : b);
       v.x += dx + Math.sign(dx) * .02; v.z += dz + Math.sign(dz) * .02;
     }
     return v;
@@ -348,6 +350,7 @@ export class Bedroom {
     for (let i = prev[n - 1]; i > 0; i = prev[i]) out.unshift(nodes[i].clone());
     return out;
   }
+  blocked(a, b) { return blocked(a, b); }
   // (For the tests: the patches she keeps out of, her floor.)
   get keep() { return KEEP; }
   get floorBox() { return FLOOR; }

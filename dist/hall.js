@@ -560,11 +560,16 @@ export class Hall {
       // (Between the landing and the bedroom: by the doorway, each side's
       // way round what stands there.)
       const bed = p => p.z < -.225, a = bed(from), b = bed(to);
-      if (a && b) { const p = this.bedroom.path(from, to); return p.length ? [...p, to.clone()] : []; }
+      if (a && b) { const p = this.bedroom.path(from, to).filter(q => Math.hypot(q.x - from.x, q.z - from.z) > .2); return p.length ? [...p, to.clone()] : []; }
       if (!a && !b) { const p = this.landingPath(from, to); return p.length ? [...p, to.clone()] : []; }
       const dl = V(H.bedDoor.x, 0, UPFLOOR.z0 + .2), db = this.bedroom.doorSpot;
       const pts = a ? [...this.bedroom.path(from, db), db, dl, ...this.landingPath(dl, to)] : [...this.landingPath(from, dl), dl, db, ...this.bedroom.path(db, to)];
-      return pts.filter(p => p.distanceTo(from) > .2).concat([to.clone()]);
+      // (Nothing left between, the doorway's two spots being where she is
+      // and where she's going: straight there. Else walkTo would ask again
+      // for the same way, forever.)
+      const flat = p => Math.hypot(p.x - from.x, p.z - from.z) > .2 && Math.hypot(p.x - to.x, p.z - to.z) > .2;
+      const way = pts.filter(flat);
+      return way.length ? way.concat([to.clone()]) : [];
     }
     const R = KEEP_OUT, inX = p => p.x > R.x0 - .01 && p.x < R.x1 + .01;
     if (Math.min(from.z, to.z) >= R.z1 - .01 || (from.x <= R.x0 && to.x <= R.x0) || (from.x >= R.x1 && to.x >= R.x1)) return [];
@@ -575,6 +580,13 @@ export class Hall {
     return c.distanceTo(from) > .2 && c.distanceTo(to) > .2 ? [c, to.clone()] : [];
   }
 
+  // Upstairs, can she dash straight from a to b? (Same side of the
+  // bedroom's wall, and in there nothing standing between.)
+  straightOk(a, b) {
+    const bed = p => p.z < -.225;
+    if (bed(a) !== bed(b)) return false;
+    return !bed(a) || !this.bedroom.path(a, b).length && !this.bedroom.blocked(a, b);
+  }
   // On the landing: round the stairwell's corner, between the main floor
   // and the gallery (the corner, or nothing).
   landingPath(from, to) {

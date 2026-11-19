@@ -1095,7 +1095,7 @@ function chainNext() {
     while (n && PERCHES[n].via !== brain.perch) n = PERCHES[n].via;
     if (n) return chainPt.set(PERCHES[n].spot.x, PERCHES[n].top + .25, PERCHES[n].spot.z);
   }
-  return cur.via ? chainPt.set(PERCHES[cur.via].spot.x, PERCHES[cur.via].top + .25, PERCHES[cur.via].spot.z) : chainPt.set(cur.base.x, .25, cur.base.z);
+  return cur.via ? chainPt.set(PERCHES[cur.via].spot.x, PERCHES[cur.via].top + .25, PERCHES[cur.via].spot.z) : chainPt.set(cur.base.x, groundAt(cur.base) + .25, cur.base.z);
 }
 const chainPt = new THREE.Vector3();
 // Along a shelf (after a cup, say), she walks back to where she landed
@@ -1862,7 +1862,8 @@ function shadowPounce() {
   if (place === hall && hall.onStairs(brain.elevation)) return;
   const a = rand(0, Math.PI * 2), d = rand(1.3, 2.1);
   const spot = onRug(new THREE.Vector3(brain.pos.x + Math.sin(a) * d, 0, brain.pos.z + Math.cos(a) * d));
-  if (spot.distanceTo(brain.pos) < .8) { nightZoomies(); return; }
+  // (A pounce is a straight dash: upstairs, not through the bedroom's wall or round its furniture.)
+  if (spot.distanceTo(brain.pos) < .8 || (place === hall && hall.level === 'up' && !hall.straightOk(brain.pos, spot))) { nightZoomies(); return; }
   brain.swatAt = spot.clone();
   glanceAt(spot.clone().setY(.03), 2.5);
   twitchEar(0, 1.2); later(.12, () => twitchEar(1, 1.2));
@@ -1952,7 +1953,11 @@ function perchLife(t) {
   if (HOPS[brain.perch] && place === kitchen && t - brain.actStart > 2) options.push('hop');
   options.push('call');
   const choice = pick(options);
-  if (choice === 'glance') glanceAt(brain.perch === 'sill' ? room.glass.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(rand(-.9, .9), rand(-.6, .6), 0)) : new THREE.Vector3(rand(-3, 3), rand(.2, 2.4), rand(-.5, 2.5)), rand(1.5, 3));
+  if (choice === 'glance') glanceAt(brain.perch === 'sill' ? room.glass.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(rand(-.9, .9), rand(-.6, .6), 0))
+    // (Upstairs: out of the window from the seat, else round the bedroom at its height.)
+    : brain.perch === 'windowSeat' ? layoutOf(hall).seatLook.clone().add(new THREE.Vector3(rand(-5, 5), rand(-1, 2), 0))
+    : place === hall && hall.level === 'up' ? new THREE.Vector3(brain.pos.x + rand(-3, 3), hall.up + rand(.2, 2.4), brain.pos.z + rand(-3, 3))
+    : new THREE.Vector3(rand(-3, 3), rand(.2, 2.4), rand(-.5, 2.5)), rand(1.5, 3));
   if (choice === 'twitch') twitchEar();
   if (choice === 'slowBlink') { glanceAt(camera.position, 2.2); slowBlink(); }
   if (choice === 'lookBack') { glanceAt(camera.position, rand(1.5, 2.5)); if (Math.random() < .3) meow('mew', 'idle'); }
@@ -2777,7 +2782,9 @@ function callTo(x, y) {
   const hit = new THREE.Vector3();
   // (Upstairs, the landing's floor.)
   const up = place === hall && hall.level === 'up';
-  if (!ray.ray.intersectPlane(up ? landingPlane : groundPlane, hit) || hit.x < LIMITS.x[0] || hit.x > LIMITS.x[1] || hit.z < LIMITS.z[0] || hit.z > LIMITS.z[1]) return;
+  // (Upstairs a tap may be through the bedroom's door: the landing and the bedroom both count.)
+  const TL = up ? {x: [-6.4, 6.4], z: [-16.05, 4.65]} : LIMITS;
+  if (!ray.ray.intersectPlane(up ? landingPlane : groundPlane, hit) || hit.x < TL.x[0] || hit.x > TL.x[1] || hit.z < TL.z[0] || hit.z > TL.z[1]) return;
   const r = host.getBoundingClientRect();
   pawAt(x - r.left, y - r.top);
   if (pet.sleeping) { twitchEar(undefined, .6); return; }
@@ -4116,8 +4123,11 @@ function callToLanding() {
   if (brain.mode === 'play') endPlay(true);
   if (brain.mode !== 'idle') setMode('idle');
   toast(`Calling ${pet.name} up to the landing…`);
-  const up = () => climbTo(true, () => { setActivity('sit', rand(4, 7)); express('curious', 2); });
-  if (place === hall) up(); else if (!walkToRoom('hall', up, true)) return false;
+  const there = () => { setActivity('sit', rand(4, 7)); express('curious', 2); };
+  const up = () => climbTo(true, there);
+  // (Already upstairs, in the bedroom: through its door to the top of the stairs.)
+  if (place === hall && hall.level === 'up') walkTo(layoutOf(hall).topSpot.at, there, true);
+  else if (place === hall) up(); else if (!walkToRoom('hall', up, true)) return false;
   brain.nextIdle = clockNow + 25;
   return true;
 }
