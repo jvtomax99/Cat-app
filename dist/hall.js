@@ -423,6 +423,7 @@ export class Hall {
   }
   downLayout(upSpots, stairSolids) {
     const at = (x, z) => V(x, 0, z), F = H.frontDoor, C = H.console, B = H.bench, S = H.stairs;
+    const U = H.up;
     const box = (x0, x1, z0, z1, y0, y1, tag) => ({kind: 'box', x0, x1, z0, z1, y0, y1, tag});
     return {
       ...upSpots,
