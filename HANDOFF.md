@@ -16,8 +16,10 @@ plan, wait for his OK).
 - Reviewer subagent ran; its 8 real finds fixed. Own find: hall routes
   returned one point, which walkTo ignores (she cut across the stairwell;
   downstairs, the console's corner): routes now end with the goal.
-- Tests: `tools/qa/stairs.mjs` 8 of 8. `hall.mjs` rerun after the route fix:
-  see the latest commit message or rerun it.
+- Tests: `tools/qa/stairs.mjs` 8 of 8, `hall.mjs` 14 of 14 (updated: the
+  landing in the picker; stairs and landing count as hers). `npm run check`
+  passes. Preview build 502 (`1b586f0`) has all the app changes (later
+  commits are tests and notes only).
 
 ## Left
 - Merlin's phone check of the preview; "Go live" when he's happy.
