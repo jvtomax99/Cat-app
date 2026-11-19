@@ -1,14 +1,12 @@
-# Handoff (2026-11-19): the hall is on the preview; Merlin is testing it on his phone
+# Handoff (2026-11-19): the hall is live; next, phase 21 step 2 (the stairs)
 
 ## Goal and exact next step
-Phase 21, step 1b, the hall (`docs/phases/21-house.md`). Built and on the
-preview as build 494 (`2e5dea2`), not live. Merlin picked "I'll test on my
-phone" (2026-11-19). Next: ask what he saw (speed with three rooms; she walks
-to the hall from the picker; looks up the stairs or sits by the door; Feed in
-the hall sends her to the kitchen). If smooth and he says "Go live": push
-`2e5dea2` (or later reviewed sha) to `main`, run "Deploy site", check
-`/version.json`, add a row to `MILESTONES.md`. Then step 2: climbing the
-stairs and the landing (a big job: plan first, wait for his OK).
+Phase 21, step 1b, the hall (`docs/phases/21-house.md`): **live since
+2026-11-19, build 494 (`2e5dea2`)**. Merlin said "Go live" without reporting
+a phone check: ask once whether three rooms run smoothly on his phone (the
+phase's stop rule: fix speed before the next step if it stutters).
+Next: step 2, climbing the stairs and the landing. A big job: look at 2 or 3
+similar apps, plan in plain words, list assumptions, wait for his OK.
 
 ## Done (commits c4dfd38 to 2e5dea2)
 - `dist/hall.js`: the room (front door, console and mirror, bench, runner,
@@ -25,7 +23,7 @@ stairs and the landing (a big job: plan first, wait for his OK).
   13 of 13, `npm run check` passes. Stills: `tools/qa/hall-look.mjs`.
 
 ## Left
-- Merlin's phone check of build 494, then "Go live".
+- Merlin's phone check of the live hall (not reported yet).
 - Rough edge: on a wide screen, past the hall's east end the view shows dunes
   where the study's outer wall will be (step 5).
 - The deploy run sometimes fails with "No artifacts named github-pages"
