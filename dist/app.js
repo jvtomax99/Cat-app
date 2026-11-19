@@ -4606,7 +4606,7 @@ function updateCamera(dt) {
     const s = brain.justCrossed ? 1 : brain.toRoom ? -1 : 0;
     if (lane && s && brain.target) {
       const want = Math.atan2(lane.out.x * s, lane.out.z * s), k = wrapYaw(want - g.yaw) * (1 - Math.exp(-2.5 * dt));
-      g.yaw = wrapYaw(g.yaw + clamp(k, -1.1 * dt, 1.1 * dt));
+      g.yaw = wrapYaw(g.yaw + clamp(k, -.8 * dt, .8 * dt));
     }
   }
   // (Leaving the title screen, the camera glides out slowly.)
