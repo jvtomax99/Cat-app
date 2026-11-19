@@ -61,10 +61,11 @@ await page.evaluate(() => Object.assign(kitten.brain, {nextIdle: 0, nextShow: 1e
 const did = new Set(); let off = 0;
 for (let i = 0; i < 160; i++) {
   await step(10);
-  const s = await page.evaluate(() => { const b = kitten.brain; if (b.mode === 'idle' && b.nextIdle > kitten.clock + 1.5) b.nextIdle = kitten.clock + .5; return {id: kitten.placeId(kitten.place), x: b.pos.x, z: b.pos.z, act: b.activity, walk: !!b.target}; });
+  const s = await page.evaluate(() => { const b = kitten.brain; if (b.mode === 'idle' && b.nextIdle > kitten.clock + 1.5) b.nextIdle = kitten.clock + .5; return {id: kitten.placeId(kitten.place), x: b.pos.x, z: b.pos.z, y: b.elevation, act: b.activity, walk: !!b.target}; });
   if (s.id !== 'hall') break;
   did.add(s.walk ? 'walk' : s.act);
-  if (s.x < -5.5 || s.x > 1.0 || s.z > 4.45 || (s.z < .6 && Math.abs(s.x + 2.15) > .6)) off++;
+  if (s.y > .05) { did.add(s.y > 9.9 ? 'on the landing' : 'on the stairs'); continue; }
+  if (s.x < -5.5 || s.x > -1.0 || s.z > 4.45 || (s.z < .6 && Math.abs(s.x + 2.15) > .6)) off++;
   if (i === 60) await shot('2-hall-life');
 }
 ok('in the hall she keeps to its floor', off === 0, `${off} samples off it; she did: ${[...did].join(', ')}`);
