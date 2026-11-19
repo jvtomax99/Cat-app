@@ -1,6 +1,6 @@
 # Phase 20: One home, she walks between rooms
 
-Status: built on the preview branch, being tested (2026-11-18: steps 1 to 7; test `tools/qa/house-walk.mjs`). Plan approved by Merlin 2026-11-18 (food and water in the
+Status: preview (2026-11-19). Built steps 1 to 7; `tools/qa/house-walk.mjs` 12 of 12, `tools/qa/house.mjs` 12 of 12, `tools/qa/camera.mjs` 25 of 25; reviewer's 9 findings fixed. Not verified: a real phone. Known, from before this phase: the follow camera can swoop quickly in front of furniture (up to 2.8 m in .2 s). Plan approved by Merlin 2026-11-18 (food and water in the
 kitchen only; first version study + kitchen). Start after the Christmas
 tree (phase 06) is on the preview.
 
