@@ -1,17 +1,15 @@
-# Handoff (2026-11-19): what she does in the living room
+# Handoff (2026-11-19): living room things built, waiting on Merlin's look
 
 ## Goal and exact next step
-Phase 21, step 1 (`docs/phases/21-house.md`). Merlin picked the next job on
-2026-11-19: **things for her to do in the living room**: nap on the sofa,
-lie by the fire, knead the throw, watch the sea.
+Phase 21, step 1 (`docs/phases/21-house.md`). What she does in the living
+room is built (Merlin 2026-11-19: all four): `sofaNap`, `kneadThrow`,
+`fireside`, `seaWatch` in `dist/app.js`; `tools/qa/living-life.mjs` 24 of 24
+(plain and Christmas). On the preview, not live.
 
-Next step: read `living.layout()` in `dist/living.js` (perch spots are
-ready there) and `layout()` in `dist/kitchen.js`, which does not pass them
-on yet (the living room is part of the kitchen's place, its frame is the
-kitchen's z + 9.8, `K.front`). Then how app.js uses a place's perches and
-idle picks (the kitchen's counter, shelves, island are the pattern). Before
-building, tell Merlin in a few plain lines what she will do and where, and
-ask the one thing that is open: which of the four first, or all four.
+Next step: ask Merlin how it looks on his phone (and the speed of the joined
+space), fix what he finds, then step 2 of phase 21 (the hall and stairs) or
+"Go live", his choice. Offered, not decided: the mohair and sling chairs and
+the sofa's back as places for her (spots are ready in `living.layout()`).
 
 ## Done (on the preview, build 479, commit `90cc0ce`; not live)
 - The living room, joined to the kitchen (`tools/qa/join.mjs`, 13 of 13).
@@ -22,7 +20,6 @@ ask the one thing that is open: which of the four first, or all four.
   in app.js); the living half's fit starts from `frame().from`.
 
 ## Left in step 1
-- What she does in the living room (this handoff).
 - A real-phone speed check of the joined space (Merlin).
 - Rough edges: listed in `docs/phases/21-house.md`, step 1.
 
