@@ -773,6 +773,8 @@ function placeBowls() {
 }
 // Something to do by her bowl or fountain: in the kitchen now, or once
 // she's walked there.
+// A room's layout (worked out once, until its furniture changes).
+const layoutOf = p => p.layoutCache ??= p === room ? studyLayout() : p === kitchen ? withTree(p.layout()) : p.layout();
 const inKitchen = (fn, run = false) => place === kitchen ? fn() : walkToRoom('kitchen', fn, run);
 // To her bed: this room's, or (from the hall, which has none) her tent's.
 const toBed = then => place.noBed ? walkToRoom('kitchen', () => walkTo(CUSHION_SPOT, then, false, true)) : walkTo(CUSHION_SPOT, then, false, true);
@@ -887,7 +889,12 @@ function walkTo(point, then = null, run = false, anywhere = false) {
   const lane = laneAt(placeId(place), point), target = anywhere || lane ? point.clone() : onRug(point.clone());
   // Into or out of a lane, by its mouth: straight down the middle of it,
   // clear of what stands beside it.
-  const from = laneAt(placeId(place), brain.pos), mouth = (lane || from)?.mouth;
+  const from = laneAt(placeId(place), brain.pos);
+  // (From one doorway's lane to another's: out by the mouth of the one she's in first.)
+  if (from && lane && lane !== from && Math.hypot(brain.pos.x - from.mouth.x, brain.pos.z - from.mouth.z) > .15) {
+    walkTo(new THREE.Vector3(from.mouth.x, 0, from.mouth.z), () => walkTo(point, then, run, anywhere), run, true); return;
+  }
+  const mouth = (lane || from)?.mouth;
   if (lane !== from && mouth && Math.hypot(brain.pos.x - mouth.x, brain.pos.z - mouth.z) > .15 && Math.hypot(target.x - mouth.x, target.z - mouth.z) > .15) {
     walkTo(new THREE.Vector3(mouth.x, 0, mouth.z), () => walkTo(target, then, run, true), run, true); return;
   }
@@ -3844,7 +3851,7 @@ function goTo(id) {
   if (brain.mode !== 'idle') setMode('idle');
   Object.assign(brain, {perch: null, jump: null, target: null, pounce: null});
   usePlace(target);
-  brain.pos.copy(pet.sleeping ? CUSHION_SPOT : HOME);
+  brain.pos.copy(pet.sleeping && !place.noBed ? CUSHION_SPOT : HOME);
   brain.elevation = pet.sleeping ? place.bedTop : 0;
   brain.heading = pet.sleeping ? place.layoutCache.sleepHeading ?? .6 : 0;
   setActivity(pet.sleeping ? 'sleep' : 'sit');
@@ -4767,10 +4774,15 @@ function updateRoom(dt, t) {
     // (In the opening itself, both are drawn whole; a little either way of
     // it, so a camera hovering there doesn't flip between them.)
     const id = placeId(place);
+    // (Past a doorway's wall only counts beside that doorway: in the room
+    // beyond it, or in the opening itself. A wall's line runs on through
+    // other rooms: the hall's doorway's, through the study.)
     let camIn = null, between = false;
     for (const o of house.neighbours(id)) {
-      const past = house.pastDoor(house.doorBetween(id, o).here, camera.position);
-      if (past > .35) camIn = o; else if (Math.abs(past) < .3) camIn = id + '+' + o; else if (past > 0) between = true;
+      const D = house.doorBetween(id, o), S = D.here, C = camera.position, past = house.pastDoor(S, C);
+      const side = Math.abs((C.x - S.mid.x) * -S.out.z + (C.z - S.mid.z) * S.out.x), q = house.convert(C, id, o), B = layoutOf(roomOf(o)).camBox;
+      const beyond = q.x > B.x[0] - .6 && q.x < B.x[1] + .6 && q.z > B.z[0] - .6 && q.z < B.z[1] + .6, inDoor = side < D.width / 2 + .3;
+      if (past > .35 && (beyond || inDoor)) camIn = o; else if (Math.abs(past) < .3 && inDoor) camIn = id + '+' + o; else if (Math.abs(past) <= .35 && inDoor) between = true;
     }
     camIn ??= between && camRoom ? camRoom : id;
     const whole = camIn.split('+');
