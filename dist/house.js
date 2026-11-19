@@ -11,6 +11,10 @@ export const ROOMS = {
   // The kitchen's opening (x 3.8 to 6.2 in its back wall at z -4.2, .45
   // deep) meets the study's (z -.1 to 2.3 in its left wall at x -4.6).
   kitchen: {name: 'kitchen', at: {x: -9.25, z: -3.9}, ry: -Math.PI / 2},
+  // The hall lies along the kitchen's right wall (the house's z 6.1), a
+  // wall's thickness (.45) beyond it: its own x runs along that wall (east
+  // is +x, as in the house), its z from that wall (0) to the front door's.
+  hall: {name: 'hall', at: {x: -12.05, z: 6.55}, ry: 0},
 };
 
 // Each doorway, seen from each side, in that room's own frame:
@@ -21,11 +25,18 @@ export const ROOMS = {
 //   mouth: where the lane to the door leaves her usual floor;
 //   lane: the corridor she may walk from her floor to the opening and a
 //         little past it ({x0, x1, z0, z1}).
+// width, top: the opening's; deep: the wall's thickness there.
 export const DOORS = [{
-  rooms: ['room', 'kitchen'], width: 2.4,
+  rooms: ['room', 'kitchen'], width: 2.4, top: 5.4, deep: .45,
   room: {mid: {x: -4.825, z: 1.1}, out: {x: -1, z: 0}, spot: {x: -3.9, z: 1.1}, mouth: {x: -1.55, z: 1.1}, lane: {x0: -5.4, x1: -1.3, z0: .55, z1: 1.65}},
   // (Clear of the vacuum's dock on the left and the tree on the right.)
   kitchen: {mid: {x: 5.0, z: -4.425}, out: {x: 0, z: -1}, spot: {x: 5.0, z: -3.6}, mouth: {x: 5.0, z: -1.95}, lane: {x0: 4.45, x1: 5.55, z0: -5.0, z1: -1.85}},
+}, {
+  // The kitchen's right wall (x 10; opening z 3.75 to 6.15, past the
+  // painting) to the hall's back wall (z 0; opening x -3.35 to -.95).
+  rooms: ['kitchen', 'hall'], width: 2.4, top: 5.4, deep: .45,
+  kitchen: {mid: {x: 10.225, z: 4.95}, out: {x: 1, z: 0}, spot: {x: 9.4, z: 4.95}, mouth: {x: 9.1, z: 4.95}, lane: {x0: 9.0, x1: 10.8, z0: 4.4, z1: 5.5}},
+  hall: {mid: {x: -2.15, z: -.225}, out: {x: 0, z: -1}, spot: {x: -2.15, z: .6}, mouth: {x: -2.15, z: .95}, lane: {x0: -2.7, x1: -1.6, z0: -.8, z1: 1.05}},
 }];
 
 const turn = (p, a) => ({x: p.x * Math.cos(a) + p.z * Math.sin(a), z: -p.x * Math.sin(a) + p.z * Math.cos(a)});
@@ -51,6 +62,28 @@ export function placeOf(id, here) {
 export function doorBetween(from, to) {
   const d = DOORS.find(d => d.rooms.includes(from) && d.rooms.includes(to) && from !== to);
   return d ? {here: d[from], there: d[to], width: d.width} : null;
+}
+// The next room on the way from one room to another (the rooms hang
+// together by their doorways; null if there's no way).
+export function nextRoom(from, to) {
+  if (from === to) return null;
+  const seen = new Set([to]), queue = [to];
+  while (queue.length) {
+    const r = queue.shift();
+    for (const n of neighbours(r)) {
+      if (n === from) return r;
+      if (!seen.has(n)) { seen.add(n); queue.push(n); }
+    }
+  }
+  return null;
+}
+// A doorway's opening seen from one of its rooms, in that room's frame:
+// the four corners of the face a given way through the wall (k = -1: this
+// room's face; 1: the far room's), going round.
+export function opening(id, other, k) {
+  const d = DOORS.find(d => d.rooms.includes(id) && d.rooms.includes(other)), S = d[id], h = d.width / 2;
+  const cx = S.mid.x + S.out.x * k * d.deep / 2, cz = S.mid.z + S.out.z * k * d.deep / 2, ax = -S.out.z * h, az = S.out.x * h;
+  return [[cx - ax, 0, cz - az], [cx + ax, 0, cz + az], [cx + ax, d.top, cz + az], [cx - ax, d.top, cz - az]];
 }
 // The rooms a room has a doorway to.
 export const neighbours = id => DOORS.filter(d => d.rooms.includes(id)).map(d => d.rooms.find(r => r !== id));

@@ -28,6 +28,8 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // with the opening to her study in the back wall between x = 3.8 and 6.2.
 const K = {
   back: -4.2, left: -6, right: 10, front: 9.8, door: [3.8, 6.2], doorTop: 5.4, wallH: 9.5,
+  // (The doorway to the hall, in the right wall: house.js has the same.)
+  hallDoor: [3.75, 6.15],
   counter: 2.2, counterFront: -2.72, shelf1: 4.1, shelf2: 5.5, shelfX: [-5.2, 3.4], shelfD: .9,
   island: {x0: -3.9, x1: 1.5, z0: -.55, z1: 1.95, top: 2.25},
   // (Her tent stands in the living room, by the glazing; living.js has its place.)
@@ -181,7 +183,11 @@ export class Kitchen {
     wall(d0 - K.left, H, (K.left + d0) / 2, H / 2, K.back, 0);
     wall(d1 - d0, H - K.doorTop, (d0 + d1) / 2, (H + K.doorTop) / 2, K.back, 0);
     wall(K.right - d1, H, (d1 + K.right) / 2, H / 2, K.back, 0);
-    wall(14, H, K.right, H / 2, 2.8, -Math.PI / 2);
+    // The right wall, with the doorway to the hall (house.js) past the painting.
+    const [h0, h1] = K.hallDoor;
+    wall(h0 - K.back, H, K.right, H / 2, (K.back + h0) / 2, -Math.PI / 2);
+    wall(h1 - h0, H - K.doorTop, K.right, (H + K.doorTop) / 2, (h0 + h1) / 2, -Math.PI / 2);
+    wall(K.front - h1, H, K.right, H / 2, (h1 + K.front) / 2, -Math.PI / 2);
     // (And up past its top: the sky beyond the living room's far end would show over it.)
     wall(14, 30, K.right, H + 15, 2.8, -Math.PI / 2);
     // (No front wall: the living room opens off the kitchen there.)
@@ -203,7 +209,12 @@ export class Kitchen {
     // A slim limestone skirting.
     const skirt = new THREE.MeshStandardMaterial({color: '#d8ccb6', roughness: .6});
     this.box(d0 - K.left, .14, .04, (K.left + d0) / 2, .07, K.back + .02, skirt, this.group, {cast: false});
-    this.box(.04, .14, 14, K.right - .02, .07, 2.8, skirt, this.group, {cast: false});
+    this.box(.04, .14, h0 - K.back, K.right - .02, .07, (K.back + h0) / 2, skirt, this.group, {cast: false});
+    this.box(.04, .14, K.front - h1, K.right - .02, .07, (h1 + K.front) / 2, skirt, this.group, {cast: false});
+    // (The hall doorway's reveals and soffit.)
+    for (const z of [h0, h1]) { const r = this.mesh(new THREE.PlaneGeometry(T, K.doorTop), reveal, this.group, {cast: false}); r.position.set(K.right + T / 2, K.doorTop / 2, z); r.rotation.y = z === h0 ? 0 : Math.PI; }
+    const soffit2 = this.mesh(new THREE.PlaneGeometry(T, h1 - h0), reveal, this.group, {cast: false});
+    soffit2.position.set(K.right + T / 2, K.doorTop, (h0 + h1) / 2); soffit2.rotation.x = Math.PI / 2;
   }
 
   // Floor-to-ceiling black steel glazing with a pair of garden doors in the
@@ -1037,7 +1048,7 @@ export class Kitchen {
           box(I.x0, I.x1, I.z0, I.z1, baseH, I.top),
           box(K.left, 3.6, K.back, K.counterFront, 0, K.counter, 'counter'),
           box(2.84, 3.46, -2.72, -2.52, 0, .34),
-          box(K.left - .5, K.left + .12, K.back, K.front, 0, K.wallH), box(K.right - .05, K.right + .5, K.back, K.front, 0, K.wallH),
+          box(K.left - .5, K.left + .12, K.back, K.front, 0, K.wallH), box(K.right - .05, K.right + .5, K.back, K.hallDoor[0], 0, K.wallH), box(K.right - .05, K.right + .5, K.hallDoor[1], K.front, 0, K.wallH),
           box(K.left, K.door[0], K.back - .5, K.back + .05, 0, K.wallH), box(K.door[1], K.right, K.back - .5, K.back + .05, 0, K.wallH),
           cyl(FOUNTAIN.x, FOUNTAIN.z, .55, 0, .23), cyl(FOUNTAIN.x, FOUNTAIN.z, .23, .23, .38), cyl(BOWL.x, BOWL.z, .37, 0, .16),
         ];

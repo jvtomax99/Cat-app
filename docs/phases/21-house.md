@@ -73,6 +73,20 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
 1b. **The hall.** A third room in `ROOMS` and a second doorway in `DOORS`
    (`dist/house.js`); whatever in `app.js` still assumes two rooms
    (`joinRooms`, `cullThroughDoor`, "the other room") becomes a list.
+   *Built 2026-11-19 (`dist/hall.js`, `tools/qa/hall.mjs`; Merlin: hall
+   first, the stairs as scenery, climbing next). The doorway is in the
+   kitchen's right wall at its z 3.75 to 6.15, past the painting (the
+   blueprint's spot is where the painting hangs); the front door faces it.
+   The stairs are a dog-leg along the hall's length (lower flight east along
+   the front wall, half landing at the east end, upper flight back west
+   along the kitchen's wall to y 10), not two flights across the hall as
+   drawn: across, there is no floor to step on to them from. Console and
+   mirror, bench, runner, lantern, a fig under the upper flight. She walks
+   there room by room (study, kitchen, hall), looks up the stairs, sits on
+   the mat by the front door; no bed there (a nap takes her to the
+   kitchen's). The room picker has "The hall". Still to do: a phone speed
+   check (Merlin). Not yet: her two hall things (sit on the stairs, race up
+   and down), which need step 2.*
 2. **Stairs and landing.** Floors at different heights (`groundAt`), her
    feet on the steps, the camera following her up.
 3. **Bathroom** with its three things to do.
@@ -96,7 +110,8 @@ kitchen; saves from before still load.
 - Living room: x -33.05 to -19.05, z -9.9 to 6.1, one storey with its own
   roof; no wall to the kitchen (the kitchen's front wall goes).
 - Upper floor at y 10 (kitchen walls are 9.5, the study's 12: trim to 10).
-- Stairs: two flights of 10 steps with a half landing, at the hall's east end.
+- Stairs: two flights of 10 steps with a half landing, at the hall's east end
+  (built as a dog-leg along the hall: `H.stairs` in `dist/hall.js`).
 
 ## Risks
 - The living room is the heaviest room to draw (much glazing with the
