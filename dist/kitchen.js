@@ -180,6 +180,8 @@ export class Kitchen {
     wall(d1 - d0, H - K.doorTop, (d0 + d1) / 2, (H + K.doorTop) / 2, K.back, 0);
     wall(K.right - d1, H, (d1 + K.right) / 2, H / 2, K.back, 0);
     wall(14, H, K.right, H / 2, 2.8, -Math.PI / 2);
+    // (And up past its top: the sky beyond the living room's far end would show over it.)
+    wall(14, 30, K.right, H + 15, 2.8, -Math.PI / 2);
     // (No front wall: the living room opens off the kitchen there.)
     // The window wall: plaster round the tall window.
     const wz0 = -3.7, wz1 = 3.9, wy0 = 0, wy1 = 8.0;

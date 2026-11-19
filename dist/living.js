@@ -208,6 +208,8 @@ export class LivingRoom {
     };
     // The wall with the fire and the sideboard.
     this.southWall = wall(L.end - L.join, H, L.south, H / 2, (L.join + L.end) / 2, -Math.PI / 2);
+    // (And up past its top: no ceiling hides the sky over it.)
+    wall(L.end - L.join, 30, L.south, H + 15, (L.join + L.end) / 2, -Math.PI / 2);
     // The sea side: plaster at each end of the glazing and above it; and up
     // past its top (no ceiling hides the sky there), as in the kitchen.
     const [s0, s1] = L.seaGlass, [e0, e1] = L.endGlass, G = L.glassTop;

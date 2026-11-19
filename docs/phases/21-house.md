@@ -47,15 +47,15 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    phase 20 left for it): one open space, the tree moved to the join.
    The furniture is built in code like the kitchen's; the picture sets
    the mood and materials, not a photo likeness.
-   *Built on its own first (2026-11-18): `dist/living.js`, seen at
-   `dist/living-check.html`, stills by `tools/qa/living.mjs`. Still to do in
-   this step once phase 20 is done: join it (one entry in `ROOMS`; kitchen's
-   front wall goes; one floor and one sea terrace for both; the tree to the
-   join; her tent and fountain moved for real), then what she does there.
-   Weight on its own: about 150 draw calls and 67k triangles a frame
-   (indoors 103 and 36k; the two terraces 48 and 31k). Merlin tried the
-   room on its own on his phone, 2026-11-18: "the speed is good" (the
-   first real-phone check; the joined rooms are still unmeasured).*
+   *Built on its own first (2026-11-18: `dist/living.js`, seen at
+   `dist/living-check.html`; Merlin tried it on his phone: "the speed is
+   good"). Joined 2026-11-19 (`tools/qa/join.mjs`): the kitchen's front wall
+   is gone, she walks the whole space, her tent and fountain stand by the
+   living room's glazing, one floor, plaster and sea terrace for both. It is
+   part of the kitchen's place, not a third room (see ARCHITECTURE,
+   `living.js`). Still to do in this step: the Christmas tree to the join;
+   what she does there (sofa, fire, throw, watching the sea); a phone speed
+   check of the joined space.*
 1b. **The hall.** A third room in `ROOMS` and a second doorway in `DOORS`
    (`dist/house.js`); whatever in `app.js` still assumes two rooms
    (`joinRooms`, `cullThroughDoor`, "the other room") becomes a list.
