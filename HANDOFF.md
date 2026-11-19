@@ -1,14 +1,14 @@
-# Handoff (2026-11-19): living room things built, waiting on Merlin's look
+# Handoff (2026-11-19): living room things live; next, phase 21 step 2
 
 ## Goal and exact next step
 Phase 21, step 1 (`docs/phases/21-house.md`). What she does in the living
 room is built (Merlin 2026-11-19: all four): `sofaNap`, `kneadThrow`,
 `fireside`, `seaWatch` in `dist/app.js`; `tools/qa/living-life.mjs` 24 of 24
-(plain and Christmas). On the preview, not live.
+(plain and Christmas). Live since 2026-11-19 (build 486, `9c37f1a`).
 
-Next step: ask Merlin how it looks on his phone (and the speed of the joined
-space), fix what he finds, then step 2 of phase 21 (the hall and stairs) or
-"Go live", his choice. Offered, not decided: the mohair and sling chairs and
+Next step: ask Merlin what he saw on his phone (the kneading, the speed of
+the joined space) and fix what he finds; then step 2 of phase 21 (the hall
+and stairs), confirmed with him first. Offered, not decided: the mohair and sling chairs and
 the sofa's back as places for her (spots are ready in `living.layout()`).
 
 ## Done before (build 479, commit `90cc0ce`; live since 2026-11-19, see MILESTONES.md)
@@ -34,7 +34,8 @@ None: the tree's place and her Christmas bed are in SPEC.md.
   background, with no short timeout. For a quick look, a throwaway script
   with `open()` from `tools/qa/lib.mjs` and one still takes 3 to 4 minutes.
 - In the fork a push does not publish: run the "Deploy site" workflow
-  (`pages.yml` on `main`), then check `/preview/version.json`.
+  (`pages.yml` on `main`), then check `/preview/version.json`. The same after
+  "Go live": a push to `main` does not start it either.
 
 ## Files to look at first
 `docs/phases/21-house.md`, `docs/ARCHITECTURE.md` (rows `living.js`,
