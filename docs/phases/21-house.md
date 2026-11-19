@@ -114,6 +114,13 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    live build (506), 2026-11-19: smooth.*
 3. **Bedroom** with its two things to do. (Merlin, 2026-11-19: bedroom
    before bathroom, since the bathroom is reached only through it.)
+   *Plan approved by Merlin 2026-11-19: over the kitchen at y 10, through
+   the landing's door (it opens now); big bed, window seat in the north
+   wall, wardrobe, rug, chaise, dresser, built in code; she naps on the bed
+   (a real nap spot) and watches from the window seat (the dark at night);
+   the kitchen hidden while the camera is upstairs, the bedroom hidden from
+   below; the bathroom's doorway in its east wall, shut until step 4;
+   "The bedroom" in the room picker. The duvet lump went to Later.*
 4. **Bathroom** with its three things to do.
 5. **Outside and the House view**: outer walls, roof, front door, tap a room.
 Stop rule: if a real phone stutters after a step, fix speed before the next.

@@ -288,6 +288,8 @@ bought models.
 - Sharing with the 1000-member group after the test group.
 - More rooms on the house plan (Merlin 2026-11-18): a living room in the
   kitchen's open front, then others, one per phase; stairs; a house map.
+- Mochi burrowing under the bedroom's duvet, a moving lump (offered with
+  the bedroom plan, Merlin 2026-11-19: later).
 
 ## Decisions
 - Nothing goes live without Merlin's "Go live"; one preview branch,
