@@ -930,6 +930,8 @@ function applyLevel() {
   LIMITS = L.limits; CAM_BOX = L.camBox; CAM_SOLIDS = L.camSolids; CAM_BLOCKS = L.camBlocks || [];
   if (view.mode === 'room') { view.glideUntil = clockNow + 3.4; CAMERA_VIEWS.room(); }
 }
+// Up on the landing or on the stairs (not the hall's floor, where the toy is).
+const offHallFloor = () => place === hall && hall && (hall.level === 'up' || hall.onStairs(brain.elevation));
 // The hall's floor at (x, z), for walkTo (a height just off 0 says
 // downstairs: see walkTo).
 const hallFloor = (x, z) => new THREE.Vector3(x, .1, z);
@@ -1820,6 +1822,7 @@ function nightZoomies() {
 // A shadow, a flicker, a speck only she can see: ears forward, the stalk,
 // the wiggle, the pounce, the swat; then a look round as if nothing happened.
 function shadowPounce() {
+  if (place === hall && hall.onStairs(brain.elevation)) return;
   const a = rand(0, Math.PI * 2), d = rand(1.3, 2.1);
   const spot = onRug(new THREE.Vector3(brain.pos.x + Math.sin(a) * d, 0, brain.pos.z + Math.cos(a) * d));
   if (spot.distanceTo(brain.pos) < .8) { nightZoomies(); return; }
@@ -2735,13 +2738,15 @@ function callTo(x, y) {
   endTrip();
   setPointer({clientX: x, clientY: y});
   const hit = new THREE.Vector3();
-  if (!ray.ray.intersectPlane(groundPlane, hit) || hit.x < LIMITS.x[0] || hit.x > LIMITS.x[1] || hit.z < LIMITS.z[0] || hit.z > LIMITS.z[1]) return;
+  // (Upstairs, the landing's floor.)
+  const up = place === hall && hall.level === 'up';
+  if (!ray.ray.intersectPlane(up ? landingPlane : groundPlane, hit) || hit.x < LIMITS.x[0] || hit.x > LIMITS.x[1] || hit.z < LIMITS.z[0] || hit.z > LIMITS.z[1]) return;
   const r = host.getBoundingClientRect();
   pawAt(x - r.left, y - r.top);
   if (pet.sleeping) { twitchEar(undefined, .6); return; }
   // (Not in the middle of a drink at the tap, a stolen bite, a stalk or a ride: those have to finish.)
   if (!['idle', 'solo'].includes(brain.mode) || busyBody()) { say(pick(['In a minute!', 'Busy! One sec.']), 2000); return; }
-  const to = onRug(hit.setY(0));
+  const to = onRug(hit.setY(up ? hall.up : 0));
   if (Math.hypot(to.x - brain.pos.x, to.z - brain.pos.z) < .4 && !brain.perch) { glanceAt(camera.position, 2); slowBlink(); return; }
   brain.mode = 'idle';
   brain.nextIdle = clockNow + 9;
@@ -2868,6 +2873,8 @@ function act(a, opts = {}) {
 // Play: steer the toy; the kitten chases it, wiggles and pounces.
 const PLAY_SECONDS = 25;
 function startPlay() {
+  // (The toy lives on the hall's floor: down to it first.)
+  if (offHallFloor()) { climbTo(false, () => { if (brain.mode === 'idle') startPlay(); }); return; }
   learned('ball');
   setMode('play', PLAY_SECONDS);
   setActivity('play');
@@ -2885,6 +2892,7 @@ function startPlay() {
 // Solo play: when she's in the mood, she bats the ball around the rug by
 // herself, chasing it, swatting it and now and then pouncing.
 function startSolo() {
+  if (offHallFloor()) { climbTo(false, () => { if (brain.mode === 'idle') startSolo(); }); return; }
   setMode('solo', rand(14, 24));
   setActivity('play');
   brain.stillSince = clockNow;
@@ -3058,7 +3066,7 @@ const view = {
   zoomHeld: false, fling: null, shown: 7, auto: 7, far: 0, farY: 0, push: 0, home: null,
 };
 const pointer = new THREE.Vector2(), ray = new THREE.Raycaster();
-const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -.13);
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -.13), landingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -10.13);
 const gazePlane = new THREE.Plane();
 let gesture = null;
 const touches = new Map();
@@ -3319,7 +3327,7 @@ function pointUnder(x, y) {
   zoomOnCat = !!hit;
   if (hit) return zoomPt.copy(hit.point);
   // (Above the horizon there is no floor: straight in.)
-  if (!ray.ray.intersectPlane(groundPlane, zoomPt) || zoomPt.distanceTo(camera.position) > 40) return null;
+  if (!ray.ray.intersectPlane(place === hall && hall.level === 'up' ? landingPlane : groundPlane, zoomPt) || zoomPt.distanceTo(camera.position) > 40) return null;
   zoomPt.x = clamp(zoomPt.x, LIMITS.x[0] + .4, LIMITS.x[1] - .4);
   zoomPt.z = clamp(zoomPt.z, LIMITS.z[0] + .4, LIMITS.z[1] - .4);
   return zoomPt;
@@ -4042,7 +4050,9 @@ $('#place-options').addEventListener('click', e => {
   $('#decor-dialog').close();
   const to = id === 'study' ? 'room' : id;
   if (pickedPlace() === id && !brain.toRoom) return;
-  if (to === 'landing') callToLanding(); else callToRoom(to);
+  if (to === 'landing') callToLanding();
+  else if (to === 'hall' && offHallFloor() && !pet.sleeping) { toast(`Calling ${pet.name} down to the hall…`); climbTo(false, () => setActivity('sit'), true); }
+  else callToRoom(to);
 });
 // The room picker calls her: she walks there through the doorway (no jump).
 // (Asleep, she stays put; whatever she's doing ends first.)

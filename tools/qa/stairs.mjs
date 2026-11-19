@@ -37,6 +37,13 @@ while (frames < 2400) {
 check('she reaches the landing', s.y > 9.9 && s.level === 'up', JSON.stringify(s));
 check('going up she never drops more than a little', maxDrop < .15, `largest drop ${maxDrop.toFixed(2)}`);
 check('her planted paws stand on the steps', worstPaw < .03, `worst ${worstPaw.toFixed(3)}`);
+// Along the gallery, at its edge over the stairwell, facing the front wall
+// and back: she stays on the landing's floor.
+await page.evaluate(() => kitten.walkTo(new kitten.cat.root.position.constructor(4, 10, 3.1), () => { kitten.brain.faceAt = new kitten.cat.root.position.constructor(4, 0, 9); kitten.setActivity('sit', 30); }));
+let lowest = 99; frames = 0;
+while (frames < 600) { await step(10); frames += 10; s = await state(); lowest = Math.min(lowest, s.y); if (s.act === 'sit' && frames > 100) break; }
+await step(30); s = await state(); lowest = Math.min(lowest, s.y);
+check('on the gallery, at the stairwell\'s edge, she stays on the landing', lowest > 9.95 && s.level === 'up' && s.x > 3, `lowest ${lowest}, ${JSON.stringify(s)}`);
 await page.evaluate(() => kitten.CAMERA_VIEWS.room());
 await step(60); await shot('landing-room');
 await page.evaluate(() => kitten.CAMERA_VIEWS.follow(kitten.view.goal.yaw));
