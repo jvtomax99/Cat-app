@@ -58,17 +58,19 @@ ok('a note says where she went', /went to the hall/.test(r.end.toast), `"${r.end
 
 // 2. What she does in the hall: on its floor, nothing breaks.
 await page.evaluate(() => Object.assign(kitten.brain, {nextIdle: 0, nextShow: 1e9, nextTrip: 1e9, mode: 'idle'}));
-const did = new Set(); let off = 0;
+const did = new Set(), offAt = []; let off = 0;
 for (let i = 0; i < 160; i++) {
   await step(10);
   const s = await page.evaluate(() => { const b = kitten.brain; if (b.mode === 'idle' && b.nextIdle > kitten.clock + 1.5) b.nextIdle = kitten.clock + .5; return {id: kitten.placeId(kitten.place), x: b.pos.x, z: b.pos.z, y: b.elevation, act: b.activity, walk: !!b.target}; });
   if (s.id !== 'hall') break;
   did.add(s.walk ? 'walk' : s.act);
   if (s.y > .05) { did.add(s.y > 9.9 ? 'on the landing' : 'on the stairs'); continue; }
-  if (s.x < -5.5 || s.x > -1.0 || s.z > 4.45 || (s.z < .6 && Math.abs(s.x + 2.15) > .6)) off++;
+  // (Stepping on to the first tread, before her body rises: the stairs' lane.)
+  if (s.x > -1.4 && s.x < .2 && s.z > 3.3 && s.z < 4.4) continue;
+  if (s.x < -5.5 || s.x > -1.0 || s.z > 4.45 || (s.z < .6 && Math.abs(s.x + 2.15) > .6)) { off++; offAt.push(`${s.x.toFixed(2)},${s.z.toFixed(2)}`); }
   if (i === 60) await shot('2-hall-life');
 }
-ok('in the hall she keeps to its floor', off === 0, `${off} samples off it; she did: ${[...did].join(', ')}`);
+ok('in the hall she keeps to its floor', off === 0, `${off} samples off it (${offAt.slice(0, 5).join(' ')}); she did: ${[...did].join(', ')}`);
 ok('she is still in the hall after pottering about', (await snap()).id === 'hall');
 
 // 3. Hungry in the hall: she eats at the kitchen bowl.
