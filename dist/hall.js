@@ -509,20 +509,21 @@ export class Hall {
     return this.clampFloor(V(rand(FLOOR.x0 + pad, FLOOR.x1 - pad), 0, rand(KEEP_OUT.z1, FLOOR.z1 - pad)));
   }
   pushOut(v) { return v; }
-  // (Round the console's corner when it lies between: by the nearest one.)
+  // (Round the console's corner when it lies between: by the nearest one.
+  // The whole way, the goal last: walkTo follows a route of two or more.)
   route(from, to) {
     if (this.level === 'up') {
       // (Between the landing and the gallery: round the stairwell's corner.)
       const F = UPFLOOR, c = V(F.x1 - .2, 0, (F.gz0 + F.z1) / 2), g = p => p.x > F.x1 + .05;
-      return g(from) !== g(to) && Math.min(from.z, to.z) < F.gz0 && c.distanceTo(from) > .2 && c.distanceTo(to) > .2 ? [c] : [];
+      return g(from) !== g(to) && Math.min(from.z, to.z) < F.gz0 && c.distanceTo(from) > .2 && c.distanceTo(to) > .2 ? [c, to.clone()] : [];
     }
     const R = KEEP_OUT, inX = p => p.x > R.x0 - .01 && p.x < R.x1 + .01;
     if (Math.min(from.z, to.z) >= R.z1 - .01 || (from.x <= R.x0 && to.x <= R.x0) || (from.x >= R.x1 && to.x >= R.x1)) return [];
-    if (!inX(from) && !inX(to) && Math.max(from.z, to.z) < R.z1) return [V(from.x < to.x ? R.x0 : R.x1, 0, R.z1 + .05), V(from.x < to.x ? R.x1 : R.x0, 0, R.z1 + .05)].filter(p => p.distanceTo(from) > .2);
+    if (!inX(from) && !inX(to) && Math.max(from.z, to.z) < R.z1) return [V(from.x < to.x ? R.x0 : R.x1, 0, R.z1 + .05), V(from.x < to.x ? R.x1 : R.x0, 0, R.z1 + .05)].filter(p => p.distanceTo(from) > .2).concat([to.clone()]);
     const low = from.z < to.z ? from : to;
     if (inX(low) || low.z >= R.z1) return [];
     const c = V(low.x <= R.x0 ? R.x0 : R.x1, 0, R.z1 + .05);
-    return c.distanceTo(from) > .2 && c.distanceTo(to) > .2 ? [c] : [];
+    return c.distanceTo(from) > .2 && c.distanceTo(to) > .2 ? [c, to.clone()] : [];
   }
 
   update(dt, t, night, {camera = null, lamp = null, away = false} = {}) {
