@@ -233,6 +233,7 @@ Build order and status: `docs/ROADMAP.md` (a brief per phase in
 decor, Miso, phase 08 (app screens), phase 09 (test group).
 
 ## Planned: the house (phase 21, Merlin 2026-11-18)
+(2026-11-19: the living room is built and joined to the kitchen as one open space, on the preview. Merlin: its rosewood table and mohair chair stay as built in code, no bought models. Her tent and fountain stand there, her bowl stays in the kitchen.)
 After phase 20 (One home). A living room the kitchen opens into (first;
 reference picture `docs/house/reference-living-room.jpg`), a hall with stairs, an upstairs landing, a
 bedroom and a bathroom, a roof, and a House view of the whole house (tap a
