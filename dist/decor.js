@@ -617,7 +617,7 @@ export function applyKitchenDecor(kitchen, name) {
   // (Its corner first: the tent away, her bed, fountain and bowl moved, so
   // the tree's falling baubles meet them where they now stand.)
   kitchen.setTree?.(christmas);
-  if (christmas) kitchen.xmasTree ??= buildChristmasTree(kitchen.group, {solids: [kitchen.islandSolid, kitchen.counterSolid], circles: kitchen.roundSolids, bow: bowGeometry(kitchen)});
+  if (christmas) kitchen.xmasTree ??= buildChristmasTree(kitchen.group, {solids: [kitchen.islandSolid, kitchen.counterSolid, ...kitchen.livingSolids], circles: kitchen.roundSolids, bow: bowGeometry(kitchen)});
   if (kitchen.xmasTree) kitchen.xmasTree.root.visible = christmas;
   for (const [part, g] of Object.entries(parts)) g.visible = part === 'shared' ? autumn : part === name;
   kitchen.orchid.visible = name === 'classic';

@@ -708,6 +708,12 @@ export class LivingRoom {
     }
     return V(6.4, 0, 7.2);
   }
+  // Things that stand on this floor only for a while (the Christmas tree's
+  // foot and its open box, from the kitchen's setTree): she walks round them.
+  setExtras(list) {
+    for (const o of this.extras ?? []) { const i = OBSTACLES.indexOf(o); if (i >= 0) OBSTACLES.splice(i, 1); }
+    this.extras = list.map(o => ({...o})); OBSTACLES.push(...this.extras);
+  }
   // Is this round thing here (the tent and fountain only once adopted)?
   blocks(c) { return c === TENT ? !!this.bed : c === FOUNTAIN ? !!this.fountain : true; }
   // In the corridor along the tent's door axis, the way into the bed.

@@ -53,9 +53,14 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    is gone, she walks the whole space, her tent and fountain stand by the
    living room's glazing, one floor, plaster and sea terrace for both. It is
    part of the kitchen's place, not a third room (see ARCHITECTURE,
-   `living.js`). Still to do in this step: the Christmas tree to the join;
-   what she does there (sofa, fire, throw, watching the sea); a phone speed
-   check of the joined space.*
+   `living.js`). The Christmas tree moved to the join 2026-11-19, sea side, her round bed
+   beside it; fountain and bowl stay put (`tools/qa/tree.mjs`). Still to do
+   in this step: what she does there (sofa, fire, throw, watching the sea:
+   `living.layout()` has perch spots ready, the kitchen's `layout()` does
+   not pass them on yet); a phone speed check of the joined space (Merlin).
+   Known rough edges: with her in the living room the kitchen's furniture
+   has no sun shadows (`sunOver` in app.js); glance targets in app.js still
+   point near the kitchen's origin.*
 1b. **The hall.** A third room in `ROOMS` and a second doorway in `DOORS`
    (`dist/house.js`); whatever in `app.js` still assumes two rooms
    (`joinRooms`, `cullThroughDoor`, "the other room") becomes a list.

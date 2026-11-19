@@ -1,6 +1,7 @@
-// Mochi's Christmas tree, in the kitchen's back right corner, right of the
-// doorway to her study (the room was widened for it: Merlin, 2026-11-18; while
-// it's up her tent is put away for a round bed by the wall, kitchen.setTree). A tall, full fir, warm white fairy lights all
+// Mochi's Christmas tree, where the kitchen and the living room meet, on
+// the sea side (Merlin, 2026-11-19; before that in the kitchen's back right
+// corner). While it's up her tent is put away for a round bed beside it
+// (kitchen.setTree). A tall, full fir, warm white fairy lights all
 // through it, baubles in gold, champagne, bronze, mercury silver and deep
 // red, big burgundy velvet bows, a gold star on top, a cream knitted skirt
 // with a few baubles lying on it, and an open box she sits in. All built in
@@ -15,26 +16,27 @@ import {rng, canvasTexture, lathe} from './room.js';
 
 // Where it stands and where she goes in it, in the kitchen's frame (plain
 // numbers, so the kitchen's layout can name her perches before it's built).
-// The camera looks from the open front (+z): her places are on the tree's
-// front-left, the side she climbs from (turned by RY, below).
-// (RY turns all of her side of it round together, should it move again.)
-const TX = 8.1, TZ = -1.4, RY = 0, at = (a, d) => [TX + Math.sin(a + RY) * d, TZ + Math.cos(a + RY) * d];
+// It stands past the seam, on the living room's floor, so the Room view
+// looks at it from the kitchen (-z): RY turns all of her side of it round
+// together to face that way, toward the kitchen and the middle of the room.
+const TX = -2.5, TZ = 10.8, RY = Math.PI, at = (a, d) => [TX + Math.sin(a + RY) * d, TZ + Math.cos(a + RY) * d];
 export const TREE = {
   x: TX, z: TZ, ry: RY, base: .9, top: 7.5, radius: 1.75,
-  walls: {x1: 9.92, z0: -4.1}, // (the right wall and the back wall: no bough goes through them)
+  // (The walls of the open space, kitchen and living room: no bough goes
+  // through them and a fallen bauble stays inside.)
+  walls: {x0: -5.9, x1: 9.92, z0: -4.1, z1: 23.3},
   // Up the tree in stages, lying across its front, her head to the right
-  // and a paw hanging down, as in the picture (side on to the camera: her
-  // faces are not turned by RY).
+  // and a paw hanging down, as in the picture (side on to the camera; her
+  // faces turn with RY like the rest).
   perches: {
-    treeLow: {spot: at(-.75, 1.15), top: 1.9, face: Math.PI / 2 + .3},
-    treeMid: {spot: at(-.5, .9), top: 3.3, face: Math.PI / 2 + .15},
-    treeHigh: {spot: at(-.35, .65), top: 4.6, face: Math.PI / 2 + .3},
-    treeTop: {spot: at(-.25, .36), top: 5.8, face: Math.PI / 2 + .4},
+    treeLow: {spot: at(-.75, 1.15), top: 1.9, face: Math.PI / 2 + .3 + RY},
+    treeMid: {spot: at(-.5, .9), top: 3.3, face: Math.PI / 2 + .15 + RY},
+    treeHigh: {spot: at(-.35, .65), top: 4.6, face: Math.PI / 2 + .3 + RY},
+    treeTop: {spot: at(-.25, .36), top: 5.8, face: Math.PI / 2 + .4 + RY},
   },
   climbFrom: at(-1.0, 2.25),
-  // On the skirt under the low boughs at its front (its left is hard by
-  // the island), looking out at you.
-  hide: at(-.9, 1.2), hideFace: 0,
+  // On the skirt under the low boughs at its front, looking out at you.
+  hide: at(-.9, 1.2), hideFace: RY,
   // The open box on the skirt at its right, and where she hops in from.
   box: {spot: at(.1, 1.55), ry: Math.PI / 2 + .15 + RY - .45, face: .3 + RY - .45}, boxFrom: at(-.647, 1.53),
   // The first look: from out on the floor, then up close to sniff.
@@ -149,7 +151,7 @@ export function buildChristmasTree(parent, {solids = [], circles = [], bow = nul
   const Y = V(0, 1, 0), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
 
   // Keep-out: the right wall and the back wall (the boughs there are shorter).
-  const blocked = p => p.x + TREE.x > TREE.walls.x1 || p.z + TREE.z < TREE.walls.z0;
+  const blocked = p => p.x + TREE.x > TREE.walls.x1 || p.x + TREE.x < TREE.walls.x0 || p.z + TREE.z < TREE.walls.z0 || p.z + TREE.z > TREE.walls.z1;
   const bodies = bodyLines();
   const nearHer = (p, pad) => bodies.some(b => segDist(p, b) < pad);
 
@@ -478,13 +480,13 @@ export function buildChristmasTree(parent, {solids = [], circles = [], bow = nul
           g.rotation.z -= D.vel.x / L.rad * dt; g.rotation.x += D.vel.z / L.rad * dt;
           if (Math.hypot(D.vel.x, D.vel.z) < .03 && D.vel.y === 0) D.rest = true;
         }
-        // (The kitchen's walls, the back counter, the island, the tent and
+        // (The walls of the open space, the back counter, the island, the sofa and
         // the other round things, the tree's stand and the open box.)
         const wx = g.position.x + TREE.x, wz = g.position.z + TREE.z, rad = L.rad;
-        if (wx < -5.9 + rad) { g.position.x = -5.9 + rad - TREE.x; D.vel.x = Math.abs(D.vel.x) * .5; }
+        if (wx < TREE.walls.x0 + rad) { g.position.x = TREE.walls.x0 + rad - TREE.x; D.vel.x = Math.abs(D.vel.x) * .5; }
         if (wx > TREE.walls.x1 - rad) { g.position.x = TREE.walls.x1 - rad - TREE.x; D.vel.x = -Math.abs(D.vel.x) * .5; }
-        if (wz < -4.1 + rad) { g.position.z = -4.1 + rad - TREE.z; D.vel.z = Math.abs(D.vel.z) * .5; }
-        if (wz > 9) { g.position.z = 9 - TREE.z; D.vel.z = -Math.abs(D.vel.z) * .5; }
+        if (wz < TREE.walls.z0 + rad) { g.position.z = TREE.walls.z0 + rad - TREE.z; D.vel.z = Math.abs(D.vel.z) * .5; }
+        if (wz > TREE.walls.z1 - rad) { g.position.z = TREE.walls.z1 - rad - TREE.z; D.vel.z = -Math.abs(D.vel.z) * .5; }
         for (const C of circles) {
           if (g.position.y > C.top + rad) continue;
           tmp.set(g.position.x + TREE.x - C.x, 0, g.position.z + TREE.z - C.z);

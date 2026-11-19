@@ -32,9 +32,11 @@ const K = {
   island: {x0: -3.9, x1: 1.5, z0: -.55, z1: 1.95, top: 2.25},
   // (Her tent stands in the living room, by the glazing; living.js has its place.)
   tent: {x: LIVING.tent.x, z: 9.8 + LIVING.tent.z, ry: LIVING.tent.ry},
-  // At Christmas the tree stands right of the doorway and the tent is put
-  // away for a round bed beside it; her fountain and bowl stay put.
-  xmas: {bed: {x: 8.4, z: 1.7}, fountain: {x: 3.0, z: 1.55, ry: .3}, bowl: {x: 4.55, z: 2.6, ry: -.5}},
+  // At Christmas the tree stands where this room meets the living room,
+  // on the sea side, and the tent is put away for a round bed beside it,
+  // by the window wall; her fountain and bowl stay where they always are
+  // (Merlin, 2026-11-19).
+  xmas: {bed: {x: -4.4, z: 9.5}},
 };
 // Where she may walk: the open floor, keeping clear of the island.
 // (Her centre .6 from the window wall and the counter: her head turned
@@ -56,11 +58,11 @@ const VAC_FLOOR = {x0: -5.4, x1: 9.5, z0: -2.25, z1: 4.3}, VAC_FLOOR_RIDE = {x0:
 const TENT = {x: K.tent.x, z: K.tent.z, r: 1.55};
 // (The vacuum's moves with it.)
 const VAC = {x: 3.15, z: -2.0, r: .7};
-// (Her fountain and bowl move at Christmas: setTree.)
 const FOUNTAIN = {...FOUNTAIN_HOME, r: .9}, BOWL = {x: 4.55, z: 2.6, r: .7, ry: -.5};
 const OBSTACLES = [FOUNTAIN, BOWL, TENT, VAC];
 // At Christmas: the tree's foot and the open box (setTree).
-const TREE_FOOT = {x: TREE.x, z: TREE.z, r: TREE.ring}, TREE_BOX = {x: TREE.box.spot[0], z: TREE.box.spot[1], r: .65};
+// (They stand past the seam: in the living room's frame, for its floor.)
+const TREE_THINGS = [{x: TREE.x, z: TREE.z - K.front, r: TREE.ring}, {x: TREE.box.spot[0], z: TREE.box.spot[1] - K.front, r: .65}];
 const VAC_HOME = V(3.15, 0, -2.0);
 // The dock, for the vacuum with her aboard: her rear hangs .8 behind it.
 const DOCK = {x: 3.15, z: -2.62, r: .55};
@@ -1047,10 +1049,10 @@ export class Kitchen {
       // it, clear of the canvas) and her face to the doorway; a little
       // forward of the middle, so the tail has room.
       // (In the round bed at Christmas: curled up in the middle, facing the room.)
-      sleepHeading: this.treeOn ? -.8 : K.tent.ry,
+      sleepHeading: this.treeOn ? Math.PI - .8 : K.tent.ry,
       bedOffset: this.treeOn ? null : V(Math.sin(K.tent.ry) * .15, 0, Math.cos(K.tent.ry) * .15),
       // Awake in the tent she faces out of the doorway (where it's tallest).
-      bedFace: this.treeOn ? -.8 : K.tent.ry,
+      bedFace: this.treeOn ? Math.PI - .8 : K.tent.ry,
       limits: {dist: [1.1, 16], pitch: [.04, 1.25], x: [-5.6, K.right - .6], z: [-3.6, K.front + LIVING.end - .6], y: [.08, 5.8]},
       camBox: {x: [-5.8, K.right - .2], y: [.2, 9.2], z: [-3.9, K.front + LIVING.end - .2]}, // through the living room to its far glazing
       camSolids: [[-2.6, .7, 1.45, 2.3], [.2, .7, 1.45, 2.3]].concat(this.treeOn ? [] : [[K.tent.x, K.tent.z, 1.4, 2.0]], this.living.layout().camSolids.map(([x, z, r, h]) => [x, z + K.front, r, h])),
@@ -1067,7 +1069,21 @@ export class Kitchen {
     // down the room, the sea on the left.)
     if (this.half === 'living') {
       const f = this.living.frame(wide), on = list => list.map(([x, y, z]) => [x, y, z + K.front]);
-      return {yaw: Math.PI - (wide ? .35 : .2), across: on(f.across), bottom: on(f.bottom), top: on(f.top)};
+      // (At Christmas the tree at the join and her round bed beside it too.)
+      const X = K.xmas.bed, tree = this.treeOn;
+      // (On a phone there is no room for all of it: the tree, her bed, the
+      // sofa and the table, the sea behind; the rest is a drag away. Its edges may run off
+      // the screen a little, so the bed's point is set well out.)
+      const S = LIVING.sofa, T = LIVING.table, treeSide = [[X.x - .8, .3, X.z], [TREE.x + 1.8, 1.2, TREE.z - .6]];
+      const across = !tree ? on(f.across) : wide ? on(f.across).concat(treeSide) : [[X.x - 2.2, .3, X.z], treeSide[1]].concat(on([[S.x - 1, 1.9, S.z + 3.1], [T.x + .6, .9, T.z]]));
+      return {
+        yaw: Math.PI - (wide ? .35 : .2),
+        // (Where the fit starts looking: the middle of what it shows.)
+        from: [across.reduce((a, p) => a + p[0], 0) / across.length, .9, across.reduce((a, p) => a + p[2], 0) / across.length],
+        across,
+        bottom: on(f.bottom).concat(tree ? [[X.x, 0, X.z - 1.0], [TREE.box.spot[0], 0, TREE.box.spot[1] - 1.0]] : []),
+        top: on(f.top).concat(tree ? [[TREE.x, TREE.top + .5, TREE.z]] : []),
+      };
     }
     const I = K.island;
     return {
@@ -1079,7 +1095,7 @@ export class Kitchen {
       // Wide screens: the whole room. Phones: her route (floor, wall steps,
       // counter, both shelves) and the island; the tent corner is a drag away.
       across: wide
-        ? [[I.x0, 1.2, I.z1], [I.x1, 1.2, I.z1], [-3.3, .8, I.z1 + .8], this.treeOn ? [K.xmas.bed.x + .6, .4, K.xmas.bed.z] : [K.tent.x + .7, .9, K.tent.z], [FOUNTAIN.x, .3, FOUNTAIN.z], [BOWL.x, .1, BOWL.z], [-5.2, 4.2, -3.9], [3.4, 4.2, -3.9],
+        ? [[I.x0, 1.2, I.z1], [I.x1, 1.2, I.z1], [-3.3, .8, I.z1 + .8], ...(this.treeOn ? [] : [[K.tent.x + .7, .9, K.tent.z]]), [FOUNTAIN.x, .3, FOUNTAIN.z], [BOWL.x, .1, BOWL.z], [-5.2, 4.2, -3.9], [3.4, 4.2, -3.9],
           [K.left, 4, this.windowRect.z0], [K.left, 1, this.windowRect.z1], [K.door[1], 3, K.back], [K.right - .5, 6.5, -2.2], [K.right - .8, .4, 1.0]]
         : [[I.x0, 1.2, I.z1], [I.x1, 1.2, I.z1], [-3.3, .8, I.z1 + .8], [3.0, .3, 1.55], [-5.2, 4.2, -3.9], [3.4, 4.2, -3.9], [-5.95, .9, -3.55], [-5.95, 5.0, -3.55]],
       bottom: [[I.x0, 0, I.z1 + .8], [I.x1, 0, I.z1 + .3], wide ? [4.55, 0, 3.0] : [2.6, 0, 3.0], [-1, 0, 3.4]],
@@ -1088,16 +1104,14 @@ export class Kitchen {
   }
 
   // The Christmas tree up (or put away): its foot and the box are in her
-  // way; the tent is put away for a round bed by the wall, and her fountain
-  // moves beside it (it would stand in front of the tree).
+  // way (on the living room's floor); the tent is put away for a round bed
+  // beside the tree. Her fountain and bowl stay put.
   setTree(on) {
     on = !!on;
-    for (const o of [TREE_FOOT, TREE_BOX]) { const i = OBSTACLES.indexOf(o); if (on && i < 0) OBSTACLES.push(o); if (!on && i >= 0) OBSTACLES.splice(i, 1); }
+    this.living.setExtras(on ? TREE_THINGS : []);
     const t = OBSTACLES.indexOf(TENT); if (on && t >= 0) OBSTACLES.splice(t, 1); if (!on && t < 0) OBSTACLES.push(TENT);
-    Object.assign(FOUNTAIN, on ? K.xmas.fountain : FOUNTAIN_HOME);
-    // (The living room keeps clear of her tent and fountain while they stand there.)
-    this.living.bed = on ? null : this.bed; this.living.fountain = on ? null : true;
-    Object.assign(BOWL, on ? K.xmas.bowl : {x: 4.55, z: 2.6, ry: -.5});
+    // (The living room keeps clear of her tent while it stands there.)
+    this.living.bed = on ? null : this.bed;
     const B = on ? K.xmas.bed : K.tent;
     this.bed.position.set(B.x, 0, B.z); this.bed.rotation.y = on ? 0 : K.tent.ry;
     this.tentParts.visible = !on; this.roundBed.visible = on;
@@ -1113,6 +1127,8 @@ export class Kitchen {
   // middle of the living room: for the floor seen from the study, and the sun.
   get farEnd() { return K.front + LIVING.end; }
   get livingMid() { return {x: (LIVING.sea + LIVING.south) / 2, z: K.front + LIVING.end / 2}; }
+  // The sofa and the low table, for things that roll (in this room's frame).
+  get livingSolids() { return this.living.layout().keepOut.map(R => ({x0: R.x0 + .5, x1: R.x1 - .5, z0: R.z0 + K.front + .5, z1: R.z1 + K.front - .5, top: R.tag === 'sofa' ? 1.9 : .9})); }
   get islandSolid() { const I = K.island; return {x0: I.x0, x1: I.x1, z0: I.z0, z1: I.z1, top: I.top}; }
   get counterSolid() { return {x0: K.left, x1: 3.6, z0: K.back, z1: K.counterFront, top: K.counter}; }
   get roundSolids() { return [this.treeOn ? {x: K.xmas.bed.x, z: K.xmas.bed.z, r: .84, top: .3} : {x: TENT.x, z: TENT.z, r: 1.2, top: 1.9}, {x: FOUNTAIN.x, z: FOUNTAIN.z, r: .5, top: .4}, {x: BOWL.x, z: BOWL.z, r: .37, top: .16}, {x: DOCK.x, z: DOCK.z, r: .4, top: .35}]; }
@@ -1308,7 +1324,9 @@ export class Kitchen {
     // living room's arc lamp. It drifts across as she crosses.)
     if (lamp && cat?.pos) lamp.position.lerp(cat.pos.z > K.front ? this.livingLamp : this.lampSpot, 1 - Math.exp(-1.6 * dt));
     this.living.update(dt, t, night, {camera, away: true});
-    this.half = cat?.pos ? (cat.pos.z > K.front ? 'living' : 'kitchen') : this.half;
+    // (Round the Christmas tree, which stands on the line between the two,
+    // she counts as in the living room: that view looks at her side of it.)
+    this.half = cat?.pos ? (cat.pos.z > (this.treeOn && cat.pos.x < 1 ? 8.2 : K.front) ? 'living' : 'kitchen') : this.half;
     const e = damp(this.materials.shade.emissiveIntensity, night ? 2.6 : .3, 3, dt);
     this.materials.shade.emissiveIntensity = e;
     // By night the window's light on the floor is moonlight: fainter and cool.

@@ -3327,7 +3327,7 @@ function roomFrame() {
   const tanV = Math.tan(THREE.MathUtils.degToRad(fitCam.fov / 2)), tanH = tanV * fitCam.aspect;
   // (?roomview=full keeps the earlier phone view, for comparison.)
   const wide = W / H > 1, full = new URLSearchParams(location.search).get('roomview') === 'full';
-  let across, bottomPts, topPts, yaw;
+  let across, bottomPts, topPts, yaw, from = [0, .9, -.6];
   if (place === room) {
     across = ROOM_FRAME.across.concat(ROOM_FRAME.bottom, wide ? ROOM_FRAME.left.concat(ROOM_FRAME.fireWide) : full ? ROOM_FRAME.left.concat(ROOM_FRAME.fireNarrow) : ROOM_FRAME.leftNarrow.concat(ROOM_FRAME.fireWide.slice(1)));
     bottomPts = ROOM_FRAME.bottom; topPts = ROOM_FRAME.top;
@@ -3336,6 +3336,9 @@ function roomFrame() {
   } else {
     const F = place.frame(wide);
     across = F.across.concat(F.bottom); bottomPts = F.bottom; topPts = F.top; yaw = F.yaw;
+    // (A view of somewhere away from the place's middle, the living room
+    // say, starts its search there: the fit only slides sideways and up.)
+    if (F.from) from = F.from;
   }
   // For a distance, slide the focus so the furniture sits centred in the
   // clear area with the rug's front edge on its bottom; report whether it fits.
@@ -3370,8 +3373,8 @@ function roomFrame() {
   // room's ceiling.
   for (; pitch >= .1; pitch -= .03) {
     let lo = 3, hi = place === room ? 18 : 28;
-    for (let i = 0; i < 16; i++) { const mid = (lo + hi) / 2; if (placeAt(mid, f.set(0, .9, -.6), pitch)) hi = mid; else lo = mid; }
-    placeAt(hi, f.set(0, .9, -.6), pitch);
+    for (let i = 0; i < 16; i++) { const mid = (lo + hi) / 2; if (placeAt(mid, f.set(...from), pitch)) hi = mid; else lo = mid; }
+    placeAt(hi, f.set(...from), pitch);
     dist = hi;
     if (f.y + Math.sin(pitch) * dist < CAM_BOX.y[1] - .2) break;
   }
@@ -4661,6 +4664,9 @@ function updateRoom(dt, t) {
   sun.intensity = damp(sun.intensity, night ? .05 : 3.2, 3, dt);
   {
     const wide = place === kitchen && kitchen.half === 'living', mid = wide ? kitchen.livingMid : null;
+    // (She crossed between the kitchen and the living room: the Room view
+    // glides round to the half she is in. A view you set yourself is left alone.)
+    if (place === kitchen && kitchen.half !== view.half) { if (view.half && view.mode === 'room') { view.glideUntil = clockNow + 3.4; CAMERA_VIEWS.room(); } view.half = kitchen.half; }
     sunOver.lerp(sunAt.set(mid ? mid.x : 0, 0, mid ? mid.z : 0), 1 - Math.exp(-1.2 * dt));
     sun.target.position.copy(sunOver);
     sunAt.copy(SUN_HOME).add(sunOver);
