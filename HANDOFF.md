@@ -11,7 +11,7 @@ space), fix what he finds, then step 2 of phase 21 (the hall and stairs) or
 "Go live", his choice. Offered, not decided: the mohair and sling chairs and
 the sofa's back as places for her (spots are ready in `living.layout()`).
 
-## Done (on the preview, build 479, commit `90cc0ce`; not live)
+## Done before (build 479, commit `90cc0ce`; live since 2026-11-19, see MILESTONES.md)
 - The living room, joined to the kitchen (`tools/qa/join.mjs`, 13 of 13).
 - The Christmas tree at the join, sea side, her round bed beside it;
   fountain and bowl stay put (`tools/qa/tree.mjs`, `tools/qa/tree-place.mjs`
