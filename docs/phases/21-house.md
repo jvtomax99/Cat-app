@@ -86,7 +86,10 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    the mat by the front door; no bed there (a nap takes her to the
    kitchen's). The room picker has "The hall". Still to do: a phone speed
    check (Merlin). Not yet: her two hall things (sit on the stairs, race up
-   and down), which need step 2.*
+   and down), which need step 2. Tests 2026-11-19: `hall.mjs` 14 of 14,
+   `house-walk.mjs` 12 of 12, `join.mjs` 13 of 13. Rough edge: on a wide
+   screen the Room view stands outside the front wall, and past the hall's
+   east end it sees the dunes where the study's outer wall will be (step 5).*
 2. **Stairs and landing.** Floors at different heights (`groundAt`), her
    feet on the steps, the camera following her up.
 3. **Bathroom** with its three things to do.
