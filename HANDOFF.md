@@ -2,8 +2,8 @@
 
 ## Goal and exact next step
 Step 2 of phase 21 (`docs/phases/21-house.md`): Mochi climbs the hall
-stairs to a new landing. **Built and on the preview; waiting for Merlin to
-try it on his phone** (speed, how the climb looks), then his "Go live".
+stairs to a new landing. **Live since 2026-11-19, build 506 (`62a295e`).** Merlin
+hasn't said yet how it runs on his phone: ask.
 Next after that: step 3, the bathroom (big job: look at similar apps first,
 plan, wait for his OK).
 
@@ -22,7 +22,7 @@ plan, wait for his OK).
   commits are tests and notes only).
 
 ## Left
-- Merlin's phone check of the preview; "Go live" when he's happy.
+- Merlin's phone check of the live build.
 - Rough edges: 3 cm high at the stairs' foot facing away; the hall shows
   under the landing's front edge in its Room view.
 
