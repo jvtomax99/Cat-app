@@ -19,7 +19,7 @@ const shot = name => page.locator('canvas').first().screenshot({path: `${OUT}/${
 const snap = () => page.evaluate(() => {
   const H = kitten.house, id = kitten.placeId(kitten.place), b = kitten.brain, c = kitten.camera.position;
   const p = H.toHouse(id, b.pos), cp = H.toHouse(id, c);
-  return {id, p: [p.x, p.z], c: [cp.x, c.y, cp.z], act: b.activity, mode: b.mode, walk: !!b.target, trip: b.toRoom || null, view: kitten.view.mode, toast: document.querySelector('#toast').textContent};
+  return {id, p: [p.x, p.z], c: [cp.x, c.y, cp.z], act: b.activity, mode: b.mode, walk: !!b.target, trip: b.toRoom?.to || null, view: kitten.view.mode, toast: document.querySelector('#toast').textContent};
 });
 // Steps until done(s) (or max), measuring her and the camera between samples (.2 s).
 async function watch(name, done, max = 500) {

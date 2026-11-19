@@ -1155,6 +1155,7 @@ function updateCat(dt, t) {
   }
   // Never through the furniture, however she's moving on the floor.
   if (place.pushOut && !J && !brain.perch && brain.elevation < .05) place.pushOut(brain.pos);
+  if (brain.justCrossed && !laneAt(placeId(place), brain.pos)) brain.justCrossed = false;
   // Through the middle of a doorway: she's in the other room now.
   if (brain.crossing && !J && house.pastDoor(brain.crossing.side, brain.pos) > 0) crossOver(brain.crossing.to);
   // Up on the big pendant shade: she goes where it swings.
@@ -2471,7 +2472,7 @@ function pawAt(x, y) {
 // ---------------------------------------------------------------------------
 function setMode(mode, seconds = Infinity) {
   // (Anything new she's asked to do ends a walk to another room.)
-  brain.crossing = null; brain.toRoom = null;
+  endTrip();
   brain.mode = mode;
   brain.modeStart = clockNow;
   brain.modeUntil = clockNow + seconds;
@@ -2549,6 +2550,7 @@ const busyBody = () => !!brain.eatAt || brain.vacRide || ['eat', 'drink', 'stalk
 // A tap on the floor calls her over. She comes unless she is busy or asleep.
 function callTo(x, y) {
   if (!ready || brain.mode === 'play') return;
+  endTrip();
   setPointer({clientX: x, clientY: y});
   const hit = new THREE.Vector3();
   if (!ray.ray.intersectPlane(groundPlane, hit) || hit.x < LIMITS.x[0] || hit.x > LIMITS.x[1] || hit.z < LIMITS.z[0] || hit.z > LIMITS.z[1]) return;
@@ -3084,7 +3086,11 @@ function cameraArm(off, dist) {
 // Near a doorway the camera may stand in either room, or in the opening
 // between them: the boxes it may be in (this room's, the other's, and the
 // opening's), in this room's frame.
+let doorBoxMemo = null;
 function doorBoxes() {
+  // (Worked out once per room and layout, not every frame.)
+  const key = [place, room.layoutCache, kitchen?.layoutCache];
+  if (doorBoxMemo && doorBoxMemo.key.every((k, i) => k === key[i])) return doorBoxMemo.boxes;
   const id = placeId(place), out = [];
   for (const other of house.neighbours(id)) {
     const o = other === 'kitchen' ? kitchen : room;
@@ -3095,7 +3101,8 @@ function doorBoxes() {
     const a = {x: S.mid.x - S.out.x * 1.5, z: S.mid.z - S.out.z * 1.5}, b = {x: S.mid.x + S.out.x * 1.5, z: S.mid.z + S.out.z * 1.5};
     out.push({x: [Math.min(a.x, b.x) - Math.abs(S.out.z) * w, Math.max(a.x, b.x) + Math.abs(S.out.z) * w], y: [.2, 5], z: [Math.min(a.z, b.z) - Math.abs(S.out.x) * w, Math.max(a.z, b.z) + Math.abs(S.out.x) * w]});
   }
-  return out;
+  doorBoxMemo = {key, boxes: [CAM_BOX, ...out]};
+  return doorBoxMemo.boxes;
 }
 const inBox = (B, x, y, z) => x >= B.x[0] && x <= B.x[1] && y >= B.y[0] && y <= B.y[1] && z >= B.z[0] && z <= B.z[1];
 // How long the camera's arm can be before it leaves the room.
@@ -3103,7 +3110,7 @@ function boxArm(focus, off, d) {
   // (She, or the camera, at a doorway: the arm may run through it into
   // the other room, as far as it stays inside some room or the opening.)
   if (view.doorBoxes) {
-    const boxes = [CAM_BOX, ...view.doorBoxes];
+    const boxes = view.doorBoxes;
     for (let t = .1; t <= d; t += .1) if (!boxes.some(B => inBox(B, focus.x + off.x * t, focus.y + off.y * t, focus.z + off.z * t))) return Math.max(.1, t - .1);
     return d;
   }
@@ -3773,35 +3780,50 @@ function goTo(id) {
 function walkToRoom(id, then = null, run = false) {
   const from = placeId(place), d = house.doorBetween(from, id);
   if (!d || from === id) return false;
-  if (id === 'kitchen' && !kitchen) { buildKitchen(); joinRooms(); }
+  if (id === 'kitchen' && !kitchen) { buildKitchen(); joinRooms(); placeBowls(); }
   const H = d.here, v = (p, k = 0) => new THREE.Vector3(p.x + H.out.x * k, 0, p.z + H.out.z * k);
-  brain.toRoom = id;
+  // (Each step goes on only while this is still her trip, and in the room
+  // it's meant for: a walk cut short, or timed out, ends it.)
+  const trip = brain.toRoom = {to: id};
   walkTo(v(H.spot), () => {
+    if (brain.toRoom !== trip || placeId(place) !== from) return endTrip();
     brain.crossing = {to: id, side: H};
-    walkTo(v(H.mid, .5), () => { brain.crossing = null; brain.toRoom = null; then?.(); }, run, true);
+    walkTo(v(H.mid, .5), () => {
+      const ok = placeId(place) === id && (brain.toRoom === trip || brain.justCrossed);
+      endTrip();
+      if (ok) then?.(); else setActivity('sit');
+    }, run, true);
   }, run);
   return true;
 }
+function endTrip() { brain.crossing = null; brain.toRoom = null; }
 // The change of room, with nothing moving on screen: where she is, which
 // way she faces, where she's going, the toy and the camera are all put into
 // the new room's own frame (house.js), and the rooms swap places round them.
 function crossOver(id) {
   const from = placeId(place), next = id === 'kitchen' ? kitchen : room;
-  Object.assign(brain, {crossing: null, toRoom: null, justCrossed: true});
+  Object.assign(brain, {crossing: null, justCrossed: true});
   if (!next || next === place) return;
   const conv = v => { if (!v) return; const p = house.convert(v, from, id); v.x = p.x; v.z = p.z; };
   const turn = y => house.convertYaw(y, from, id);
   conv(brain.pos); conv(brain.target);
   brain.heading = turn(brain.heading);
   Object.assign(brain, {faceAt: null, eatAt: null});
-  conv(toy.position); conv(toyTarget);
-  { const p = house.convert(sun.position, from, id); sun.position.x = p.x; sun.position.z = p.z; }
-  // (Her gait reads her speed from where she was a frame ago: that too.)
+  // Where she looks (and where your finger last was), too.
+  for (const v of [brain.gaze, brain.headGaze, brain.glance, brain.pointerWorld]) conv(v);
+  // The sun: the same direction as before (turned, not moved), easing back
+  // to the new room's own side.
+  { const o = house.convert({x: 0, z: 0}, from, id), p = house.convert(sun.position, from, id); sun.position.x = p.x - o.x; sun.position.z = p.z - o.z; }
+  // (Her gait reads her speed from where she was a frame ago, and each paw
+  // keeps its spot on the floor: those too.)
   if (cat.motion?.prev) { conv(cat.motion.prev.pos); cat.motion.prev.heading = turn(cat.motion.prev.heading); }
+  for (const pw of Object.values(cat.motion?.paws || {})) { if (pw?.pos) conv(pw.pos); if (pw?.swing?.from) conv(pw.swing.from); }
   for (const o of [view, view.goal]) { conv(o.focus); o.yaw = turn(o.yaw); }
   view.goal.yaw = wrapYaw(view.goal.yaw);
   usePlace(next);
   cat.root.position.set(brain.pos.x, cat.root.position.y, brain.pos.z); cat.root.rotation.y = brain.heading;
+  // (The toy waits in the new room, as it did when she was taken there.)
+  toy.position.copy(TOY_HOME); toyTarget.copy(TOY_HOME); toyLast.copy(TOY_HOME);
   // Not following her: the view glides into the room she went to, and a
   // note says where she is.
   if (view.mode !== 'follow') { view.glideUntil = clockNow + 3.4; CAMERA_VIEWS.room(); toast(`${pet.name} went to the ${house.ROOMS[id].name}`); }
@@ -3814,8 +3836,9 @@ $('#place-options').addEventListener('click', e => {
   if (!b) return;
   const id = b.dataset.place;
   $('#decor-dialog').close();
-  if (place.id === id) return;
-  callToRoom(id === 'kitchen' ? 'kitchen' : 'room');
+  const to = id === 'kitchen' ? 'kitchen' : 'room';
+  if (place.id === id && !brain.toRoom) return;
+  callToRoom(to);
 });
 // The room picker calls her: she walks there through the doorway (no jump).
 // (Asleep, she stays put; whatever she's doing ends first.)
@@ -3825,6 +3848,8 @@ function callToRoom(id) {
   if (brain.mode === 'play') endPlay(true);
   if (brain.mode !== 'idle') setMode('idle');
   toast(`Calling ${pet.name} to the ${house.ROOMS[id].name}…`);
+  // (Already there, on her way out: she stays.)
+  if (placeId(place) === id) { endTrip(); brain.target = null; brain.after = null; setActivity('sit'); return true; }
   if (!walkToRoom(id, null, true)) return false;
   brain.nextIdle = clockNow + 20;
   return true;
@@ -3859,7 +3884,7 @@ $('#decor-options').addEventListener('click', e => {
     if (kitchen) applyKitchenDecor(kitchen, id);
     // (The kitchen's places change with its tree: her perches in it, her floor.)
     if (kitchen) kitchen.layoutCache = null;
-    if (place === kitchen) usePlace(kitchen);
+    if (place === kitchen) usePlace(kitchen); else placeBowls();
     if (place === kitchen && treeWas !== !!kitchen.treeOn && !brain.perch && !brain.jump) {
       if (inKitchenBed) brain.pos.set(CUSHION_SPOT.x, 0, CUSHION_SPOT.z);
       else if (brain.target) { brain.target = null; brain.after = null; setActivity('sit'); }
@@ -4578,8 +4603,7 @@ function updateCamera(dt) {
     // came from, so the camera trails her through. Never faster than a
     // slow turn.)
     const lane = laneAt(placeId(place), brain.pos);
-    if (!lane) brain.justCrossed = false;
-    const s = brain.toRoom ? -1 : brain.justCrossed ? 1 : 0;
+    const s = brain.justCrossed ? 1 : brain.toRoom ? -1 : 0;
     if (lane && s && brain.target) {
       const want = Math.atan2(lane.out.x * s, lane.out.z * s), k = wrapYaw(want - g.yaw) * (1 - Math.exp(-2.5 * dt));
       g.yaw = wrapYaw(g.yaw + clamp(k, -1.1 * dt, 1.1 * dt));
@@ -4640,10 +4664,15 @@ function updateRoom(dt, t) {
   // the room she has just left.)
   const other = place === room ? kitchen : room;
   if (other) {
-    const id = placeId(place), d = house.doorBetween(id, placeId(other));
-    const camIn = d && house.pastDoor(d.here, camera.position) > 0 ? other : place, far = camIn === place ? other : place;
-    if (camRoom !== camIn) { camRoom = camIn; camIn.group.visible = true; camIn.group.traverse(o => o.layers.set(SEEN)); }
-    far.group.visible = doorwayInView(); if (far.group.visible) cullThroughDoor(far, camIn === room);
+    // (In the opening itself, both are drawn whole; a little either way of
+    // it, so a camera hovering there doesn't flip between them.)
+    const id = placeId(place), d = house.doorBetween(id, placeId(other)), past = d ? house.pastDoor(d.here, camera.position) : -9;
+    const camIn = past > .35 ? other : past < -.35 ? place : Math.abs(past) < .3 ? 'both' : camRoom ?? place;
+    if (camRoom !== camIn) {
+      camRoom = camIn;
+      for (const r of camIn === 'both' ? [place, other] : [camIn]) { r.group.visible = true; r.group.traverse(o => o.layers.set(SEEN)); }
+    }
+    if (camIn !== 'both') { const far = camIn === place ? other : place; far.group.visible = doorwayInView(); if (far.group.visible) cullThroughDoor(far, camIn === room); }
   }
   if (place === room) { room.update(dt, t, night, {drinking: atFountain, camera}); if (kitchen?.group.visible) kitchen.update(dt, t, night, {camera, away: true}); }
   else {
