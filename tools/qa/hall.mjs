@@ -50,7 +50,9 @@ ok('called, she is still in the kitchen, walking', called.id === 'kitchen' && ca
 let r = await watch('1-to-hall', new Function(`return ${settled('hall')}`));
 await step(80); await shot('1-in-hall');
 ok('she walks kitchen to hall through the doorway', r.end.id === 'hall' && r.switches === 1, `in the ${r.end.id}, ${r.switches} change of room`);
-ok('no jump as she changes room', r.herJump < .1 && r.camAtSwitch < .6, `her house position jumped ${f(r.herJump)} beyond her step, the camera ${f(r.camAtSwitch)}`);
+// (In the Room view the camera sweeps round into the new room, as at the
+// study's doorway: reported, not judged. house-walk.mjs judges Mochi mode.)
+ok('no jump as she changes room', r.herJump < .1, `her house position jumped ${f(r.herJump)} beyond her step; the Room view's camera moved ${f(r.camAtSwitch)} in .2 s`);
 ok('a note says where she went', /went to the hall/.test(r.end.toast), `"${r.end.toast}"`);
 
 // 2. What she does in the hall: on its floor, nothing breaks.
