@@ -1,4 +1,4 @@
-# Handoff (2026-11-20): phase 21 step 3 (the bedroom) on the preview
+# Handoff (2026-11-20): phase 21 step 3 (the bedroom) live (build 516)
 
 ## Goal and exact next step
 Step 3 of phase 21 (`docs/phases/21-house.md`; Merlin swapped it with the
@@ -15,8 +15,8 @@ is already in the bedroom's east wall, shut (`bedroom.js` `B.bathDoor`).
 - Her things: `bedNap` (perch `bigBed`), `seatWatch` (perch `windowSeat`);
   "The bedroom" in the picker (`callToBedroom`).
 - Reviewer's five finds fixed; own find: a route loop at the doorway.
-- Tests: `tools/qa/bedroom.mjs` 11 of 11, `hall.mjs` 14 of 14 (list
-  updated), `stairs.mjs` 8 of 8. `npm run check` passes.
+- Tests: `tools/qa/bedroom.mjs` 11 of 11, `hall.mjs` 13 of 14 (the one: its room list, since
+  updated, not rerun), `stairs.mjs` 8 of 8. `npm run check` passes.
 
 ## Left
 - Merlin's phone check of the live build.
