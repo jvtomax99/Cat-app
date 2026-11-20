@@ -584,6 +584,13 @@ export class Hall {
       // by each doorway on the way, each side's way round what stands there.)
       const ra = this.upRoom(from), rb = this.upRoom(to);
       const inner = (r, p, q) => r === 2 ? this.bathroom.path(p, q) : r === 1 ? this.bedroom.path(p, q) : this.landingPath(p, q);
+      // (Stopped in the bathroom's doorway: out of it by the door's spot first,
+      // not on a slant across the wall.)
+      const A = this.bathroom, lane = p => A.inLane(p) && p.x < A.doorSpot.x - .3;
+      if (ra === 2 && rb === 2 && lane(from) !== lane(to)) {
+        const d = A.doorSpot, p = (lane(from) ? [d, ...A.path(d, to)] : [...A.path(from, d), d]).filter(q => Math.hypot(q.x - from.x, q.z - from.z) > .1 && Math.hypot(q.x - to.x, q.z - to.z) > .1);
+        return p.length ? [...p, to.clone()] : [];
+      }
       if (ra === rb) { const p = inner(ra, from, to).filter(q => Math.hypot(q.x - from.x, q.z - from.z) > .1); return p.length ? [...p, to.clone()] : []; }
       // (Each doorway's two spots, the lower-numbered room's first.)
       const doors = [[V(H.bedDoor.x, 0, UPFLOOR.z0 + .2), this.bedroom.doorSpot], [this.bathroom.bedroomSpot, this.bathroom.doorSpot]];
@@ -615,6 +622,7 @@ export class Hall {
   straightOk(a, b) {
     const r = this.upRoom(a);
     if (r !== this.upRoom(b)) return false;
+    if (r === 2 && this.bathroom.inLane(a) !== this.bathroom.inLane(b)) return false;
     const R = r === 1 ? this.bedroom : r === 2 ? this.bathroom : null;
     return !R || !R.path(a, b).length && !R.blocked(a, b);
   }

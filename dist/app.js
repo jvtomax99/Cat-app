@@ -877,11 +877,18 @@ function glanceAt(point, seconds) { brain.glance = point.clone(); brain.glanceUn
 function twitchEar(side = Math.random() < .5 ? 0 : 1, strength = 1) { cat.twitchEar(side, strength); }
 
 function setActivity(name, seconds = Infinity, after = null) {
+  // (A drink cut short, by a call, a tap or another room: the tap stops and
+  // she stops aiming at its water. Reviewer, 2026-11-20.)
+  if (brain.activity === 'drink' && name !== 'drink') stopLap();
   brain.activity = name;
   brain.napFace = null; // (which way she lies for a nap on the shelf: set after, by garlandNap)
   brain.actStart = clockNow;
   brain.actUntil = clockNow + seconds;
   brain.after = after;
+}
+function stopLap() {
+  kitchen?.faucetRun(false); hall?.bathroom.tapRun(false);
+  if (brain.lapStream) { brain.eatAt = null; brain.lapStream = false; }
 }
 function walkTo(point, then = null, run = false, anywhere = false) {
   // Mid-jump: go there once she lands. Up on a perch: hop down first.

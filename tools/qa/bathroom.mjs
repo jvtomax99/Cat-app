@@ -111,8 +111,14 @@ check('her spots in the bathroom are on free floor', walks.spots === 0, `${walks
 
 // "Go now" from downstairs opens the bathroom with her in it; the save
 // keeps the hall (a save there opens in the hall).
-await page.evaluate(() => { kitten.setActivity('sit'); kitten.goTo('kitchen'); });
+// A drink cut short (here by "Go now" to the kitchen): the water stops, and
+// she stops aiming at it.
+await hold(); await page.evaluate(() => { kitten.setActivity('sit'); kitten.pet.water = 50; kitten.tapDrink(); });
+r = await until(s => s.act === 'drink', 2500);
+await page.evaluate(() => kitten.goTo('kitchen'));
 await step(20);
+const cut = await page.evaluate(() => ({water: kitten.hall.bathroom.stream.visible, eatAt: !!kitten.brain.eatAt, lap: kitten.brain.lapStream}));
+check('a drink cut short stops the water', r.s.act === 'drink' && !cut.water && !cut.eatAt && !cut.lap, JSON.stringify(cut));
 await page.evaluate(() => kitten.goTo('bathroom'));
 await step(30);
 const go = await state();

@@ -425,7 +425,7 @@ export class Bathroom {
   get doorSpot() { return V(FLOOR.x0 + .3, 0, D.z); }
   get bedroomSpot() { return V(BED.east - 1, 0, D.z); }
   // Is (x, z) in here (or in the doorway's lane, past the bedroom's floor)?
-  holds(p) { return p.z < A.south && (p.x > BED.east || (p.x > LANE.x0 && Math.abs(p.z - D.z) < .9)); }
+  holds(p) { return p.z < A.south && (p.x > BED.east + .2 || (p.x > LANE.x0 && Math.abs(p.z - D.z) < .9)); }
 
   update(dt, t) {
     // (The window and the door's leaf go with their walls; the mirror is the wall's.)
