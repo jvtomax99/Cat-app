@@ -4,7 +4,7 @@
 //   node tools/qa/cost.mjs      (W, H, ONLY=bedroom,kitchen)
 import {open} from './lib.mjs';
 const {page, step, close} = await open({seed: 3, width: +(process.env.W || 390), height: +(process.env.H || 844)});
-const rooms = (process.env.ONLY || 'room,kitchen,hall,landing,bedroom').split(',');
+const rooms = (process.env.ONLY || 'room,kitchen,hall,landing,bedroom,bathroom').split(',');
 const read = () => page.evaluate(() => {
   const k = kitten, r = k.renderer.info.render; let meshes = 0, casters = 0;
   let sc = k.toy; while (sc.parent) sc = sc.parent;
