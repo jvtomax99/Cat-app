@@ -43,7 +43,7 @@ const settled = id => `kitten.placeId(kitten.place) === '${id}' && !kitten.brain
 // 1. The picker lists the hall and calls her there from the kitchen.
 await page.evaluate(() => { document.querySelector('#decor-btn').click(); });
 const places = await page.evaluate(() => [...document.querySelectorAll('#place-options [data-place]')].map(b => b.dataset.place));
-ok('the room picker lists the hall', places.join() === 'study,kitchen,hall,landing', places.join());
+ok('the room picker lists the hall', places.join() === 'study,kitchen,hall,landing,bedroom', places.join());
 await page.evaluate(() => document.querySelector('#place-options [data-place="hall"]').click());
 await step(2);
 const called = await snap();
