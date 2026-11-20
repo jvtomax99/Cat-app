@@ -4218,7 +4218,7 @@ function callToLanding() {
   if (brain.mode === 'play') endPlay(true);
   if (brain.mode !== 'idle') setMode('idle');
   toast(`Calling ${pet.name} up to the landing…`);
-  const there = () => { setActivity('sit', rand(4, 7)); express('curious', 2); };
+  const there = () => { arrived(); express('curious', 2); };
   const up = () => climbTo(true, there, true);
   // (Already upstairs, in the bedroom: through its door to the top of the stairs.)
   if (place === hall && hall.level === 'up') walkTo(layoutOf(hall).topSpot.at, there, true);
@@ -4226,6 +4226,10 @@ function callToLanding() {
   brain.nextIdle = clockNow + 25;
   return true;
 }
+
+// Called to a room, she stays a moment once she's there (counted from her
+// arrival: a long trip had used it all up, and she was off again at once).
+function arrived() { const n = rand(4, 7); setActivity('sit', n); brain.nextIdle = Math.max(brain.nextIdle, clockNow + n + 4); }
 
 // To the bedroom: up the stairs, then through the landing's door.
 function callToBedroom() {
@@ -4235,7 +4239,7 @@ function callToBedroom() {
   if (brain.mode !== 'idle') setMode('idle');
   if (brain.perch) { brain.climbGoal = 'floor'; }
   toast(`Calling ${pet.name} to the bedroom…`);
-  upTo(() => walkTo(layoutOf(hall).bedroomHome, () => { setActivity('sit', rand(4, 7)); express('curious', 2); }, true), true);
+  upTo(() => walkTo(layoutOf(hall).bedroomHome, () => { arrived(); express('curious', 2); }, true), true);
   brain.nextIdle = clockNow + 25;
   return true;
 }
@@ -4248,7 +4252,7 @@ function callToBathroom() {
   if (brain.mode !== 'idle') setMode('idle');
   if (brain.perch) { brain.climbGoal = 'floor'; }
   toast(`Calling ${pet.name} to the bathroom…`);
-  upTo(() => walkTo(layoutOf(hall).bathHome, () => { setActivity('sit', rand(4, 7)); express('curious', 2); }, true), true);
+  upTo(() => walkTo(layoutOf(hall).bathHome, () => { arrived(); express('curious', 2); }, true), true);
   brain.nextIdle = clockNow + 25;
   return true;
 }
