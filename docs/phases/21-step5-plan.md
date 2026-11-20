@@ -85,3 +85,15 @@ Phone speed. Downstairs at once is the study, the kitchen and the living room to
 - Preview link for Merlin's phone at each checkpoint.
 - Show Lettuce the House view at checkpoint 1, since it changes what she sees.
 - This session is already long. Once the plan is approved: write `HANDOFF.md` with this plan and start a fresh session for the build.
+
+## Step 1 result (2026-11-20, `HOUSE=1 node tools/qa/cost.mjs`, phone size)
+Draw calls: kitchen Room view 216 (Mochi view 90); every room downstairs at
+once from over the house 580 (study 163, kitchen with living room 364, hall
+83); upstairs with downstairs still drawn under it 718. Triangles about 2
+million everywhere: her fur, so they don't matter here. Hiding meshes
+smaller than a bounding radius r: r .2 → 500, .35 → 416, .5 → 365, .8 → 276.
+Decision: in the House view, looking inside, meshes under radius .5 are
+hidden while zoomed out (shown again close up); upstairs view hides the
+downstairs rooms under its floor. Merlin's phone at checkpoint 2 decides
+whether more is needed (next option: merging each room's still things per
+material when the House view opens).
