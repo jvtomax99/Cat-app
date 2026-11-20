@@ -1,30 +1,35 @@
-# Handoff (2026-11-20): phase 21 step 5, the House view, plan approved
+# Handoff (2026-11-20): House view part one on the preview; next, looking inside
 
 ## Goal and exact next step
-Build phase 21 step 5 to the approved plan: `docs/phases/21-step5-plan.md`.
-First step: extend `tools/qa/cost.mjs` to draw every room at once (per
-floor) and compare with the kitchen alone; over about 1.5x, cut detail in
-the House view before building on it. Then the shell (checkpoint 1 on the
-preview: outside only), then looking inside (checkpoint 2).
+Phase 21 step 5 (`docs/phases/21-step5-plan.md`, approved). Part one
+(checkpoint 1, the house from outside) is on the preview (`69aaa4b`).
+Next: part two, looking inside: Upstairs/Downstairs buttons in the House
+view, roof off and the shell's near walls hidden, one floor's rooms drawn
+(camera layers SEEN + HOUSE_LAYER, all built groups visible, skip
+`doorwayInView`/`cullThroughDoor` in `updateRoom` ~app.js 5190), meshes
+under radius .5 hidden while zoomed out (step 1 result in the plan), the
+study's walls cut at y 10, inside-only pieces hidden (study window sheet,
+kitchen sky sheet, sky-blocker panels, big floors → floorPatch), tap a
+room → card with Call her / Go now. Ask Merlin how part one looks on his
+phone first.
 
 ## Done (this session)
-- `e4d45b6` "The living room" in the room picker (Call her / Go now);
-  `tools/qa/living-pick.mjs` 7 of 7.
-- Build 531 live (living room card + the bathroom), `MILESTONES.md` row.
-- Step 5 planned and approved (similar apps: Sims 4, Fallout Shelter,
-  Toca Life World, in the plan).
+- `e4d45b6` living room in the picker; build 531 live (with the bathroom).
+- `0368c6a` cost measured (in the plan file).
+- `69aaa4b` House view part one: `dist/house-shell.js`, House button,
+  `tools/qa/house-view.mjs` 10 of 10. See ARCHITECTURE row `house-shell.js`.
 
 ## Left
-- Merlin hasn't checked build 531 on his phone (the bathroom is unchecked
-  on a real phone; no separate review of the bathroom is on record).
-- Step 5 build, its reviewer pass, phone check, then phase 21 done and the
-  cleanup audit (postponed until phase 21 is done, `docs/CLEANUP.md`).
+- Part two, its tests, reviewer pass, phone check; then mark phase 21 done
+  and offer the cleanup audit (`docs/CLEANUP.md`, postponed to then).
+- Merlin hasn't phone-checked build 531 (bathroom).
+- `DESIGN.md` named in CLAUDE.md doesn't exist in the repo; the House
+  button follows the existing `icon-btn glass` buttons.
 
 ## Decisions not yet in SPEC.md
-None (the plan is in the phase brief).
+None. (Night windows glow warm on the shell: the opaque glass would
+otherwise be dark; stands in for the room lights behind it.)
 
 ## Files to look at first
-`docs/phases/21-step5-plan.md` (has file:line pointers: `joinRooms`,
-`updateRoom` ~5102, `CAMERA_VIEWS` ~3694, `endGesture` ~3856),
-`docs/house/blueprint.png` ("From the front"), `docs/ARCHITECTURE.md`
-rows `hall.js`, `bedroom.js`, `living.js`.
+`docs/phases/21-step5-plan.md`, `dist/house-shell.js`, app.js
+`CAMERA_VIEWS.house`, `houseLayers`, `placeShell`, `updateRoom`.
