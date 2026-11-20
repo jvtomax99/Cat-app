@@ -9,7 +9,7 @@
 // units per metre.
 //
 // How far her body rides over the line through the treads, in risers (see rampAt).
-const STAIR_LIFT = new URLSearchParams(globalThis.location?.search || '').has('lift') ? +new URLSearchParams(location.search).get('lift') : .5;
+const STAIR_LIFT = .5;
 // The stairs: a dog-leg at the east end. The lower flight runs east along
 // the front wall (twelve risers of 5/12 to a half landing at y 5), the upper
 // flight comes back west along the kitchen's wall, to the upper floor at
