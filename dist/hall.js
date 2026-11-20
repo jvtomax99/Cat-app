@@ -8,6 +8,8 @@
 // front door's wall (5.05). Same scale as the other rooms: about 2.4 scene
 // units per metre.
 //
+// How far her body rides over the line through the treads, in risers (see rampAt).
+const STAIR_LIFT = new URLSearchParams(globalThis.location?.search || '').has('lift') ? +new URLSearchParams(location.search).get('lift') : .5;
 // The stairs: a dog-leg at the east end. The lower flight runs east along
 // the front wall (twelve risers of 5/12 to a half landing at y 5), the upper
 // flight comes back west along the kitchen's wall, to the upper floor at
@@ -513,8 +515,13 @@ export class Hall {
     // (Up on the landing, over its floor: the landing, even where the line
     // of the upper flight passes under the gallery's edge.)
     if (ref > H.up - .3 && tops(x, z).includes(H.up)) return H.up;
-    if (ref < HALF + .6 && z >= S.lowZ[0] - .3 && x > S.x0 - S.tread / 2 && x < l0) return Math.min(HALF, (x - S.x0 + S.tread / 2) * k);
-    if (ref > HALF - .6 && ref < H.up + .6 && z > -.05 && z <= S.highZ[1] + .3 && x > UPX - S.tread / 2 && x < l0) return Math.min(H.up, HALF + (l0 - x + S.tread / 2) * k);
+    // (On a flight her body rides up to half a riser over that line, or the
+    // treads' noses, which stand up to half a riser above it, come up
+    // through her chest: a riser is nearly her hips' height. The lift eases
+    // in and out over the first and last half step.)
+    const lift = (y, lo, hi) => y + Math.max(0, Math.min(STAIR_LIFT * S.rise, y - lo, hi - y));
+    if (ref < HALF + .6 && z >= S.lowZ[0] - .3 && x > S.x0 - S.tread / 2 && x < l0) return lift(Math.min(HALF, (x - S.x0 + S.tread / 2) * k), 0, HALF);
+    if (ref > HALF - .6 && ref < H.up + .6 && z > -.05 && z <= S.highZ[1] + .3 && x > UPX - S.tread / 2 && x < l0) return lift(Math.min(H.up, HALF + (l0 - x + S.tread / 2) * k), HALF, H.up);
     return this.groundAt(x, z, ref);
   }
   // The way up the stairs (or down: the same, backwards): from the foot,

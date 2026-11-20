@@ -921,7 +921,7 @@ function walkTo(point, then = null, run = false, anywhere = false) {
 const groundAt = p => place.rampAt ? place.groundAt(p.x, p.z, brain.elevation) : Math.hypot(p.x - bed.position.x, p.z - bed.position.z) < place.bedRadius ? place.bedTop : 0;
 // The stairs (phase 21, step 2). Her hips are about this far behind her
 // root; her body takes this much of the stairs' slope.
-const HIPS_BACK = .55, STAIR_TILT = .85;
+const HIPS_BACK = .55, STAIR_TILT = new URLSearchParams(location.search).has('tilt') ? +new URLSearchParams(location.search).get('tilt') : 1;
 // The hall's floor changed under her (she's come up to the landing, or
 // gone down): its spots, the camera's box and limits; the Room view glides there.
 function applyLevel() {
