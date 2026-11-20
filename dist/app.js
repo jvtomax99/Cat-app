@@ -13,6 +13,7 @@ import {MotionCat} from './motion-cat.js';
 import {Room} from './room.js';
 import {Kitchen} from './kitchen.js';
 import {Hall} from './hall.js';
+import {HouseShell, BOUNDS as HOUSE_BOUNDS, MID as HOUSE_MID} from './house-shell.js';
 import {Sounds, TUNES} from './sound.js';
 import {TitleFx} from './title-fx.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
@@ -3306,16 +3307,30 @@ function liftFocus() {
   view.far = Math.max(view.far, view.goal.dist);
 }
 function setCamMode(mode) {
+  // (Out of the House view: straight into the new view, no glide through
+  // the walls; see CAMERA_VIEWS.house.)
+  if (view.mode === 'house' && mode !== 'house') {
+    if (mode === 'follow') view.goal.focus.set(brain.pos.x, brain.elevation + .5, brain.pos.z);
+    Object.assign(view, {yaw: view.goal.yaw, pitch: view.goal.pitch, dist: view.goal.dist, cut: 0, lift: 0, rise: 0, armFree: undefined});
+    view.focus.copy(view.goal.focus);
+  }
   if (view.mode === 'room' && mode !== 'room') liftFocus();
   if (mode !== 'free') { view.fling = null; view.zoomHeld = false; }
   const swapped = (view.mode === 'follow') !== (mode === 'follow');
   view.mode = mode;
   // (The hint under the room says what fingers do in this mode.)
   if (swapped && ready && !titleOn) refresh();
-  for (const b of document.querySelectorAll('[data-cam]')) b.setAttribute('aria-pressed', String(b.dataset.cam === (mode === 'follow' ? 'follow' : 'room')));
+  for (const b of document.querySelectorAll('[data-cam]')) b.setAttribute('aria-pressed', String(b.dataset.cam === (mode === 'follow' ? 'follow' : mode === 'house' ? 'house' : 'room')));
 }
 function clampGoal() {
   const g = view.goal;
+  // (The House view: round the house, from close by to far off, never under the sand.)
+  if (view.mode === 'house') {
+    const c = house.convert(HOUSE_MID, 'room', placeId(place));
+    g.dist = clamp(g.dist, 14, 240); g.pitch = clamp(g.pitch, .06, 1.45);
+    g.focus.x = clamp(g.focus.x, c.x - 26, c.x + 26); g.focus.z = clamp(g.focus.z, c.z - 26, c.z + 26); g.focus.y = clamp(g.focus.y, 0, 22);
+    return;
+  }
   // (The whole-room view may stand further back and look higher than the
   // limits: that room is kept until you have come in from it.)
   view.far = Math.max(LIMITS.dist[1], Math.min(view.far, g.dist));
@@ -3353,7 +3368,7 @@ function pan(dx, dy) {
   view.goal.focus.z += (dx * Math.sin(yaw) - dy * Math.cos(yaw) * .6) * k;
   view.goal.focus.y += dy * k * .5;
   view.lastDrag = clockNow;
-  setCamMode('free');
+  if (view.mode !== 'house') setCamMode('free');
   clampGoal();
 }
 // The camera's arm, looking from the focus along `off`: as long as it can
@@ -3479,6 +3494,7 @@ function thingUnder(x, y) {
 const tiltAxis = new THREE.Vector3(), tiltV = new THREE.Vector3(), tiltQ = new THREE.Quaternion();
 function zoomBy(f, at) {
   const g = view.goal;
+  if (view.mode === 'house') { g.dist *= f; view.zoomedAt = clockNow; clampGoal(); return; }
   // Explore: in and out about the thing under the fingers; far out, the
   // whole room. Mochi: in and out about her. A pinch never changes the mode.
   if (clockNow - view.zoomedAt > .5) {
@@ -3709,10 +3725,58 @@ const CAMERA_VIEWS = {
     view.goal.yaw = wrapYaw(typeof yaw === 'number' ? yaw : Math.atan2(camera.position.x - brain.pos.x, camera.position.z - brain.pos.z));
     setCamMode('follow');
   },
+  // The whole house from outside (phase 21 step 5, house-shell.js): from
+  // the front, a little from the east, near enough to fill the picture.
+  // In and out of it the view cuts (setCamMode): no glide through walls.
+  house() {
+    setCamMode('house');
+    placeShell();
+    const id = placeId(place), c = house.convert(HOUSE_MID, 'room', id);
+    view.goal.focus.set(c.x, HOUSE_MID.y, c.z);
+    view.goal.yaw = wrapYaw(house.convertYaw(.62, 'room', id));
+    view.goal.pitch = .36;
+    view.goal.dist = houseFit(view.goal.focus, view.goal.yaw, view.goal.pitch);
+    Object.assign(view, {yaw: view.goal.yaw, pitch: view.goal.pitch, dist: view.goal.dist, fling: null});
+    view.focus.copy(view.goal.focus);
+  },
   food: () => lookAtSpot(bowl.getWorldPosition(new THREE.Vector3()), {y: .15}),
   water: () => lookAtSpot(fountain.getWorldPosition(new THREE.Vector3()), {y: .2}),
   bed: () => place.noBed ? CAMERA_VIEWS.room() : lookAtSpot(bed.position, {dist: 3, y: .3}),
 };
+// The house from outside: built the first time the House view opens, drawn
+// only on its own layer (the camera sees just that layer in the House view,
+// so the rooms, her and her things aren't drawn there at all; the lights
+// are on it too). It stands round the room she's in, as the rooms do.
+const HOUSE_LAYER = 2;
+let shell = null;
+function placeShell() {
+  if (!shell) {
+    shell = new HouseShell();
+    shell.group.traverse(o => o.layers.set(HOUSE_LAYER));
+    scene.add(shell.group);
+    scene.traverse(o => { if (o.isLight) o.layers.enable(HOUSE_LAYER); });
+  }
+  const j = house.placeOf('room', placeId(place));
+  shell.group.position.set(j.at.x, 0, j.at.z); shell.group.rotation.set(0, j.ry, 0);
+  shell.group.updateMatrixWorld(true);
+}
+// How far back the House view stands to have the whole house in the clear
+// part of the picture (not under the care buttons and the sheet).
+const houseCam = new THREE.PerspectiveCamera(), housePt = new THREE.Vector3();
+function houseFit(focus, yaw, pitch) {
+  // (The picture slides up to centre on the clear part, as in Mochi mode:
+  // that part is the middle `bottom / h` of the camera's height.)
+  const B = HOUSE_BOUNDS, id = placeId(place), a = clearArea(), yMax = a.bottom / a.h * .9;
+  const corners = [];
+  for (const x of [B.x0, B.x1]) for (const z of [B.z0, B.z1]) { const p = house.convert({x, z}, 'room', id); for (const y of [B.y0, B.y1]) corners.push([p.x, y, p.z]); }
+  houseCam.copy(camera); houseCam.clearViewOffset(); houseCam.far = 1000; houseCam.updateProjectionMatrix();
+  for (let d = 30; d < 400; d *= 1.04) {
+    houseCam.position.set(focus.x + Math.sin(yaw) * Math.cos(pitch) * d, focus.y + Math.sin(pitch) * d, focus.z + Math.cos(yaw) * Math.cos(pitch) * d);
+    houseCam.lookAt(focus); houseCam.updateMatrixWorld(true);
+    if (corners.every(([x, y, z]) => { housePt.set(x, y, z).project(houseCam); return housePt.z < 1 && Math.abs(housePt.x) < .92 && Math.abs(housePt.y) < yMax; })) return d;
+  }
+  return 400;
+}
 // The mode you picked is kept for next time.
 const CAM_PREF = 'mochi-cam';
 const camPref = () => { try { return storage.getItem(CAM_PREF); } catch { return null; } };
@@ -3777,9 +3841,11 @@ host.addEventListener('pointerdown', e => {
   if (touches.size > 2) return;
   const r = trackPointer(e);
   const panning = e.button === 2 || e.shiftKey;
-  const on = !panning && brain.mode !== 'play' ? catHit() : null, onCat = !!on;
-  const onFountain = !panning && !onCat && brain.mode !== 'play' && hitsFountain();
-  const onPerch = !panning && !onCat && !onFountain && brain.mode !== 'play' ? perchAt() : null;
+  // (In the House view nothing in the rooms can be touched: a drag turns the house.)
+  const outside = view.mode === 'house';
+  const on = !panning && !outside && brain.mode !== 'play' ? catHit() : null, onCat = !!on;
+  const onFountain = !panning && !outside && !onCat && brain.mode !== 'play' && hitsFountain();
+  const onPerch = !panning && !outside && !onCat && !onFountain && brain.mode !== 'play' ? perchAt() : null;
   gesture = {x: e.clientX, y: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false, onCat, onFountain, onPerch, panning, stroke: 0, rect: r, t0: e.timeStamp, lastT: e.timeStamp, vx: 0, vy: 0, turning: false, zone: on ? zoneAt(on.point) : null, zoneT: e.timeStamp, petAt: -10, off: false};
   if (onCat) host.classList.add('stroking');
 });
@@ -3864,6 +3930,8 @@ function endGesture(e) {
     if (rest && brain.mode !== 'play') gesture = {x: rest.x, y: rest.y, lastX: rest.x, lastY: rest.y, moved: true, stroke: 0, rect: host.getBoundingClientRect(), t0: e.timeStamp, lastT: e.timeStamp, vx: 0, vy: 0, turning: false};
     return;
   }
+  // (The House view: a tap does nothing yet; the rooms come in step 5's second part.)
+  if (view.mode === 'house' && gesture && !gesture.moved) { gesture = null; host.classList.remove('stroking', 'dragging'); return; }
   if (gesture && !gesture.moved && gesture.onCat) {
     // Two quick taps in one place.
     if (lastTap && e.timeStamp - lastTap.t < 340 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 34) {
@@ -4980,6 +5048,17 @@ function endTitle() {
 }
 Object.assign(view, {yaw: view.goal.yaw, pitch: view.goal.pitch, dist: view.goal.dist, cut: 0, lift: 0});
 
+// What the camera draws: the house from outside in the House view, else
+// the rooms (SEEN); and how far it sees (the house is big from far off).
+const houseSky = new THREE.Color();
+function houseLayers() {
+  const out = view.mode === 'house';
+  if (camera.layers.isEnabled(HOUSE_LAYER) !== out) camera.layers.set(out ? HOUSE_LAYER : SEEN);
+  // (A sky behind the house: the page's own colour shows round the rooms.)
+  if (out) { houseSky.set(night ? 0x1b2433 : 0xbcd3df); scene.background = houseSky; } else if (scene.background === houseSky) scene.background = null;
+  const far = out ? Math.max(60, view.dist * 2 + 120) : 60;
+  if (Math.abs(camera.far - far) > 1) { camera.far = far; camera.updateProjectionMatrix(); }
+}
 function updateCamera(dt) {
   if (view.fling) {
     const fl = view.fling;
@@ -4996,13 +5075,26 @@ function updateCamera(dt) {
   // lower camera flattens the floor and taps on it land on the furniture.)
   {
     const clear = clearArea(), W = Math.max(1, host.clientWidth);
-    view.shift = damp(view.shift || 0, following && !titleOn ? (clear.h - clear.bottom) / 2 : 0, 4, dt);
+    view.shift = damp(view.shift || 0, (following || view.mode === 'house') && !titleOn ? (clear.h - clear.bottom) / 2 : 0, 4, dt);
     const px = view.shift < .5 ? 0 : Math.round(view.shift);
     if (px !== view.shiftPx || W !== view.shiftW || clear.h !== view.shiftH) {
       if (px) camera.setViewOffset(W, clear.h, 0, px, W, clear.h); else camera.clearViewOffset();
       Object.assign(view, {shiftPx: px, shiftW: W, shiftH: clear.h});
     }
   }
+  // The House view: round the house, nothing in the way out here.
+  if (view.mode === 'house') {
+    view.focus.x = damp(view.focus.x, g.focus.x, 5, dt); view.focus.y = damp(view.focus.y, g.focus.y, 5, dt); view.focus.z = damp(view.focus.z, g.focus.z, 5, dt);
+    view.yaw = g.yaw + wrapYaw(view.yaw - g.yaw);
+    view.yaw = damp(view.yaw, g.yaw, 8, dt); view.pitch = damp(view.pitch, g.pitch, 8, dt); view.dist = damp(view.dist, g.dist, 7, dt);
+    view.shown = view.dist;
+    camera.position.set(view.focus.x + Math.sin(view.yaw) * Math.cos(view.pitch) * view.dist, view.focus.y + Math.sin(view.pitch) * view.dist, view.focus.z + Math.cos(view.yaw) * Math.cos(view.pitch) * view.dist);
+    camera.lookAt(view.focus);
+    placeShell(); shell.update(night, dt);
+    houseLayers();
+    return;
+  }
+  houseLayers();
   let distGoal = g.dist;
   if (following) {
     // Keep Mochi (and, while playing, the toy) comfortably in frame. The
@@ -5367,7 +5459,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, callToRoom, climbTo, callToLanding, callToBedroom, callToBathroom, callToLiving, bedNap, seatWatch, tapDrink, paperPlay, matNap, applyLevel, stairSit, stairRace, upstairsLook, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, sofaNap, kneadThrow, fireside, seaWatch, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, get hall() { return hall; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, callToRoom, climbTo, callToLanding, callToBedroom, callToBathroom, callToLiving, get shell() { return shell; }, bedNap, seatWatch, tapDrink, paperPlay, matNap, applyLevel, stairSit, stairRace, upstairsLook, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, sofaNap, kneadThrow, fireside, seaWatch, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, get hall() { return hall; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });
