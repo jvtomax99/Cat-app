@@ -41,6 +41,9 @@ let r = await until(s => s.inBed && s.act === 'sit' && s.mode === 'idle', 9000);
 check('called from the study, she walks to the bedroom', r.s.inBed && r.s.y > 9.95 && r.s.wing === 'bedroom', `${r.frames} frames, ${JSON.stringify(r.s)}`);
 check('on the way she keeps out of the bedroom\'s furniture', !r.hits.length, r.hits.slice(0, 5).join(' '));
 check('the picker marks the bedroom', await page.evaluate(() => { document.querySelector('#decor-btn').click(); const b = document.querySelector('[data-place="bedroom"]'); const on = b?.getAttribute('aria-pressed') === 'true'; document.querySelector('#decor-dialog').close(); return on; }));
+// (From here on she does only what she's asked: no idle wandering off.)
+const hold = () => page.evaluate(() => { kitten.brain.nextIdle = kitten.clock + 1e6; kitten.brain.nextShow = kitten.clock + 1e6; });
+await hold();
 await page.evaluate(() => kitten.CAMERA_VIEWS.room()); await step(60); await shot('arrived');
 
 // A nap on the big bed.
@@ -49,7 +52,7 @@ r = await until(s => s.perch === 'bigBed' && s.act === 'catnap', 2500);
 check('a nap on the big bed', r.s.perch === 'bigBed' && r.s.act === 'catnap' && Math.abs(r.s.y - 11.72) < .1, JSON.stringify(r.s));
 await step(30); await shot('bed-nap');
 // The window seat (down off the bed first).
-await page.evaluate(() => { kitten.setActivity('sit'); kitten.seatWatch(); });
+await hold(); await page.evaluate(() => { kitten.setActivity('sit'); kitten.seatWatch(); });
 r = await until(s => s.perch === 'windowSeat' && s.act === 'sit', 2500);
 check('a sit on the window seat', r.s.perch === 'windowSeat' && Math.abs(r.s.y - 11.6) < .1, JSON.stringify(r.s));
 check('getting there she kept out of the furniture', !r.hits.length, r.hits.slice(0, 5).join(' '));
@@ -58,7 +61,8 @@ await step(40); await shot('window-seat');
 // Random walks across the floor: every route clear of the furniture.
 const walks = await page.evaluate(() => {
   const h = kitten.hall, B = h.bedroom, K = B.keep, V = kitten.cat.root.position.constructor, bad = [];
-  const into = p => K.some(r => p.x > r.x0 + .01 && p.x < r.x1 - .01 && p.z > r.z0 + .01 && p.z < r.z1 - .01);
+  // (A corner she is already standing on is skipped: up to .1 into a patch's margin is fine; the margins are .4 to .65.)
+  const into = p => K.some(r => p.x > r.x0 + .12 && p.x < r.x1 - .12 && p.z > r.z0 + .12 && p.z < r.z1 - .12);
   for (let i = 0; i < 400; i++) {
     const a = B.randomFloorPoint(), b = i % 4 ? B.randomFloorPoint() : new V(-4.6, 0, 1 + Math.random() * 3);
     const pts = [a, ...h.route(a, b)]; if (pts.length === 1) pts.push(b);

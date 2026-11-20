@@ -560,7 +560,7 @@ export class Hall {
       // (Between the landing and the bedroom: by the doorway, each side's
       // way round what stands there.)
       const bed = p => p.z < -.225, a = bed(from), b = bed(to);
-      if (a && b) { const p = this.bedroom.path(from, to).filter(q => Math.hypot(q.x - from.x, q.z - from.z) > .2); return p.length ? [...p, to.clone()] : []; }
+      if (a && b) { const p = this.bedroom.path(from, to).filter(q => Math.hypot(q.x - from.x, q.z - from.z) > .1); return p.length ? [...p, to.clone()] : []; }
       if (!a && !b) { const p = this.landingPath(from, to); return p.length ? [...p, to.clone()] : []; }
       const dl = V(H.bedDoor.x, 0, UPFLOOR.z0 + .2), db = this.bedroom.doorSpot;
       const pts = a ? [...this.bedroom.path(from, db), db, dl, ...this.landingPath(dl, to)] : [...this.landingPath(from, dl), dl, db, ...this.bedroom.path(db, to)];
