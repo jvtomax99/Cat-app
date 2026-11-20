@@ -975,10 +975,11 @@ function upstairsLook(which) {
 // The bedroom (phase 21, step 3): a nap on the big bed, kneading the duvet
 // first; a sit on the window seat, watching outside (the dark, at night).
 // From anywhere: up the stairs and through the landing's door first.
-function upTo(fn) {
+// (`run`: called by you, she runs there; on her own she walks.)
+function upTo(fn, run = false) {
   if (place === hall && hall.level === 'up') fn();
-  else if (place === hall) climbTo(true, fn);
-  else if (!walkToRoom('hall', () => climbTo(true, fn))) setActivity('sit');
+  else if (place === hall) climbTo(true, fn, run);
+  else if (!walkToRoom('hall', () => climbTo(true, fn, run), run)) setActivity('sit');
 }
 function bedNap() {
   if (pet.sleeping) return false;
@@ -3992,7 +3993,10 @@ const PLACES = {
 // (The landing is the hall's upper floor: which of the two she's on.)
 const pickedPlace = () => place === hall && hall.level === 'up' ? (hall.wing === 'bedroom' ? 'bedroom' : 'landing') : place.id;
 function renderPlaces() {
-  $('#place-options').innerHTML = Object.entries(PLACES).map(([id, d]) => `<button type="button" data-place="${id}" aria-pressed="${pickedPlace() === id}" style="--tint:var(--accent)"><span class="decor-swatch">${d.swatch.map(c => `<i style="background:${c}"></i>`).join('')}</span><strong>${d.name}</strong><small>${d.note}</small></button>`).join('');
+  // (Two ways there: call her, and she runs there through the house; or go
+  // now, and the room opens with her in it. Merlin, 2026-11-20.)
+  const here = pickedPlace();
+  $('#place-options').innerHTML = Object.entries(PLACES).map(([id, d]) => `<div class="place-card${here === id ? ' here' : ''}" style="--tint:var(--accent)"><span class="decor-swatch">${d.swatch.map(c => `<i style="background:${c}"></i>`).join('')}</span><strong>${d.name}</strong><small>${here === id ? `${pet.name} is here` : d.note}</small><div class="place-go"><button type="button" data-place="${id}" aria-pressed="${here === id}" aria-label="Call ${pet.name} to ${d.name.toLowerCase()}">Call her</button><button type="button" data-go="${id}" aria-label="Go to ${d.name.toLowerCase()} now">Go now</button></div></div>`).join('');
 }
 // Take her (and the camera) to another room.
 function goTo(id) {
@@ -4090,6 +4094,16 @@ function crossOver(id) {
   refresh();
 }
 $('#place-options').addEventListener('click', e => {
+  const g = e.target.closest('[data-go]');
+  if (g) {
+    $('#decor-dialog').close();
+    if (pet.sleeping) { toast(`Shh, ${pet.name} is asleep.`); return; }
+    const id = g.dataset.go;
+    if (pickedPlace() === id && !brain.toRoom) return;
+    endTrip();
+    goTo(id === 'study' ? 'room' : id);
+    return;
+  }
   const b = e.target.closest('[data-place]');
   if (!b) return;
   const id = b.dataset.place;
@@ -4124,7 +4138,7 @@ function callToLanding() {
   if (brain.mode !== 'idle') setMode('idle');
   toast(`Calling ${pet.name} up to the landing…`);
   const there = () => { setActivity('sit', rand(4, 7)); express('curious', 2); };
-  const up = () => climbTo(true, there);
+  const up = () => climbTo(true, there, true);
   // (Already upstairs, in the bedroom: through its door to the top of the stairs.)
   if (place === hall && hall.level === 'up') walkTo(layoutOf(hall).topSpot.at, there, true);
   else if (place === hall) up(); else if (!walkToRoom('hall', up, true)) return false;
@@ -4140,7 +4154,7 @@ function callToBedroom() {
   if (brain.mode !== 'idle') setMode('idle');
   if (brain.perch) { brain.climbGoal = 'floor'; }
   toast(`Calling ${pet.name} to the bedroom…`);
-  upTo(() => walkTo(layoutOf(hall).bedroomHome, () => { setActivity('sit', rand(4, 7)); express('curious', 2); }, true));
+  upTo(() => walkTo(layoutOf(hall).bedroomHome, () => { setActivity('sit', rand(4, 7)); express('curious', 2); }, true), true);
   brain.nextIdle = clockNow + 25;
   return true;
 }
@@ -4917,7 +4931,9 @@ function updateCamera(dt) {
   const aim = p => camOffset.set(Math.sin(view.yaw) * Math.cos(p), Math.sin(p), Math.cos(view.yaw) * Math.cos(p));
   // (By a doorway: the boxes either side of it count too; see boxArm.)
   { const id = placeId(place), past = p => house.neighbours(id).some(o => house.pastDoor(house.doorBetween(id, o).here, p) > -.3);
-    view.doorBoxes = kitchen && (laneAt(id, view.focus) || past(view.focus) || past(camera.position)) ? doorBoxes() : null; }
+    // (Every doorway between rooms is downstairs: upstairs, the bedroom lies
+    // past the kitchen's wall, but the camera keeps to the upstairs box.)
+    view.doorBoxes = kitchen && !(place === hall && hall.level === 'up') && (laneAt(id, view.focus) || past(view.focus) || past(camera.position)) ? doorBoxes() : null; }
   let rise = 0;
   if (!titleOn) for (; rise < 1.2 - view.pitch; rise += .1) if (cameraArm(aim(view.pitch + rise), view.dist).d > Math.min(view.dist * .8, 6.5)) break;
   view.rise = damp(view.rise || 0, Math.max(0, rise), 4, dt);

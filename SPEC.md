@@ -31,6 +31,9 @@ the phone's browser and can be added to the home screen.
   (Today switching rooms moves her instantly. Phase 20, approved
   2026-11-18: she really walks through, the camera follows, the room
   picker calls her, food and water live in the kitchen.)
+  (Merlin, 2026-11-20: each room in the picker has two buttons. "Call
+  her": she runs there through the house, stairs and all. "Go now": the
+  room opens at once with her in it. On her own she still strolls.)
 - **Looking around: two camera modes** (live, phase 16; Merlin
   2026-11-13, after "still really bad": replaces the one-finger map drag
   and the automatic view changes of phase 14). Done when: the Explore and

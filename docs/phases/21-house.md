@@ -31,6 +31,10 @@ which holds every size; change the plan there).
   bathroom: drink from the tap, unroll the toilet paper, nap on the mat;
   bedroom: sleep on the big bed, watch from the window seat;
   hall and landing: sit on the stairs, race up and down them.
+- (Merlin, 2026-11-20, after trying the live bedroom: called from the
+  picker she runs, stairs too, since walking took too long; and each room
+  has a "Go now" button beside "Call her" that takes you there at once.
+  Replaces "no teleporting" for the player; she herself still walks.)
 
 ## Who it's for
 Lettuce and the test group. Show Lettuce the blueprint before building.
@@ -132,7 +136,10 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    perches, a patch overlap, taps through the door); own find: a route loop
    at the doorway. Rough edges: past the bedroom's edges the hall's floor
    shows far below (step 5's outside); her save opens downstairs in the
-   hall. Still to do: Merlin's phone check.*
+   hall. Merlin's phone check of the live build (516), 2026-11-20: too slow
+   to get there, odd legs on the stairs, and in Mochi view the camera stuck
+   on the bedroom's floor (it took the bedroom for a downstairs doorway).
+   Fixed before step 4.*
 4. **Bathroom** with its three things to do.
 5. **Outside and the House view**: outer walls, roof, front door, tap a room.
 Stop rule: if a real phone stutters after a step, fix speed before the next.
