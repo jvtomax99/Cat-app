@@ -4064,13 +4064,15 @@ function perchHint() { return place === room ? 'the sill, chair or mantel' : pla
 const PLACES = {
   study: {name: 'The study', note: 'Fireplace, window seat and the bird', swatch: ['#9a5a34', '#5a6b38', '#e7d3b2', '#1d3f9a']},
   kitchen: {name: 'The kitchen', note: 'Shelves to climb, cups to pat, a vacuum to ride', swatch: ['#4b2e1c', '#efe3d0', '#cfd0cc', '#d8c3a5']},
+  // (The living room is the kitchen's other half: one open space, kitchen.js.)
+  living: {name: 'The living room', note: 'The sofa, the fire and the sea', swatch: ['#5b3620', '#efe3d0', '#b58a3c', '#6f8fa6']},
   hall: {name: 'The hall', note: 'The front door and the stairs', swatch: ['#34424f', '#efe3d0', '#7a3a36', '#a9824f']},
   landing: {name: 'The landing', note: 'Up the stairs, by the window', swatch: ['#a9824f', '#efe3d0', '#7a3a36', '#ece4d6']},
   bedroom: {name: 'The bedroom', note: 'The big bed and the window seat', swatch: ['#5d6b7c', '#efe8dc', '#9a5a3a', '#8c9a86']},
   bathroom: {name: 'The bathroom', note: 'The tall tap, the toilet roll, the mat', swatch: ['#7f907c', '#f5f3ee', '#d7a99a', '#c9d3c0']},
 };
 // (The landing is the hall's upper floor: which of the two she's on.)
-const pickedPlace = () => place === hall && hall.level === 'up' ? (hall.wing === 'bedroom' || hall.wing === 'bathroom' ? hall.wing : 'landing') : place.id;
+const pickedPlace = () => place === kitchen && kitchen.half === 'living' ? 'living' : place === hall && hall.level === 'up' ? (hall.wing === 'bedroom' || hall.wing === 'bathroom' ? hall.wing : 'landing') : place.id;
 function renderPlaces() {
   // (Two ways there: call her, and she runs there through the house; or go
   // now, and the room opens with her in it. Merlin, 2026-11-20.)
@@ -4085,8 +4087,10 @@ function goTo(id) {
   // (The bedroom: the hall, upstairs, through the landing's door.)
   // (The bathroom: the hall, upstairs, on through the bedroom.)
   const wing = id === 'bedroom' || id === 'bathroom' ? id : 'landing', upstairs = id === 'landing' || id === 'bedroom' || id === 'bathroom'; if (upstairs) id = 'hall';
+  // (The living room: the kitchen, in its other half.)
+  const living = id === 'living'; if (living) id = 'kitchen';
   const target = roomOf(id);
-  if (target === place && (target !== hall || ((hall.level === 'up') === upstairs && (!upstairs || hall.wing === wing)))) return;
+  if (target === place && (target === kitchen ? (kitchen.half === 'living') === living : target !== hall || ((hall.level === 'up') === upstairs && (!upstairs || hall.wing === wing)))) return;
   if (target === hall) { hall.setLevel(upstairs ? 'up' : 'down'); if (upstairs) hall.setWing(wing); }
   if (brain.mode === 'play') endPlay(true);
   if (brain.mode !== 'idle') setMode('idle');
@@ -4095,6 +4099,7 @@ function goTo(id) {
   brain.pos.copy(pet.sleeping && !place.noBed ? CUSHION_SPOT : HOME);
   brain.elevation = pet.sleeping ? place.bedTop : place === hall && upstairs ? hall.up : 0;
   if (place === hall && upstairs) brain.pos.copy(HOME).setY(0);
+  if (living && !pet.sleeping && place.layoutCache?.livingHome) brain.pos.copy(place.layoutCache.livingHome).setY(0);
   brain.heading = pet.sleeping ? place.layoutCache.sleepHeading ?? .6 : 0;
   setActivity(pet.sleeping ? 'sleep' : 'sit');
   toy.position.copy(TOY_HOME); toyTarget.copy(TOY_HOME);
@@ -4192,10 +4197,28 @@ $('#place-options').addEventListener('click', e => {
   if (pickedPlace() === id && !brain.toRoom) return;
   if (to === 'landing') callToLanding();
   else if (to === 'bedroom') callToBedroom();
+  else if (to === 'living') callToLiving();
   else if (to === 'bathroom') callToBathroom();
   else if (to === 'hall' && offHallFloor() && !pet.sleeping) { toast(`Calling ${pet.name} down to the hall…`); climbTo(false, () => setActivity('sit'), true); }
   else callToRoom(to);
 });
+// Called to the living room: into the kitchen (by way of the doorways, if
+// she's elsewhere), then on across its open floor to the middle of the room.
+function callToLiving() {
+  if (pet.sleeping) { toast(`Shh, ${pet.name} is asleep.`); return false; }
+  brain.treeStuck = false;
+  if (brain.mode === 'play') endPlay(true);
+  if (brain.mode !== 'idle') setMode('idle');
+  toast(`Calling ${pet.name} to the living room…`);
+  const across = () => {
+    const at = place === kitchen && kitchen.layoutCache?.livingHome;
+    if (!at) { setActivity('sit'); return; }
+    walkTo(at.clone().setY(0), () => { setActivity('sit'); express('curious', 2); }, true);
+  };
+  brain.nextIdle = clockNow + 20;
+  if (place === kitchen) { endTrip(); across(); return true; }
+  return walkToRoom('kitchen', across, true);
+}
 // The room picker calls her: she walks there through the doorway (no jump).
 // (Asleep, she stays put; whatever she's doing ends first.)
 function callToRoom(id) {
@@ -5344,7 +5367,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, callToRoom, climbTo, callToLanding, callToBedroom, callToBathroom, bedNap, seatWatch, tapDrink, paperPlay, matNap, applyLevel, stairSit, stairRace, upstairsLook, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, sofaNap, kneadThrow, fireside, seaWatch, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, get hall() { return hall; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, callToRoom, climbTo, callToLanding, callToBedroom, callToBathroom, callToLiving, bedNap, seatWatch, tapDrink, paperPlay, matNap, applyLevel, stairSit, stairRace, upstairsLook, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, sofaNap, kneadThrow, fireside, seaWatch, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, get hall() { return hall; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });

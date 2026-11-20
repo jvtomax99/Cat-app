@@ -996,6 +996,9 @@ export class Kitchen {
       // out in front of the fire.
       seaSpot: {at: far(LV.windowSpot), look: far(LV.seaLook)},
       fireSpot: {at: far(LV.fireSpot.at), look: far(LV.fireLook)},
+      // Where she arrives when called to the living room: the open floor
+      // between the table and the fire wall.
+      livingHome: far(LV.home),
       // Floor -> stepping perch -> back counter -> lower shelf -> upper
       // shelf, all at the left end, well away from the range.
       perches: {
