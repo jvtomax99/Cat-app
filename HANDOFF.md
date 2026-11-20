@@ -1,11 +1,10 @@
-# Handoff (2026-11-20): bedroom fixes on the preview (build 522)
+# Handoff (2026-11-20): bedroom fixes live (build 522); next the bathroom
 
 ## Goal and exact next step
-Merlin's phone check of live build 516 found four problems (not a speed
-stutter): slow trips, no instant way to a room, odd legs on the stairs,
-camera stuck on the bedroom floor in Mochi view. All fixed, on the preview
-as build 522 (`d1a527c`). Waiting on Merlin: try it, then "Go live".
-Then: phase 21 step 4, the bathroom. **Plan approved by Merlin 2026-11-20**
+Bedroom fixes from Merlin's phone check of 516 (slow trips, no instant way
+to a room, odd legs on the stairs, camera stuck on the bedroom floor) are
+**live since 2026-11-20, build 522 (`d1a527c`)**.
+Next: phase 21 step 4, the bathroom. **Plan approved by Merlin 2026-11-20**
 (as in the brief, step 4): tub, sink on a cabinet with a tall tap, toilet
 and roll, mat, towel rail, window, plant; she drinks from the tap, unrolls
 the paper (rolls back up after she leaves), naps on the mat; water runs only
