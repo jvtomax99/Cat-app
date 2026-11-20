@@ -121,6 +121,18 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    the kitchen hidden while the camera is upstairs, the bedroom hidden from
    below; the bathroom's doorway in its east wall, shut until step 4;
    "The bedroom" in the room picker. The duvet lump went to Later.*
+   *Built 2026-11-20 (`dist/bedroom.js`, `tools/qa/bedroom.mjs` 11 of 11):
+   part of the hall's place upstairs, like the landing (`hall.wing`); the
+   landing's door stands open; the Room view looks in from beyond the west
+   wall (phones: from the corner by the landing). The dresser moved to the
+   landing's wall (by the west wall it blocked the Room view). Things:
+   `bedNap` (perch `bigBed`; upstairs a nap or a worn-out night catnap is
+   this), `seatWatch` (perch `windowSeat`). Reviewer's five finds fixed
+   (landing call from the bedroom, pounces through the wall, looks from the
+   perches, a patch overlap, taps through the door); own find: a route loop
+   at the doorway. Rough edges: past the bedroom's edges the hall's floor
+   shows far below (step 5's outside); her save opens downstairs in the
+   hall. Still to do: Merlin's phone check.*
 4. **Bathroom** with its three things to do.
 5. **Outside and the House view**: outer walls, roof, front door, tap a room.
 Stop rule: if a real phone stutters after a step, fix speed before the next.
