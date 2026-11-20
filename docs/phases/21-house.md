@@ -158,6 +158,7 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    or a worn-out night catnap is in here). Room view from beyond the south
    wall (phones: the tub and the mat; the sink and the toilet a drag away).*
 5. **Outside and the House view**: outer walls, roof, front door, tap a room.
+   *Plan approved by Merlin 2026-11-20: `docs/phases/21-step5-plan.md` (House button; outside as the blueprint's front drawing; Upstairs/Downstairs to look inside, one floor drawn at a time; tap a room for Call her / Go now; measure the cost first). Also 2026-11-20: "The living room" added to the room picker.*
 Stop rule: if a real phone stutters after a step, fix speed before the next.
 
 ## Done when
