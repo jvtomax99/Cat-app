@@ -1,8 +1,8 @@
 // Mochi's bedroom (phase 21, step 3): over the kitchen, through the
 // landing's door. A big bed against the east wall, a window seat in the
 // north wall, a wardrobe, a dresser with a mirror, a chaise, a rug, a fig.
-// The bathroom's door (shut until step 4) is in the east wall, over the
-// study's doorway.
+// The bathroom's door (phase 21 step 4: bathroom.js) is in the east wall,
+// over the study's doorway.
 //
 // Part of the hall's place, as the landing is (the hall's upper floor):
 // `Hall` builds it and adds its group to its own, in the hall's frame (x
@@ -158,16 +158,13 @@ export class Bedroom {
     this.window = g;
   }
 
-  // The bathroom's door, shut until step 4: white, four panels, a brass knob.
+  // The bathroom's doorway: its white frame on this side (the leaf stands
+  // open in the bathroom: bathroom.js).
   buildBathDoor(add) {
     const M = this.hall.materials, BD = B.bathDoor, U = this.up, d = new THREE.Group();
     d.position.set(B.east, U, BD.z); d.rotation.y = -Math.PI / 2; this.group.add(d);
     for (const s of [-1, 1]) add(new THREE.BoxGeometry(.14, BD.h + .1, .2), M.white, s * (BD.w / 2 - .07), (BD.h + .1) / 2, .06, d, false);
     add(new THREE.BoxGeometry(BD.w, .14, .2), M.white, 0, BD.h + .03, .06, d, false);
-    add(new THREE.BoxGeometry(BD.w - .28, BD.h, .1), M.white, 0, BD.h / 2, .04, d, false);
-    const pw = (BD.w - .28) / 2 - .2;
-    for (const s of [-1, 1]) for (const [y0, y1] of [[.4, 2.3], [2.6, 4.6]]) add(roundedBox(pw, y1 - y0, .04, .03), M.white, s * (pw / 2 + .07), (y0 + y1) / 2, .1, d, false);
-    add(new THREE.SphereGeometry(.09, 16, 12), M.brass, -(BD.w / 2 - .4), 2.4, .16, d, false);
     this.bathDoor = d;
   }
 
@@ -266,7 +263,8 @@ export class Bedroom {
       home: V(-1.2, U, -6.4),
       sunSpot: V(B.window.x, U, S.z1 + 1.15),
       tailSolids: [
-        box(B.west - .5, B.west + .05, B.north, B.south, U, U + B.wallH), box(B.east - .05, B.east + .5, B.north, B.south, U, U + B.wallH),
+        box(B.west - .5, B.west + .05, B.north, B.south, U, U + B.wallH),
+        box(B.east - .05, B.east + .5, B.north, B.bathDoor.z - B.bathDoor.w / 2, U, U + B.wallH), box(B.east - .05, B.east + .5, B.bathDoor.z + B.bathDoor.w / 2, B.south, U, U + B.wallH),
         box(B.west, B.east, B.north - .5, B.north + .05, U, U + B.wallH), box(B.west, d0, B.south - .05, B.south + .5, U, U + B.wallH), box(d1, B.east, B.south - .05, B.south + .5, U, U + B.wallH),
         box(Bd.x0, B.east, Bd.z0, Bd.z1, U, U + Bd.top), ...B.tables.map(([z0, z1]) => box(B.tableX, B.east, z0, z1, U, U + B.tableTop + 1.1)),
         box(B.wardrobe.x0, B.east, B.wardrobe.z0, B.south, U, U + B.wardrobe.top), box(B.dresser.x0, B.dresser.x1, B.dresser.z0, B.south, U, U + B.dresser.top),

@@ -147,6 +147,16 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    tap (water runs only then), unrolls the paper (it rolls back up after she
    leaves), naps on the mat; "The bathroom" in the picker; a save there
    opens in the hall. A nap in the sink went to Later if wanted.*
+   *Built 2026-11-20 (`dist/bathroom.js`, `tools/qa/bathroom.mjs`, stills
+   `bathroom-look.mjs`): part of the hall's place upstairs, a third wing
+   (`hall.wing` 'bathroom', from her x past the bedroom's east wall). The
+   door's leaf is folded flat against the bathroom's wall (standing out it
+   hid the sink from the Room view); the towel rail is on the east wall by
+   the tub. Things: `tapDrink` (perch `vanity`; `tapRun` shows the water
+   only during the drink), `paperPlay` (pats at the roll; `pullPaper`; it
+   rolls back up when she's 1.6 or more from it), `matNap` (also what a nap
+   or a worn-out night catnap is in here). Room view from beyond the south
+   wall (phones: the tub and the mat; the sink and the toilet a drag away).*
 5. **Outside and the House view**: outer walls, roof, front door, tap a room.
 Stop rule: if a real phone stutters after a step, fix speed before the next.
 

@@ -18,6 +18,7 @@ import * as THREE from 'three';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {canvasTexture, drawLinen, drawWood, roundedBox} from './room.js';
 import {Bedroom} from './bedroom.js';
+import {Bathroom} from './bathroom.js';
 
 const {damp} = THREE.MathUtils;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -83,9 +84,11 @@ export class Hall {
     this.lampSpot = V(H.lamp.x, H.lamp.y - 1.1, H.lamp.z);
     this.upLampSpot = V(-3.2, H.up + 6, 2.5);
     this.level = 'down';
-    // (Upstairs: on the landing, or through its door in the bedroom.)
+    // (Upstairs: on the landing, through its door in the bedroom, or on
+    // through the bedroom's east door in the bathroom.)
     this.wing = 'landing';
     this.bedLampSpot = V(0, H.up + 6.5, -8.5);
+    this.bathLampSpot = V(11.8, H.up + 6.5, -5.2);
     this.build(plaster, floor);
   }
 
@@ -142,6 +145,7 @@ export class Hall {
     this.buildFurniture();
     this.buildUpstairs();
     this.bedroom = new Bedroom(this);
+    this.bathroom = new Bathroom(this);
   }
 
   // Floor, plaster walls, the doorway to the kitchen.
@@ -394,28 +398,31 @@ export class Hall {
     };
     // (Upstairs: the landing's or the bedroom's camera and spots, by which
     // side of its door she's on; the bedroom's two perches either way.)
-    const BL = this.bedroom.layout();
-    if (this.level === 'up' && this.wing === 'bedroom') {
-      const landing = {...this.upLayout(upSpots, stairSolids, BL)};
-      return {...landing, home: BL.home, sunSpot: BL.sunSpot, limits: BL.limits, camBox: BL.camBox, camSolids: BL.camSolids, camBlocks: BL.camBlocks};
+    const BL = this.bedroom.layout(), AL = this.bathroom.layout();
+    const wingL = this.wing === 'bedroom' ? BL : this.wing === 'bathroom' ? AL : null;
+    if (this.level === 'up' && wingL) {
+      const landing = this.upLayout(upSpots, stairSolids, BL, AL);
+      return {...landing, home: wingL.home, sunSpot: wingL.sunSpot, limits: wingL.limits, camBox: wingL.camBox, camSolids: wingL.camSolids, camBlocks: wingL.camBlocks};
     }
-    if (this.level === 'up') return this.upLayout(upSpots, stairSolids, BL);
+    if (this.level === 'up') return this.upLayout(upSpots, stairSolids, BL, AL);
     return this.downLayout(upSpots, stairSolids);
   }
-  upLayout(upSpots, stairSolids, BL) {
+  upLayout(upSpots, stairSolids, BL, AL) {
     const U = H.up, box = (x0, x1, z0, z1, y0, y1) => ({kind: 'box', x0, x1, z0, z1, y0, y1});
     return {
       ...upSpots,
       seatLook: BL.seatLook, bedroomHome: BL.home,
+      // (The bathroom's: the water at the tap, the roll, the mat, its middle.)
+      tapDrink: AL.tapDrink, rollSpot: AL.rollSpot, matSpot: AL.matSpot, bathHome: AL.home,
       // (Spots up here are at the landing's height: walkTo knows them by it.)
       home: V(-3.2, U, 2.4), toyHome: V(-1.7, .13, 3.1),
       sunSpot: V(H.window.x, U, H.front - 1.3),
-      perches: BL.perches, perchTargets: [],
+      perches: {...BL.perches, ...AL.perches}, perchTargets: [],
       tailSolids: [
         box(H.west - .5, H.west + .05, H.back, H.front, U, U + H.upH), box(H.west, H.east, H.front - .05, H.front + .5, U, U + H.upH),
         box(H.west, H.bedDoor.x - H.bedDoor.w / 2, H.back - .5, H.back + .05, U, U + H.upH), box(H.bedDoor.x + H.bedDoor.w / 2, H.east, H.back - .5, H.back + .05, U, U + H.upH), ...stairSolids,
         {kind: 'cyl', x: H.west + .8, z: H.front - .8, r: .55, y0: U, y1: U + .9},
-        ...BL.tailSolids,
+        ...BL.tailSolids, ...AL.tailSolids,
       ],
       limits: {dist: [1.1, 21], pitch: [.04, 1.25], x: [H.west + .6, H.east - .6], z: [.4, H.front - .4], y: [U + .08, U + 6.5]},
       camBox: {x: [H.west + .2, H.east - .2], y: [U + .4, U + 12], z: [.2, 24]},
@@ -460,6 +467,7 @@ export class Hall {
     // (Upstairs: the landing from outside its front wall, the top of the
     // stairs on one side, the bedroom's door ahead.)
     if (this.level === 'up' && this.wing === 'bedroom') return this.bedroom.frame(wide);
+    if (this.level === 'up' && this.wing === 'bathroom') return this.bathroom.frame(wide);
     if (this.level === 'up') return {
       yaw: wide ? .12 : -.3,
       from: [-2, U + 1.5, 2.5],
@@ -481,7 +489,7 @@ export class Hall {
   }
 
   activate(lamp) { this.lamp = lamp; lamp.position.copy(this.lampFor()); }
-  lampFor() { return this.level !== 'up' ? this.lampSpot : this.wing === 'bedroom' ? this.bedLampSpot : this.upLampSpot; }
+  lampFor() { return this.level !== 'up' ? this.lampSpot : this.wing === 'bedroom' ? this.bedLampSpot : this.wing === 'bathroom' ? this.bathLampSpot : this.upLampSpot; }
 
   // Which floor she's on (the app sets it from her height): the hall's
   // or the landing's. The Room view, the camera's box, where she walks and
@@ -501,7 +509,12 @@ export class Hall {
     if (this.lamp) this.lamp.position.copy(this.lampFor());
     return true;
   }
-  wingAt(p) { return this.level !== 'up' ? 'landing' : p.z < (this.wing === 'bedroom' ? .1 : -.6) ? 'bedroom' : 'landing'; }
+  // (The bathroom the same way, by the bedroom's east wall, at x 7.)
+  wingAt(p) {
+    if (this.level !== 'up') return 'landing';
+    if (p.z < -.45 && p.x > (this.wing === 'bathroom' ? 6.6 : 7.4)) return 'bathroom';
+    return p.z < (this.wing === 'bedroom' || this.wing === 'bathroom' ? .1 : -.6) ? 'bedroom' : 'landing';
+  }
   levelAt(y) { return y > HALF + 2.5 ? 'up' : 'down'; }
   // Between the floors (on a step or the half landing).
   onStairs(y) { return y > .05 && y < H.up - .05; }
@@ -542,6 +555,8 @@ export class Hall {
   clampFloor(v) {
     if (this.level === 'up') {
       const F = UPFLOOR;
+      // (Through the bathroom's door, or in there.)
+      if (v.z < -.45 && (v.x > 7.2 || (v.x > 6.3 && this.bathroom.inLane(v)))) return this.bathroom.clampFloor(v);
       // (Through the bedroom's door, or in there.)
       if (v.z < F.z0 && (v.z < -.225 || this.bedroom.inLane(v))) return this.bedroom.clampFloor(v);
       v.x = Math.min(H.east - .7, Math.max(F.x0, v.x)); v.z = Math.min(F.z1, Math.max(F.z0, v.z));
@@ -556,6 +571,7 @@ export class Hall {
   randomFloorPoint(pad = 0) {
     const F = UPFLOOR;
     if (this.level === 'up' && this.wing === 'bedroom') return this.bedroom.randomFloorPoint(pad);
+    if (this.level === 'up' && this.wing === 'bathroom') return this.bathroom.randomFloorPoint(pad);
     if (this.level === 'up') return this.clampFloor(Math.random() < .3 ? V(rand(F.x1, H.east - .7 - pad), 0, rand(F.gz0, F.z1)) : V(rand(F.x0 + pad, F.x1 - pad), 0, rand(F.z0 + pad, F.z1 - pad)));
     return this.clampFloor(V(rand(FLOOR.x0 + pad, FLOOR.x1 - pad), 0, rand(KEEP_OUT.z1, FLOOR.z1 - pad)));
   }
@@ -564,13 +580,20 @@ export class Hall {
   // The whole way, the goal last: walkTo follows a route of two or more.)
   route(from, to) {
     if (this.level === 'up') {
-      // (Between the landing and the bedroom: by the doorway, each side's
-      // way round what stands there.)
-      const bed = p => p.z < -.225, a = bed(from), b = bed(to);
-      if (a && b) { const p = this.bedroom.path(from, to).filter(q => Math.hypot(q.x - from.x, q.z - from.z) > .1); return p.length ? [...p, to.clone()] : []; }
-      if (!a && !b) { const p = this.landingPath(from, to); return p.length ? [...p, to.clone()] : []; }
-      const dl = V(H.bedDoor.x, 0, UPFLOOR.z0 + .2), db = this.bedroom.doorSpot;
-      const pts = a ? [...this.bedroom.path(from, db), db, dl, ...this.landingPath(dl, to)] : [...this.landingPath(from, dl), dl, db, ...this.bedroom.path(db, to)];
+      // (Between the landing, the bedroom and the bathroom, a row of three:
+      // by each doorway on the way, each side's way round what stands there.)
+      const ra = this.upRoom(from), rb = this.upRoom(to);
+      const inner = (r, p, q) => r === 2 ? this.bathroom.path(p, q) : r === 1 ? this.bedroom.path(p, q) : this.landingPath(p, q);
+      if (ra === rb) { const p = inner(ra, from, to).filter(q => Math.hypot(q.x - from.x, q.z - from.z) > .1); return p.length ? [...p, to.clone()] : []; }
+      // (Each doorway's two spots, the lower-numbered room's first.)
+      const doors = [[V(H.bedDoor.x, 0, UPFLOOR.z0 + .2), this.bedroom.doorSpot], [this.bathroom.bedroomSpot, this.bathroom.doorSpot]];
+      const pts = [], dir = rb > ra ? 1 : -1;
+      let cur = from;
+      for (let r = ra; r !== rb; r += dir) {
+        const [p, q] = dir > 0 ? doors[r] : [doors[r - 1][1], doors[r - 1][0]];
+        pts.push(...inner(r, cur, p), p, q); cur = q;
+      }
+      pts.push(...inner(rb, cur, to));
       // (Nothing left between, the doorway's two spots being where she is
       // and where she's going: straight there. Else walkTo would ask again
       // for the same way, forever.)
@@ -590,10 +613,13 @@ export class Hall {
   // Upstairs, can she dash straight from a to b? (Same side of the
   // bedroom's wall, and in there nothing standing between.)
   straightOk(a, b) {
-    const bed = p => p.z < -.225;
-    if (bed(a) !== bed(b)) return false;
-    return !bed(a) || !this.bedroom.path(a, b).length && !this.bedroom.blocked(a, b);
+    const r = this.upRoom(a);
+    if (r !== this.upRoom(b)) return false;
+    const R = r === 1 ? this.bedroom : r === 2 ? this.bathroom : null;
+    return !R || !R.path(a, b).length && !R.blocked(a, b);
   }
+  // Upstairs, which room (x, z) is in: 0 the landing, 1 the bedroom, 2 the bathroom.
+  upRoom(p) { return this.bathroom.holds(p) && p.x > 6.3 ? 2 : p.z < -.225 ? 1 : 0; }
   // On the landing: round the stairwell's corner, between the main floor
   // and the gallery (the corner, or nothing).
   landingPath(from, to) {
@@ -615,12 +641,15 @@ export class Hall {
       if (up) for (const m of [...this.landing, this.upWindow, this.upRug, this.upPlant]) m.visible = true;
       this.bedDoorGroup.visible = this.upWalls[1].visible;
       this.bedroom.group.visible = up; this.bedLeaf.visible = up;
+      this.bathroom.group.visible = up;
       if (up) this.bedroom.update(camera);
       this.upWindow.visible = up && this.upFront[1].visible;
       // (The front door goes with its wall; the skirting with the kitchen's.)
       this.frontDoor.visible = this.frontWalls[0].visible;
       this.skirting.visible = this.walls[0].visible;
     }
+    // (The tap's water, the roll's paper: whether or not it's drawn.)
+    this.bathroom.update(dt, t);
     if (lamp) lamp.intensity = damp(lamp.intensity, night ? 26 : 3, 3, dt);
     const M = this.materials;
     M.shade.emissiveIntensity = damp(M.shade.emissiveIntensity, night ? 2.4 : .3, 3, dt);
