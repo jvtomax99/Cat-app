@@ -2,10 +2,9 @@
 
 ## Goal and exact next step
 Step 3 of phase 21 (`docs/phases/21-house.md`; Merlin swapped it with the
-bathroom): the bedroom over the kitchen. **On the preview, build 515
-(`9ab710f`).** Waiting on Merlin: his phone check (speed with the bedroom),
-then "Go live". Live = push the reviewed sha to `main`, check the Deploy
-workflow, add a row to `MILESTONES.md`.
+bathroom): the bedroom over the kitchen. **Live since 2026-11-20, build 516 (`def03b6`)**, without a phone check
+first (Merlin's pick). Ask him how it runs on his phone; a stutter means a
+speed fix before the bathroom.
 Next after that: step 4, the bathroom (big job: similar apps were already
 looked at 2026-11-19, see the phase brief; plan, wait for his OK). Its door
 is already in the bedroom's east wall, shut (`bedroom.js` `B.bathDoor`).
@@ -20,7 +19,7 @@ is already in the bedroom's east wall, shut (`bedroom.js` `B.bathDoor`).
   updated), `stairs.mjs` 8 of 8. `npm run check` passes.
 
 ## Left
-- Merlin's phone check, then "Go live".
+- Merlin's phone check of the live build.
 - Rough edges: past the bedroom's edges the hall's floor shows far below
   (goes with step 5's outside); the corner-by-corner route may brush up to
   10 cm into a furniture margin (margins are 40 to 65 cm).
