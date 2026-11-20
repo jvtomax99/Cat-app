@@ -141,6 +141,12 @@ Before it: phase 20 finished (she crosses the doorway for real, `dist/house.js`)
    on the bedroom's floor (it took the bedroom for a downstairs doorway).
    Fixed before step 4.*
 4. **Bathroom** with its three things to do.
+   *Plan approved by Merlin 2026-11-20: over the study, through the
+   bedroom's east door; tub, sink on a cabinet with a tall tap, toilet and
+   roll, mat, towel rail, window, plant, built in code; she drinks from the
+   tap (water runs only then), unrolls the paper (it rolls back up after she
+   leaves), naps on the mat; "The bathroom" in the picker; a save there
+   opens in the hall. A nap in the sink went to Later if wanted.*
 5. **Outside and the House view**: outer walls, roof, front door, tap a room.
 Stop rule: if a real phone stutters after a step, fix speed before the next.
 
