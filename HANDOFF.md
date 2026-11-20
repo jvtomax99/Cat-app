@@ -1,42 +1,41 @@
-# Handoff (2026-11-19): phase 21 step 2 (stairs and landing) on the preview
+# Handoff (2026-11-20): phase 21 step 3 (the bedroom) on the preview
 
 ## Goal and exact next step
-Step 2 of phase 21 (`docs/phases/21-house.md`): Mochi climbs the hall
-stairs to a new landing. **Live since 2026-11-19, build 506 (`62a295e`).** Merlin
-hasn't said yet how it runs on his phone: ask.
-Next: step 3, the bedroom (Merlin swapped it with the bathroom; big job: look at similar apps first,
-plan, wait for his OK).
+Step 3 of phase 21 (`docs/phases/21-house.md`; Merlin swapped it with the
+bathroom): the bedroom over the kitchen. **On the preview, build 515
+(`9ab710f`).** Waiting on Merlin: his phone check (speed with the bedroom),
+then "Go live". Live = push the reviewed sha to `main`, check the Deploy
+workflow, add a row to `MILESTONES.md`.
+Next after that: step 4, the bathroom (big job: similar apps were already
+looked at 2026-11-19, see the phase brief; plan, wait for his OK). Its door
+is already in the bedroom's east wall, shut (`bedroom.js` `B.bathDoor`).
 
-## Done (commits 5fc10e2 to the route fix)
-- Stairs made gentler first (Merlin's pick): 12 + 12 steps of 17 cm on 25 cm
-  treads, about 40 degrees.
-- Each paw on its own step, body tilted (`motion-cat.js`: `ctl.ground`,
-  `ctl.slope`). Landing = the hall's upper floor (`hall.level`), see
-  ARCHITECTURE row `hall.js`.
-- Reviewer subagent ran; its 8 real finds fixed. Own find: hall routes
-  returned one point, which walkTo ignores (she cut across the stairwell;
-  downstairs, the console's corner): routes now end with the goal.
-- Tests: `tools/qa/stairs.mjs` 8 of 8, `hall.mjs` 14 of 14 (updated: the
-  landing in the picker; stairs and landing count as hers). `npm run check`
-  passes. Preview build 502 (`1b586f0`) has all the app changes (later
-  commits are tests and notes only).
+## Done (commits 3444c9e to 9ab710f)
+- `dist/bedroom.js`: the room, built in code; part of the hall's place
+  upstairs (`hall.wing`), see ARCHITECTURE row `bedroom.js`.
+- Her things: `bedNap` (perch `bigBed`), `seatWatch` (perch `windowSeat`);
+  "The bedroom" in the picker (`callToBedroom`).
+- Reviewer's five finds fixed; own find: a route loop at the doorway.
+- Tests: `tools/qa/bedroom.mjs` 11 of 11, `hall.mjs` 14 of 14 (list
+  updated), `stairs.mjs` 8 of 8. `npm run check` passes.
 
 ## Left
-- Merlin's phone check of the live build.
-- Rough edges: 3 cm high at the stairs' foot facing away; the hall shows
-  under the landing's front edge in its Room view.
+- Merlin's phone check, then "Go live".
+- Rough edges: past the bedroom's edges the hall's floor shows far below
+  (goes with step 5's outside); the corner-by-corner route may brush up to
+  10 cm into a furniture margin (margins are 40 to 65 cm).
 
 ## Decisions not yet in SPEC.md
-None (stairs slope and the single bedroom door are in the phase brief).
+None (bedroom before bathroom and the duvet idea are in the brief / Later).
 
 ## Rules learned
 - Commit messages: no AI model name, no "Co-Authored-By"; end with the
   "Claude-Session:" link line.
-- Browser tests are slow (stairs.mjs about 30 min, hall.mjs about 40): one at
-  a time, in the background.
-- A place's `route()` must return the whole way with the goal last: walkTo
-  follows only routes of two or more points.
+- Browser tests are slow (bedroom.mjs about 30 min, hall.mjs about 40,
+  stairs.mjs about 30): one at a time, in the background.
+- A place's `route()` must never hand walkTo a first point she's already
+  on: it asks again for the same way, forever (stack overflow).
 
 ## Files to look at first
-`docs/phases/21-house.md` (step 2), `docs/ARCHITECTURE.md` (row `hall.js`),
-`dist/hall.js` (`tops`, `rampAt`, `stairPath`, `level`), app.js `climbTo`.
+`docs/phases/21-house.md` (step 3), `docs/ARCHITECTURE.md` (rows
+`hall.js`, `bedroom.js`), `dist/bedroom.js`, app.js `bedNap`, `seatWatch`, `upTo`.
