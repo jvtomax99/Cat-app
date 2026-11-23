@@ -642,8 +642,9 @@ export class Hall {
         const n = V(0, 0, 1).applyQuaternion(w.quaternion);
         w.visible = V(0, 0, 0).subVectors(eye, w.position).dot(n) > -.05;
       }
-      // (Upstairs is drawn only with her up there, the camera above its floor.)
-      const up = this.level === 'up';
+      // (Upstairs is drawn only with her up there, the camera above its floor;
+      // in the House view, looking in, by the floor picked: `houseFloor`.)
+      const up = this.houseFloor ? this.houseFloor === 'up' : this.level === 'up';
       // (Except the kitchen's wall up there, with the bedroom's door: no sky over the hall.)
       for (const m of [...this.upFront, this.upWest, this.upEast, ...this.landing, this.upWindow, this.upRug, this.upPlant]) if (m && !up) m.visible = false;
       if (up) for (const m of [...this.landing, this.upWindow, this.upRug, this.upPlant]) m.visible = true;

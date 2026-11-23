@@ -13,7 +13,7 @@ import {MotionCat} from './motion-cat.js';
 import {Room} from './room.js';
 import {Kitchen} from './kitchen.js';
 import {Hall} from './hall.js';
-import {HouseShell, BOUNDS as HOUSE_BOUNDS, MID as HOUSE_MID} from './house-shell.js';
+import {HouseShell, BOUNDS as HOUSE_BOUNDS, MID as HOUSE_MID, BLOCKS as HOUSE_BLOCKS} from './house-shell.js';
 import {Sounds, TUNES} from './sound.js';
 import {TitleFx} from './title-fx.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
@@ -3310,6 +3310,8 @@ function setCamMode(mode) {
   // (Out of the House view: straight into the new view, no glide through
   // the walls; see CAMERA_VIEWS.house.)
   if (view.mode === 'house' && mode !== 'house') {
+    view.floor = null; closeHouseCard();
+    for (const b of document.querySelectorAll('[data-floor]')) b.setAttribute('aria-pressed', 'false');
     if (mode === 'follow') view.goal.focus.set(brain.pos.x, brain.elevation + .5, brain.pos.z);
     Object.assign(view, {yaw: view.goal.yaw, pitch: view.goal.pitch, dist: view.goal.dist, cut: 0, lift: 0, rise: 0, armFree: undefined});
     view.focus.copy(view.goal.focus);
@@ -3318,6 +3320,7 @@ function setCamMode(mode) {
   if (mode !== 'free') { view.fling = null; view.zoomHeld = false; }
   const swapped = (view.mode === 'follow') !== (mode === 'follow');
   view.mode = mode;
+  document.body.classList.toggle('house-view', mode === 'house');
   // (The hint under the room says what fingers do in this mode.)
   if (swapped && ready && !titleOn) refresh();
   for (const b of document.querySelectorAll('[data-cam]')) b.setAttribute('aria-pressed', String(b.dataset.cam === (mode === 'follow' ? 'follow' : mode === 'house' ? 'house' : 'room')));
@@ -3327,7 +3330,7 @@ function clampGoal() {
   // (The House view: round the house, from close by to far off, never under the sand.)
   if (view.mode === 'house') {
     const c = house.convert(HOUSE_MID, 'room', placeId(place));
-    g.dist = clamp(g.dist, 14, 240); g.pitch = clamp(g.pitch, .06, 1.45);
+    g.dist = clamp(g.dist, view.floor ? 7 : 14, 240); g.pitch = clamp(g.pitch, .06, 1.45);
     g.focus.x = clamp(g.focus.x, c.x - 26, c.x + 26); g.focus.z = clamp(g.focus.z, c.z - 26, c.z + 26); g.focus.y = clamp(g.focus.y, 0, 22);
     return;
   }
@@ -3730,6 +3733,7 @@ const CAMERA_VIEWS = {
   // In and out of it the view cuts (setCamMode): no glide through walls.
   house() {
     setCamMode('house');
+    if (view.floor) { view.floor = null; closeHouseCard(); for (const b of document.querySelectorAll('[data-floor]')) b.setAttribute('aria-pressed', 'false'); }
     placeShell();
     const id = placeId(place), c = house.convert(HOUSE_MID, 'room', id);
     view.goal.focus.set(c.x, HOUSE_MID.y, c.z);
@@ -3763,12 +3767,12 @@ function placeShell() {
 // How far back the House view stands to have the whole house in the clear
 // part of the picture (not under the care buttons and the sheet).
 const houseCam = new THREE.PerspectiveCamera(), housePt = new THREE.Vector3();
-function houseFit(focus, yaw, pitch) {
+function houseFit(focus, yaw, pitch, top = HOUSE_BOUNDS.y1) {
   // (The picture slides up to centre on the clear part, as in Mochi mode:
   // that part is the middle `bottom / h` of the camera's height.)
   const B = HOUSE_BOUNDS, id = placeId(place), a = clearArea(), yMax = a.bottom / a.h * .9;
   const corners = [];
-  for (const x of [B.x0, B.x1]) for (const z of [B.z0, B.z1]) { const p = house.convert({x, z}, 'room', id); for (const y of [B.y0, B.y1]) corners.push([p.x, y, p.z]); }
+  for (const x of [B.x0, B.x1]) for (const z of [B.z0, B.z1]) { const p = house.convert({x, z}, 'room', id); for (const y of [B.y0, top]) corners.push([p.x, y, p.z]); }
   houseCam.copy(camera); houseCam.clearViewOffset(); houseCam.far = 1000; houseCam.updateProjectionMatrix();
   for (let d = 30; d < 400; d *= 1.04) {
     houseCam.position.set(focus.x + Math.sin(yaw) * Math.cos(pitch) * d, focus.y + Math.sin(pitch) * d, focus.z + Math.cos(yaw) * Math.cos(pitch) * d);
@@ -3777,6 +3781,141 @@ function houseFit(focus, yaw, pitch) {
   }
   return 400;
 }
+// Looking inside (phase 21 step 5, part two): `view.floor` 'down' or 'up'
+// (null: the house from outside). The roofs and the shell's walls go, its
+// ground stays; one floor's rooms are drawn whole (no doorway culling), each
+// room's own walls hiding as they face the camera, as in the Room view.
+// Zoomed out, meshes under radius .5 are left out (step 1's measure: 580
+// draw calls downstairs, 365 without them).
+const insideView = () => view.mode === 'house' && !!view.floor;
+const herFloor = () => place === hall && hall.level === 'up' ? 'up' : 'down';
+const SHELL_GROUND = new Set(['shell-sand', 'shell-paving', 'shell-sea']);
+const HOUSE_SMALL = .5, HOUSE_CLOSE = 26;
+// (The study's walls are cut at the upper floor in this view, so they don't
+// rise into the bathroom; elsewhere the cut sits far overhead. Set from the
+// start, so turning it on compiles nothing.)
+const studyCut = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e4);
+if (renderer) renderer.localClippingEnabled = true;
+for (const w of room.wallGroups) w.traverse(o => { if (o.material) for (const m of [o.material].flat()) m.clippingPlanes = [studyCut]; });
+const inside = {key: '', on: false, hide: []};
+function setFloor(f, follow = false) {
+  if (!kitchen) { buildKitchen(); joinRooms(); placeBowls(); }
+  view.floor = f; view.floorFollow = follow; view.floorMoved = clockNow;
+  inside.key = '';
+  closeHouseCard();
+  for (const b of document.querySelectorAll('[data-floor]')) b.setAttribute('aria-pressed', String(b.dataset.floor === f));
+  if (!f) { CAMERA_VIEWS.house(); return; }
+  // (Looking down into that floor, from where you were round the house.)
+  const g = view.goal;
+  g.focus.y = f === 'up' ? hall.up + 1 : 1;
+  g.pitch = Math.max(g.pitch, .78);
+  // (Roofs off: the house is only as tall as that floor's walls.)
+  g.dist = houseFit(g.focus, g.yaw, g.pitch, f === 'up' ? hall.up * 2 : hall.up);
+  clampGoal();
+}
+// (Inside-only pieces: the study's painted window view, the terraces with
+// their sky sheets, the plaster that blocks the sky over the Room views.)
+function insideOnly() {
+  const list = [room.glass, kitchen.terrace?.group, ...(kitchen.living?.terraces || []).map(t => t.group)];
+  for (const r of [kitchen, kitchen.living, hall]) for (const w of r?.walls || []) if (w.geometry?.parameters?.height === 30) list.push(w);
+  return list.filter(Boolean);
+}
+function houseInside() {
+  const up = view.floor === 'up';
+  if (!inside.on) {
+    inside.on = true;
+    // (The big floor sheets, 60 across for the Room view's far corners: each
+    // room's floor cut to its plan instead, as seen through a doorway.)
+    inside.hide = insideOnly();
+    for (const m of shell.group.children) m.visible = SHELL_GROUND.has(m.name);
+    // (No sun shadows in here: its box covers only a few steps round her.
+    // Faded, not switched off, so nothing has to compile.)
+    sun.shadow.autoUpdate = false; inside.shadow = sun.shadow.intensity; sun.shadow.intensity = 0;
+    camRoom = null;
+  }
+  // (Upstairs: the rooms under its floor aren't drawn.)
+  // (Each frame: her crossing into another room re-joins the rooms, which
+  // brings that room's big floor and all its small things back.)
+  for (const [, r] of builtRooms()) { r.floor.visible = false; r.floorPatch.visible = true; }
+  if (inside.place !== place) { inside.place = place; inside.key = ''; }
+  hall.houseFloor = view.floor;
+  room.group.visible = kitchen.group.visible = !up; hall.group.visible = true;
+  studyCut.constant = up ? 1e4 : hall.up;
+  // (She's drawn where she is, on the floor shown; on the other, not.)
+  cat.root.visible = herFloor() === view.floor;
+  // Zoomed out, the small things are left out; close up, all of them.
+  const key = view.floor + (view.dist < HOUSE_CLOSE);
+  if (inside.key !== key) {
+    inside.key = key;
+    const all = view.dist < HOUSE_CLOSE;
+    for (const r of [room, kitchen, hall]) r.group.traverse(o => {
+      if (!o.geometry) return;
+      if (o.userData.houseR === undefined) {
+        if (o.isInstancedMesh) { if (!o.boundingSphere) o.computeBoundingSphere(); } else if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+        o.userData.houseR = (o.isInstancedMesh ? o.boundingSphere : o.geometry.boundingSphere).radius * o.getWorldScale(tmpV).x;
+      }
+      o.layers.set(all || o.userData.houseR >= HOUSE_SMALL ? SEEN : UNSEEN);
+    });
+  }
+  // (Called from here and she takes the stairs: the floor shown follows her.)
+  if (view.floorFollow && herFloor() !== view.floor) setFloor(herFloor(), true);
+  // (Until she gets there: two seconds standing still, not a pause between
+  // the steps of her way.)
+  if (brain.toRoom || brain.target) view.floorMoved = clockNow;
+  if (view.floorFollow && clockNow - (view.floorMoved ?? 0) > 2) view.floorFollow = false;
+}
+// (After the rooms' own updates, which set their walls each frame.)
+function houseInsideAfter() { for (const o of inside.hide) o.visible = false; }
+function houseOutside() {
+  if (!inside.on) return;
+  inside.on = false; inside.key = '';
+  for (const [, r] of builtRooms()) { r.floor.visible = r === place; r.floorPatch.visible = r !== place; }
+  for (const o of inside.hide) o.visible = true;
+  if (shell) for (const m of shell.group.children) m.visible = true;
+  if (hall) hall.houseFloor = null;
+  studyCut.constant = 1e4; cat.root.visible = true;
+  sun.shadow.autoUpdate = true; sun.shadow.needsUpdate = true; sun.shadow.intensity = inside.shadow ?? 1;
+  view.floorFollow = false; inside.place = null;
+  camRoom = null;
+}
+// Tapping a room while looking inside: a card with its name and the
+// picker's two choices. (From outside, a tap looks in on her floor.)
+const ROOM_KEYS = {study: 'study', kitchen: 'kitchen', living: 'living', hall: 'hall', landing: 'landing', bedroom: 'bedroom', bathroom: 'bathroom'};
+const tapPlane = new THREE.Plane(), tapAt = new THREE.Vector3();
+function roomAtTap(x, y) {
+  setPointer({clientX: x, clientY: y});
+  const up = view.floor === 'up';
+  tapPlane.set(new THREE.Vector3(0, 1, 0), -(up ? hall.up : 0));
+  if (!ray.ray.intersectPlane(tapPlane, tapAt)) return null;
+  const p = house.convert(tapAt, placeId(place), 'room'), B = HOUSE_BLOCKS, inB = b => p.x > b.x0 - .3 && p.x < b.x1 + .3 && p.z > b.z0 - .3 && p.z < b.z1 + .3;
+  const front = p.z > house.ROOMS.hall.at.z - .45;
+  if (inB(B.study)) return up ? 'bathroom' : 'study';
+  if (inB(B.middle)) return up ? (front ? 'landing' : 'bedroom') : front ? 'hall' : 'kitchen';
+  if (inB(B.living) && !up) return 'living';
+  return null;
+}
+function houseTap(x, y) {
+  if (!view.floor) { setFloor(herFloor()); return; }
+  const id = roomAtTap(x, y);
+  if (!id) { closeHouseCard(); return; }
+  openHouseCard(id, x, y);
+}
+function openHouseCard(id, x, y) {
+  const card = $('#house-card'), d = PLACES[ROOM_KEYS[id]], here = pickedPlace() === id;
+  card.dataset.room = id;
+  card.querySelector('strong').textContent = d.name;
+  card.querySelector('small').textContent = here ? `${pet.name} is here` : d.note;
+  card.querySelector('[data-house-call]').setAttribute('aria-label', `Call ${pet.name} to ${d.name.toLowerCase()}`);
+  card.querySelector('[data-house-go]').setAttribute('aria-label', `Go to ${d.name.toLowerCase()} now`);
+  card.hidden = false;
+  // (Over the room tapped, kept on the screen.)
+  const box = card.parentElement.getBoundingClientRect(), w = card.offsetWidth, h = card.offsetHeight;
+  // (On a phone the view buttons run down the right edge.)
+  card.style.left = clamp(x - box.left - w / 2, 12, box.width - w - (sheetMQ.matches ? 64 : 12)) + 'px';
+  card.style.top = clamp(y - box.top - h - 16, 12, box.height - h - 12) + 'px';
+}
+function closeHouseCard() { const c = $('#house-card'); if (c) c.hidden = true; }
+
 // The mode you picked is kept for next time.
 const CAM_PREF = 'mochi-cam';
 const camPref = () => { try { return storage.getItem(CAM_PREF); } catch { return null; } };
@@ -3824,7 +3963,7 @@ host.addEventListener('wheel', e => {
 }, {passive: false});
 
 host.addEventListener('pointerdown', e => {
-  if (e.target.closest('button, .hud, .dock, dialog')) return;
+  if (e.target.closest('button, .hud, .dock, dialog, .house-card')) return;
   host.setPointerCapture(e.pointerId);
   // (A first finger: nothing can be left over from a touch that never ended.)
   if (e.isPrimary) { touches.clear(); pinch = null; }
@@ -3930,8 +4069,8 @@ function endGesture(e) {
     if (rest && brain.mode !== 'play') gesture = {x: rest.x, y: rest.y, lastX: rest.x, lastY: rest.y, moved: true, stroke: 0, rect: host.getBoundingClientRect(), t0: e.timeStamp, lastT: e.timeStamp, vx: 0, vy: 0, turning: false};
     return;
   }
-  // (The House view: a tap does nothing yet; the rooms come in step 5's second part.)
-  if (view.mode === 'house' && gesture && !gesture.moved) { gesture = null; host.classList.remove('stroking', 'dragging'); return; }
+  // (The House view: a tap looks in, or opens a room's card.)
+  if (view.mode === 'house' && gesture && !gesture.moved) { gesture = null; host.classList.remove('stroking', 'dragging'); houseTap(e.clientX, e.clientY); return; }
   if (gesture && !gesture.moved && gesture.onCat) {
     // Two quick taps in one place.
     if (lastTap && e.timeStamp - lastTap.t < 340 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 34) {
@@ -4241,26 +4380,35 @@ function crossOver(id) {
   toy.position.copy(TOY_HOME); toyTarget.copy(TOY_HOME); toyLast.copy(TOY_HOME);
   // Not following her: the view glides into the room she went to, and a
   // note says where she is.
-  if (view.mode !== 'follow') { view.glideUntil = clockNow + 3.4; CAMERA_VIEWS.room(); toast(`${pet.name} went to the ${house.ROOMS[id].name}`); }
+  if (view.mode !== 'follow' && view.mode !== 'house') { view.glideUntil = clockNow + 3.4; CAMERA_VIEWS.room(); toast(`${pet.name} went to the ${house.ROOMS[id].name}`); }
   pet.place = id;
   save();
   refresh();
 }
+// The picker's two choices (and the House view's card's): go now, or call her.
+function goNow(id) {
+  if (pet.sleeping) { toast(`Shh, ${pet.name} is asleep.`); return; }
+  if (pickedPlace() === id && !brain.toRoom) { if (view.mode === 'house') CAMERA_VIEWS.room(); return; }
+  endTrip();
+  goTo(id === 'study' ? 'room' : id);
+  // (From the House view, already in that room: into its Room view all the same.)
+  if (view.mode === 'house') CAMERA_VIEWS.room();
+}
 $('#place-options').addEventListener('click', e => {
   const g = e.target.closest('[data-go]');
-  if (g) {
-    $('#decor-dialog').close();
-    if (pet.sleeping) { toast(`Shh, ${pet.name} is asleep.`); return; }
-    const id = g.dataset.go;
-    if (pickedPlace() === id && !brain.toRoom) return;
-    endTrip();
-    goTo(id === 'study' ? 'room' : id);
-    return;
-  }
+  if (g) { $('#decor-dialog').close(); goNow(g.dataset.go); return; }
   const b = e.target.closest('[data-place]');
   if (!b) return;
-  const id = b.dataset.place;
   $('#decor-dialog').close();
+  callHer(b.dataset.place);
+});
+for (const b of document.querySelectorAll('[data-floor]')) b.addEventListener('click', () => setFloor(view.floor === b.dataset.floor ? null : b.dataset.floor));
+$('#house-card').addEventListener('click', e => {
+  const id = $('#house-card').dataset.room;
+  if (e.target.closest('[data-house-go]')) { closeHouseCard(); goNow(id); }
+  else if (e.target.closest('[data-house-call]')) { closeHouseCard(); callHer(id); view.floorFollow = true; view.floorMoved = clockNow; }
+});
+function callHer(id) {
   const to = id === 'study' ? 'room' : id;
   if (pickedPlace() === id && !brain.toRoom) return;
   if (to === 'landing') callToLanding();
@@ -4269,7 +4417,7 @@ $('#place-options').addEventListener('click', e => {
   else if (to === 'bathroom') callToBathroom();
   else if (to === 'hall' && offHallFloor() && !pet.sleeping) { toast(`Calling ${pet.name} down to the hall…`); climbTo(false, () => setActivity('sit'), true); }
   else callToRoom(to);
-});
+}
 // Called to the living room: into the kitchen (by way of the doorways, if
 // she's elsewhere), then on across its open floor to the middle of the room.
 function callToLiving() {
@@ -5052,8 +5200,8 @@ Object.assign(view, {yaw: view.goal.yaw, pitch: view.goal.pitch, dist: view.goal
 // the rooms (SEEN); and how far it sees (the house is big from far off).
 const houseSky = new THREE.Color();
 function houseLayers() {
-  const out = view.mode === 'house';
-  if (camera.layers.isEnabled(HOUSE_LAYER) !== out) camera.layers.set(out ? HOUSE_LAYER : SEEN);
+  const out = view.mode === 'house', want = out ? view.floor ? 'both' : 'shell' : 'rooms';
+  if (view.layerSet !== want) { view.layerSet = want; camera.layers.set(want === 'shell' ? HOUSE_LAYER : SEEN); if (want === 'both') camera.layers.enable(HOUSE_LAYER); }
   // (A sky behind the house: the page's own colour shows round the rooms.)
   if (out) { houseSky.set(night ? 0x1b2433 : 0xbcd3df); scene.background = houseSky; } else if (scene.background === houseSky) scene.background = null;
   const far = out ? Math.max(60, view.dist * 2 + 120) : 60;
@@ -5191,7 +5339,9 @@ function updateRoom(dt, t) {
   // The room the camera stands in is drawn whole; the other only through
   // the doorway. (Following her through it, the camera may still stand in
   // the room she has just left.)
-  if (kitchen) {
+  // (Looking inside from the House view: a whole floor, no doorways.)
+  if (insideView()) houseInside(); else houseOutside();
+  if (kitchen && !inside.on) {
     // (In the opening itself, both are drawn whole; a little either way of
     // it, so a camera hovering there doesn't flip between them.)
     const id = placeId(place);
@@ -5236,6 +5386,7 @@ function updateRoom(dt, t) {
     if (room.group.visible) room.update(dt, t, night, {drinking: atFountain, camera, away: true}); else room.updateFountain(dt, t, atFountain);
   }
   for (const r of [kitchen, hall]) if (r && r !== place && r.group.visible) r.update(dt, t, night, {camera, away: true});
+  if (inside.on) houseInsideAfter();
 
   // Feeding: kibble disappears bite by bite.
   if (brain.activity === 'eat' && !brain.eatAt) {
@@ -5459,7 +5610,7 @@ sheetScrim.addEventListener('click', () => sheetOpen(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isSheetOpen()) sheetOpen(false); });
 
 loadFramePhoto();
-if (params.has('debug')) window.kitten = {house, placeId, walkToRoom, callToRoom, climbTo, callToLanding, callToBedroom, callToBathroom, callToLiving, get shell() { return shell; }, bedNap, seatWatch, tapDrink, paperPlay, matNap, applyLevel, stairSit, stairRace, upstairsLook, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, sofaNap, kneadThrow, fireside, seaWatch, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, get hall() { return hall; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
+if (params.has('debug')) window.kitten = {house, placeId, setFloor, roomAtTap, inside, get studyCut() { return studyCut; }, builtRoomsFloors: () => builtRooms().some(([, r]) => r.floor.visible), get sunShadow() { return sun.shadow.intensity; }, walkToRoom, callToRoom, climbTo, callToLanding, callToBedroom, callToBathroom, callToLiving, get shell() { return shell; }, bedNap, seatWatch, tapDrink, paperPlay, matNap, applyLevel, stairSit, stairRace, upstairsLook, crossOver, news, pumpNews, wishNow, wishCheck, takePhoto, useToy, openToys, get giftToy() { return giftToy; }, brain, renderJournal, sheetOpen, sheetPeek, cat, get clock() { return clockNow; }, SWAT, express, endPlay, get teach() { return teachStep(); }, get title() { return {stage: titleStage, cine, film, fx: titleFx, full: titleFull, toys: titleToys}; }, ridePendant, sofaNap, kneadThrow, fireside, seaWatch, dash, dogLife, nightLife, nightZoomies, shadowPounce, dockHunt, isNight, get night() { return night; }, setNight(v) { forcedNight = v; refresh(); }, act, yawn, slowBlink, meow, hop, view, setActivity, walkTo, jumpTo, jumpDown, startSolo, knockBook, knockVase, climbTree, batBauble, knockBauble, chaseBauble, rehangBauble, curiousLook, treeHide, boxSit, treePaw, helpDown, xmasTree, TREE, tapCups, knockItem: knockThing, stroll, garlandNap, sinkSit, inSink, hopFrom, stealSalmon, drinkFaucet, vacuumRide, vacuumAttack, invite, zoneAt, touchCat, callTo, zoneUnder(x, y) { setPointer({clientX: x, clientY: y}); const h = catHit(); return h ? zoneAt(h.point) : null; }, refresh, goTo, get place() { return place; }, get kitchen() { return kitchen; }, get hall() { return hall; }, room, get PERCHES() { return PERCHES; }, get SUN_SPOT() { return SUN_SPOT; }, renderer, orbit, pan, zoomBy, toy, toyTarget, sounds, pet, say, CAMERA_VIEWS, camera,
   step(dt = 1 / 24, n = 1, drawAll = true) { for (let i = 0; i < n; i++) { virtualNow += dt * 1000; skipDraw = !drawAll && i < n - 1; frame(virtualNow); } skipDraw = false; }};
 
 renderer?.setAnimationLoop(now => { if (manual) return; if (!document.hidden) frame(now); else last = now; });

@@ -651,3 +651,15 @@ dialog.photo .photo-note { margin: 12px 0 0; font-size: 12.5px; text-align: cent
 #ribbon-options { display: flex; gap: 5px; flex-wrap: wrap; }
 #ribbon-options button { flex: none; width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 3px solid var(--card, #fff); background: var(--ribbon); box-shadow: 0 0 0 1px rgba(74, 46, 25, .18); cursor: pointer; }
 #ribbon-options button[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--accent); }
+
+/* The House view (phase 21 step 5): the floor buttons and a room's card. */
+.house-floors { display: none; gap: 6px; }
+body.house-view .house-floors { display: flex; }
+.house-floors button { min-height: 44px; padding: 0 14px; border-radius: 14px; font-size: 13px; font-weight: 800; color: var(--ink-2); }
+.house-floors button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.house-card { position: absolute; z-index: 6; width: min(260px, calc(100% - 24px)); padding: 14px; border-radius: 18px; display: grid; gap: 2px; }
+.house-card[hidden] { display: none; }
+.house-card small { color: var(--ink-2); font-size: 12.5px; }
+.house-card .place-go { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.house-card .place-go button { min-height: 44px; border-radius: 14px; font-size: 14px; font-weight: 800; border: 1px solid var(--accent); background: transparent; color: var(--accent); }
+.house-card .place-go button[data-house-go] { background: var(--accent); color: #fff; }
