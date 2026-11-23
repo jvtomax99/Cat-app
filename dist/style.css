@@ -375,6 +375,8 @@ label.spaced { margin-top: 22px; }
 .install-line svg { width: 16px; height: 16px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .link-btn { display: block; margin: 14px auto 0; border: 0; background: none; font-size: 14px; font-weight: 700; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .link-btn.small { display: flex; align-items: center; width: fit-content; min-height: 44px; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+a.link-btn:not(.small) { width: fit-content; min-height: 44px; display: flex; align-items: center; }
+a.link-btn[hidden] { display: none; }
 
 .toast { position: fixed; z-index: 20; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); max-width: min(92vw, 420px); padding: 13px 20px; border-radius: 18px; background: #2c2520; color: #fff8f0; font-size: 14px; font-weight: 650; text-align: center; box-shadow: var(--shadow-lg); opacity: 0; transform: translate(-50%, 24px) scale(.95); transition: opacity .35s var(--ease), transform .5s var(--spring); pointer-events: none; }
 .toast.visible { opacity: 1; transform: translate(-50%, 0) scale(1); }
