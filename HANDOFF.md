@@ -1,13 +1,10 @@
 # Handoff (2026-11-23): House view part two on the preview; waiting on Merlin's phone check
 
 ## Goal and exact next step
-Phase 21 step 5 (`docs/phases/21-step5-plan.md`). Both parts are now on the
-preview (`d818610`). Next: Merlin checks it on his phone
-(https://jvtomax99.github.io/Cat-app/preview/). If it's good: mark phase 21
-done in `docs/ROADMAP.md`, then offer the cleanup audit
-(`docs/cleanup-audit.md`; `docs/CLEANUP.md` says "none yet", postponed until
-phase 21 is done) with buttons: "Run it now" (recommended), "Next session",
-"Skip this time". Going live needs his "Go live".
+Phase 21 is done and marked in `docs/ROADMAP.md` (on the preview, build 539,
+checked on Merlin's phone). The cleanup audit ran (`docs/CLEANUP.md`, 5
+items, all low risk). Next: Merlin picks which cleanup items to do; then
+"Go live" when he says so.
 
 ## Done
 - `69aaa4b` part one: the house from outside, House button.
