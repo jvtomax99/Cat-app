@@ -1,4 +1,4 @@
-# Handoff (2026-11-23): House view part two on the preview; waiting on Merlin's phone check
+# Handoff (2026-11-23): phase 21 done on the preview; cleanup audit waiting on Merlin
 
 ## Goal and exact next step
 Phase 21 is done and marked in `docs/ROADMAP.md` (on the preview, build 539,
