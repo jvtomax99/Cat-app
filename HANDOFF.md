@@ -1,28 +1,35 @@
-# Handoff (2026-11-23): phase 21 live (build 543)
+# Handoff (2026-11-23): next, phase 09, the small test group
 
 ## Goal and exact next step
-Phase 21 is done and live (build 543, `e180b68`), with the cleanup audit's
-five items. Next: pick the next phase with Merlin (`docs/ROADMAP.md`). This
-handoff's work is finished; delete this file at the next session start.
+Phase 21 (the house) is done and live (build 543, `e180b68`). Merlin picked
+the next phase: **09, the small test group**: share Mochi with 10 to 20
+people on different phones, with a way to send feedback, before the
+1000-member group (`docs/ROADMAP.md` row 09, `SPEC.md` line ~15).
 
-## Done
-- `69aaa4b` part one: the house from outside, House button.
-- `d818610` part two: Upstairs/Downstairs, roofs and shell walls off, one
-  floor's rooms drawn whole, tap a room for a card (Call her / Go now), the
-  view follows her to the other floor after Call her. Includes the code
-  reviewer's four fixes. Built in a scheduled run that couldn't commit, so it
-  came over as a patch and was committed here.
-- Checks: `npm run check` pass; `tools/qa/house-view.mjs` all 25 pass
-  (downstairs 307 draw calls vs the kitchen's 216; upstairs 151).
+It's a big feature (likely an outside service for feedback), so per
+CLAUDE.md: first look at 2 or 3 similar apps/tools for collecting tester
+feedback and tell Merlin in a few lines how they do it and where Mochi can
+be better; then plan mode, plain words, assumptions listed apart; wait for
+his OK. Write the brief to `docs/phases/09-test-group.md`.
+
+Open question already in SPEC.md (line ~258): what counts as v1, i.e. what
+the test group gets. Ask that one first.
+
+## Done (previous session)
+- `d818610` House view part two; `e180b68` cleanup audit's five items;
+  `1908f90` MILESTONES row for live build 543, phase 21 marked live.
 
 ## Left
-- Merlin's phone check of part two (and of build 531, the bathroom).
-- Phase 21 marked done, the cleanup audit offer.
+- Merlin hasn't phone-checked live 543 after the cleanup (should look the
+  same; the cleanup removed only unused files and code).
 - `DESIGN.md` named in CLAUDE.md doesn't exist in the repo.
+- Deploys: a push to `main` doesn't start "Deploy site" here; run it by hand.
+  GitHub sometimes fails the publish step ("No artifacts named github-pages");
+  a fresh run fixes it.
 
 ## Decisions not yet in SPEC.md
 None.
 
 ## Files to look at first
-ARCHITECTURE row `house-shell.js`; app.js `setFloor`, `houseInside`,
-`houseOutside`, `roomAtTap`, `openHouseCard`; `tools/qa/house-view.mjs`.
+`SPEC.md`, `docs/ROADMAP.md`, `dist/privacy.html` (what the app keeps and
+sends: feedback must fit it), `docs/app-store.md`.
