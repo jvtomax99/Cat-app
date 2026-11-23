@@ -1,10 +1,9 @@
-# Handoff (2026-11-23): phase 21 done on the preview; cleanup audit waiting on Merlin
+# Handoff (2026-11-23): phase 21 live (build 543)
 
 ## Goal and exact next step
-Phase 21 is done and marked in `docs/ROADMAP.md` (on the preview, build 539,
-checked on Merlin's phone). The cleanup audit ran (`docs/CLEANUP.md`, 5
-items, all low risk). Next: Merlin picks which cleanup items to do; then
-"Go live" when he says so.
+Phase 21 is done and live (build 543, `e180b68`), with the cleanup audit's
+five items. Next: pick the next phase with Merlin (`docs/ROADMAP.md`). This
+handoff's work is finished; delete this file at the next session start.
 
 ## Done
 - `69aaa4b` part one: the house from outside, House button.
