@@ -58,15 +58,3 @@ export function meowV2(ctx, dest, t, kind = 'meow') {
   return dur + .05;
 }
 
-// Loudness envelope of a version 2 meow (0..1 at `rate` per second), for the
-// mouth: it follows the same gain curve as the sound.
-export function meowV2Envelope(kind = 'meow', rate = 60) {
-  const dur = {chirp: .2, mew: .36, meow: .6, sleepy: .8}[kind] ?? .6;
-  const n = Math.ceil((dur + .05) * rate), out = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const t = i / rate;
-    let g = t < .05 ? Math.pow(.0001 / .32, 1 - t / .05) : t < dur * .55 ? 1 : t < dur ? Math.pow(.0001 / .32, (t - dur * .55) / (dur * .45)) : 0;
-    out[i] = Math.pow(g, .5);
-  }
-  return {dur: dur + .05, env: out};
-}

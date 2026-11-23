@@ -123,7 +123,7 @@ export function drawNoise(g, w, h, {base, blobs, seed = 5}) {
   }
 }
 
-export function drawLeather(g, w, h) {
+function drawLeather(g, w, h) {
   drawNoise(g, w, h, {base: '#4f2a17', blobs: [['rgba(130,78,42,.09)', 900, 8, 40], ['rgba(50,20,6,.08)', 900, 6, 34], ['rgba(190,120,60,.05)', 400, 20, 70]], seed: 9});
   const r = rng(11);
   for (let i = 0; i < 260; i++) {
@@ -152,7 +152,7 @@ function drawSherpa(g, w, h) {
 // slab of cobalt, a block of vermilion, black bars and chalky whites, laid
 // on with a dry brush and a palette knife and worn back in places. Signed,
 // small and in paint, in the bottom right corner.
-export function drawAbstract(g, w, h) {
+function drawAbstract(g, w, h) {
   const r = rng(58);
   const pick = c => Array.isArray(c) ? c[Math.floor(r() * c.length)] : c;
   // A block built up from palette-knife dabs: slanted slabs of paint in

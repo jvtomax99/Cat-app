@@ -36,7 +36,7 @@ import {sculptFace, MOUTH, fade} from './face-sculpt.js';
 const {damp, clamp} = THREE.MathUtils;
 const MODEL_SCALE = 0.86;
 // The long-haired Mochi's coat, part by part (model units; see furLengthsLonghair).
-export const FUR_LONGHAIR = {scale: 1, body: .042, belly: .06, ruff: .08, bib: .012, muzzle: .002, skull: .012, cheek: .036, ear: .003, earTuft: .01,
+const FUR_LONGHAIR = {scale: 1, body: .042, belly: .06, ruff: .08, bib: .012, muzzle: .002, skull: .012, cheek: .036, ear: .003, earTuft: .01,
   armUp: .034, armLow: .013, feather: .014, haunch: .046, britches: .09, shin: .026, paw: .006, plume: .14};
 const MODEL_SCALE_LONGHAIR = 0.95; // her bones come out the first Mochi's size
 

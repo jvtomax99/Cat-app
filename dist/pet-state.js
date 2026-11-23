@@ -19,8 +19,8 @@ const ease=(v,d)=>v>FLOOR?Math.max(FLOOR,v-d):v;
 // she is a little hungry and thirsty in the morning, left a whole day she is
 // missing you too; before, nothing ever asked). Time away counts for a day
 // at most.
-export const DROP={food:5.5,water:6,waterAsleep:2.5,happiness:3,happinessAsleep:1.5,cleanliness:1.5,energy:1.5};
-export const AWAY_MAX_HOURS=24;
+const DROP={food:5.5,water:6,waterAsleep:2.5,happiness:3,happinessAsleep:1.5,cleanliness:1.5,energy:1.5};
+const AWAY_MAX_HOURS=24;
 export function advance(p,now=Date.now()){const hours=Math.max(0,Math.min(AWAY_MAX_HOURS,(now-p.updated)/3600000));p.food=clamp(ease(p.food,hours*DROP.food));p.water=clamp(ease(Number.isFinite(p.water)?p.water:85,hours*(p.sleeping?DROP.waterAsleep:DROP.water)));p.happiness=clamp(ease(p.happiness,hours*(p.sleeping?DROP.happinessAsleep:DROP.happiness)));p.cleanliness=clamp(ease(p.cleanliness,hours*DROP.cleanliness));p.energy=clamp(p.sleeping?p.energy+hours*120:ease(p.energy,hours*DROP.energy));p.updated=now;return p;}
 // Friendship is earned over days (phase 17b). Each kind of care counts in
 // full a few times a day (DAY_FULL), then a tenth, and the tenths stop at
@@ -39,7 +39,7 @@ export function dayKey(now=Date.now()){const d=new Date(now-4*3600000);return `$
 const tenth=v=>Math.round(v*10)/10;
 export function today(p,now=Date.now()){const key=dayKey(now);let d=p.day;const ok=d&&typeof d==='object'&&!Array.isArray(d)&&typeof d.key==='string'&&/^\d{4}-\d\d-\d\d$/.test(d.key);if(!ok||d.key<key||d.key>dayKey(now+86400000))d=p.day={key,n:{},extra:0,...(ok&&typeof d.wish==='string'?{last:d.wish}:{})};if(!d.n||typeof d.n!=='object'||Array.isArray(d.n))d.n={};if(!(d.extra>=0))d.extra=0;return d;}
 // Adds the friendship one care is worth today and returns what it added.
-export function earn(p,action,now=Date.now()){const worth=WORTH[action]||0,d=today(p,now),n=Number.isFinite(d.n[action])?d.n[action]:0;d.n[action]=n+1;let gain=worth;if(n>=(DAY_FULL[action]??0)){gain=tenth(Math.max(0,Math.min(worth/10,DAY_EXTRA-d.extra)));d.extra=tenth(d.extra+gain);}p.bond=tenth(p.bond+gain);return gain;}
+function earn(p,action,now=Date.now()){const worth=WORTH[action]||0,d=today(p,now),n=Number.isFinite(d.n[action])?d.n[action]:0;d.n[action]=n+1;let gain=worth;if(n>=(DAY_FULL[action]??0)){gain=tenth(Math.max(0,Math.min(worth/10,DAY_EXTRA-d.extra)));d.extra=tenth(d.extra+gain);}p.bond=tenth(p.bond+gain);return gain;}
 // The main kinds of care (the ones nothing else holds back) have all counted
 // in full today: "more tomorrow".
 export function dayFull(p,now=Date.now()){const d=today(p,now);return ['pet','brush','play'].every(a=>(d.n[a]||0)>=DAY_FULL[a]);}

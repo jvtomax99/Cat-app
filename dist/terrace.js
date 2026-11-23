@@ -90,7 +90,7 @@ function cards(list, {cross = false, foot = false} = {}) {
 
 // How high the dunes stand, `u` beyond the wall and `z` along it: flat at
 // the wall, a first crest about 4 out, a higher one about 10 out.
-export function duneHeight(u, z) {
+function duneHeight(u, z) {
   const s = Math.min(1, Math.max(0, u / 1.4)), rise = s * s * (3 - 2 * s);
   const a = 1.25 * (1 + .25 * Math.sin(z * .5 + 2)) * Math.exp(-(((u - 4 - 1.2 * Math.sin(z * .21)) / 1.9) ** 2));
   const b = 1.75 * (1 + .2 * Math.sin(z * .31)) * Math.exp(-(((u - 10 + 1.5 * Math.sin(z * .17 + 1)) / 2.6) ** 2));

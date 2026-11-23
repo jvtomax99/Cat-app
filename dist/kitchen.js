@@ -1454,7 +1454,7 @@ function drawLimestone(g, w, h) {
 // with a web of fine brown and gold veins along the joins, a soft shadow at
 // each fragment's edge, and the odd darker fragment. (Cells around scattered
 // points, wobbled so the joins wander; it tiles.)
-export function drawBreccia(g, w, h) {
+function drawBreccia(g, w, h) {
   // Breccia: rounded stone fragments of many sizes and tones (mostly cream,
   // some beige and taupe, a few grey and darker mineral patches) set in a
   // softer sandy matrix, with fine golden veins along only some of the joins.

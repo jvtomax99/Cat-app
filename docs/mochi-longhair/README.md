@@ -7,7 +7,7 @@ Meshy model over a new coat on the old one, knowing it sets aside the rule
 Nothing here is live or on preview.
 
 ## What exists
-- `dist/assets/mochi-longhair.glb` (6 MB, 82,706 triangles, 2K colour and
+- `models/mochi-longhair.glb` (6 MB, 82,706 triangles, 2K colour and
   normal maps). Original with 4K maps: `models/mochi-longhair-meshy.glb`.
 - Made from three standing views Meshy drew from the sheet
   (`sources/mochi-longhair-views/`), then Multi-Image to 3D (meshy-7.1, 2K
@@ -50,7 +50,7 @@ triangle copy for phones by Meshy's Remesh. 96 credits (170 in all).
 ## Candidate B: Merlin's own Meshy model (2026-11-12)
 Merlin shared a model he made in Meshy (317 MB, 7.7 million triangles, fur
 strands and whiskers as real geometry, no skeleton). Meshy's Remesh made a
-90,000 triangle copy: `dist/assets/mochi-longhair-b.glb`, see it with
+90,000 triangle copy: `models/mochi-longhair-b.glb`, see it with
 `mochi-study.html?model=mochi-longhair-b.glb`. Side by side with the rigged
 model: `compare-merlin-model.jpg` (his on top). His: warmer cream closer to
 the sheet, squarer stance. At phone size its strands collapse into flat

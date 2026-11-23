@@ -56,7 +56,7 @@ const I0 = new THREE.Quaternion();
 
 // A rotation from yaw (about y), pitch (about x; positive raises the front)
 // and roll (about z; positive drops the right side), applied in that order.
-export function ypr(yaw = 0, pitch = 0, roll = 0, out = new THREE.Quaternion()) {
+function ypr(yaw = 0, pitch = 0, roll = 0, out = new THREE.Quaternion()) {
   return out.setFromEuler(new THREE.Euler(-pitch, yaw, roll, 'YXZ'));
 }
 
@@ -526,7 +526,7 @@ function frameTurn(rest, now, side) {
 
 // A channel of keys [time, value, ease] (ease into that key: 'io' smooth,
 // 'o' fast then settling, 'i' slow then quick, 'l' linear).
-export class Track {
+class Track {
   constructor(keys) { this.k = keys; }
   at(t) {
     const k = this.k;

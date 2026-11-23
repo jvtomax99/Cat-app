@@ -39,11 +39,11 @@ const inClumpBand = (x, y, z) => z > 0.78 && y > 0.12 && y < 0.45;
 // The muzzle pads, where the clumps grew out of the face. Whatever is left
 // of their roots is pressed onto a smooth surface fitted to the skin around
 // them (then sculpted into rounded pads below).
-export const padQ = (x, y) => Math.hypot((Math.abs(x - MOUTH.midX) - 0.066) / 0.047, (y - 0.293) / 0.033);
+const padQ = (x, y) => Math.hypot((Math.abs(x - MOUTH.midX) - 0.066) / 0.047, (y - 0.293) / 0.033);
 const inPad = (x, y, z) => z > 0.82 && padQ(x, y) < 1;
 
 const inMouth = (x, y, z) => z > 0.8 && Math.abs(x - MOUTH.midX) < 0.085 && y > 0.235 && y < 0.34;
-export const eyeDist = (x, y, c) => Math.hypot((x - c.x) / FACE.eyeRadius.x, (y - c.y) / FACE.eyeRadius.y);
+const eyeDist = (x, y, c) => Math.hypot((x - c.x) / FACE.eyeRadius.x, (y - c.y) / FACE.eyeRadius.y);
 const inEyes = (x, y, z) => z > 0.76 && Math.min(eyeDist(x, y, FACE.eyeR), eyeDist(x, y, FACE.eyeL)) < 1.7;
 
 const posKey = (pos, i) => Math.round(pos.getX(i) * 1e5) + ',' + Math.round(pos.getY(i) * 1e5) + ',' + Math.round(pos.getZ(i) * 1e5);

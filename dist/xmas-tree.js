@@ -51,7 +51,7 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const P = n => TREE.perches[n];
 
 // The fir's radius at height y (measured up from the floor).
-export const radiusAt = y => TREE.radius * Math.pow(Math.max(0, (TREE.top - y) / (TREE.top - TREE.base)), .92) * (1 + .04 * Math.sin(y * 1.7));
+const radiusAt = y => TREE.radius * Math.pow(Math.max(0, (TREE.top - y) / (TREE.top - TREE.base)), .92) * (1 + .04 * Math.sin(y * 1.7));
 
 // Her body on each perch and under the tree, as a line from head to tail
 // base (the tree's frame): nothing hard hangs there.
@@ -94,12 +94,6 @@ function drawFirSprig(g, w, h) {
   };
   shoot(w * .5, h * .99, 0, h * .93, w * .15, .32);
   for (const [y, a, l] of [[.82, -.7, .42], [.74, .66, .44], [.6, -.62, .36], [.52, .6, .34], [.4, -.55, .26], [.33, .55, .25]]) shoot(w * .5, h * y, a, h * l, w * .11, .45);
-}
-// Fine diagonal stripes, red on white (the twisted glass ornaments).
-function drawTwist(g, w, h) {
-  g.fillStyle = '#f2ece2'; g.fillRect(0, 0, w, h);
-  g.fillStyle = '#b3141f';
-  for (let i = -8; i < 16; i++) { g.beginPath(); g.moveTo(i * w / 6, 0); g.lineTo(i * w / 6 + w / 12, 0); g.lineTo(i * w / 6 + w / 12 + w, h); g.lineTo(i * w / 6 + w, h); g.fill(); }
 }
 function glowTexture() {
   return canvasTexture(64, 64, (c, w, h) => {

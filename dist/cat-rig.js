@@ -244,7 +244,7 @@ BONES2.tail7 = ['tail6', V(0.48, -0.365, -0.82), V(0.43, -0.34, -0.95)];
 // (back at y .25, bones at .08). Not used by the app yet (mochi-study.html
 // draws it with ?bones).
 const side = (n, parent, x, y, z, end) => ({[n + 'R']: [parent && parent + 'R', V(-x, y, z), end && V(-end[0], end[1], end[2])].filter(v => v !== undefined), [n + 'L']: [parent && parent + 'L', V(x, y, z), end && V(...end)].filter(v => v !== undefined)});
-export const GROUND_Y_LONGHAIR = -0.602;
+const GROUND_Y_LONGHAIR = -0.602;
 // Joint heights are the first Mochi's (hip and shoulder joints, knees,
 // hocks, elbows, wrists the same height off the floor in the room), so the
 // movement tuned on her fits; the paws and the head are where this model
