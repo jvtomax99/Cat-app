@@ -1,5 +1,10 @@
 # Phase 09: the small test group
 
+**On hold (Merlin 2026-11-23):** no outside feedback for now; Merlin tests
+alone. The button and privacy change below were built (commit `ed02177`),
+then removed. To bring it back: restore those files from `ed02177`, make the
+Tally form, put its link in `FEEDBACK_FORM`.
+
 Merlin, 2026-11-23. 10 to 20 people try Mochi on their own phones and tell
 us what they think, before the group of about 1000.
 

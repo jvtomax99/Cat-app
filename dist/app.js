@@ -4672,30 +4672,6 @@ renderJournal();
 // testing on a phone can read it out (a film that gives way to the sequence
 // does so without a word).
 let buildText = '', buildPreview = false;
-let buildNo = '', buildCommit = '';
-// Feedback (phase 09, the test group): "Send feedback" in the name sheet
-// opens a short Tally form. The link goes in FEEDBACK_FORM; empty hides the
-// button. What it adds to the link (and nothing else): build, phone type,
-// screen size, whether she runs from the Home Screen, and the room she's in.
-// privacy.html lists the same; change both together.
-const FEEDBACK_FORM = '';
-function phoneType() {
-  const ua = navigator.userAgent;
-  const os = (ua.match(/iPhone OS [\d_]+|iPad; CPU OS [\d_]+|Android [\d.]+|Mac OS X [\d_]+|Windows NT [\d.]+|CrOS/) || ['other'])[0].replace(/_/g, '.').replace('; CPU', '');
-  const app = /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /EdgiOS|Edg\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung' : /Safari\//.test(ua) ? 'Safari' : 'other';
-  return `${os}, ${app}`;
-}
-function feedbackUrl() {
-  const home = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  const q = new URLSearchParams({build: buildNo ? `${buildNo} ${buildCommit}` : 'dev', phone: phoneType(), screen: `${screen.width}x${screen.height}@${Math.round(devicePixelRatio * 10) / 10}`, home: home ? 'yes' : 'no', room: pickedPlace()});
-  return `${FEEDBACK_FORM}?${q}`;
-}
-if (FEEDBACK_FORM) {
-  const link = $('#send-feedback');
-  link.hidden = false;
-  // Filled in at the tap, so the room is where she is right now.
-  link.addEventListener('click', () => { link.href = feedbackUrl(); });
-}
 function showFilmNote() {
   let note = ''; try { note = localStorage.getItem('pk-film-note') || ''; } catch {}
   if (buildText && buildPreview) $('#build-label').textContent = buildText + (note ? ' · film: ' + note : '');
@@ -4709,7 +4685,6 @@ fetch('./version.json', {cache: 'no-store'}).then(r => r.ok ? r.json() : null).t
   const text = `${v.channel === 'preview' ? 'Preview' : 'Version'} build ${v.build} · ${v.commit}`;
   $('#build-label').textContent = text;
   buildText = text; buildPreview = v.channel === 'preview'; showFilmNote();
-  buildNo = String(v.build); buildCommit = String(v.commit);
   if (v.channel === 'preview') { $('.topbar').classList.add('has-build'); $('#build-chip').innerHTML = `Preview<span class="long"> · build</span> ${v.build}`; $('#build-chip').hidden = false; $('#review-link').hidden = false; }
 }).catch(() => {});
 

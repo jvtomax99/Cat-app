@@ -58,12 +58,6 @@ with, and how to ask for deletion.
   exact answer wording Apple shows, and whether a web host's visitor
   records count while the app still loads from GitHub Pages
   (https://developer.apple.com/app-store/app-privacy-details/).
-- Since phase 09 (2026-11-23): Send feedback sends what the tester types
-  plus build, phone system and browser, screen size, Home Screen or not, and
-  room, through Tally (`FEEDBACK_FORM` in app.js, privacy.html "Sending
-  feedback"). For the store that is user content and diagnostics, linked to
-  no one unless they type an email. Decide before a store build whether the
-  button stays.
 - No accounts, so the account-deletion rule (5.1.1 v) does not apply.
 
 ## 5. Children (rules 1.3 and 5.1.4)

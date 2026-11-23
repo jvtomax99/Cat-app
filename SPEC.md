@@ -295,6 +295,7 @@ bought models.
 
 ## Decisions
 - Test group (phase 09) gets the live app as it is, no new features until testing ends (Merlin 2026-11-23).
+- No outside testers or feedback for now; Merlin is the only tester. Phase 09 on hold, its plan kept in docs/phases/09-test-group.md (Merlin 2026-11-23).
 - Nothing goes live without Merlin's "Go live"; one preview branch,
   published at /preview/ (no per-feature branches, no Vercel). 2026-11-11.
 - Asset and design budget: $50 total. 2026-11-11.
