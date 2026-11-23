@@ -255,7 +255,6 @@ bought models.
 ## Not in v1 (draft, Merlin to confirm)
 - Picking her up or carrying her, dragging food or the brush to her (plan
   B of phase 14; "Later" unless Merlin approves).
-- **(Merlin?)** What counts as v1: what the test group (phase 09) gets?
 - Accounts, logins, or saves that move between devices (saves stay on the
   phone; backup codes cover moving).
 - Ambient sound (room tone, the fountain, the vacuum's sound). Music is
@@ -295,6 +294,7 @@ bought models.
   the bedroom plan, Merlin 2026-11-19: later).
 
 ## Decisions
+- Test group (phase 09) gets the live app as it is, no new features until testing ends (Merlin 2026-11-23).
 - Nothing goes live without Merlin's "Go live"; one preview branch,
   published at /preview/ (no per-feature branches, no Vercel). 2026-11-11.
 - Asset and design budget: $50 total. 2026-11-11.
