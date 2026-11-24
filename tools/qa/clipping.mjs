@@ -46,11 +46,14 @@ await page.evaluate(() => {
       const mat = Array.isArray(m.material) ? m.material[0] : m.material;
       if (mat?.transparent && mat.opacity < .3 || mat?.visible === false) return;
       const name = label(m, bb.getCenter(new V3())), idx = m.geometry.index, n = (idx ? idx.count : pos.count) / 3;
+      // (A mirrored mesh's triangles wind the other way: flip them back. A
+      // thin two-sided sheet that isn't a wall has no inside.)
+      const flip = m.matrixWorld.determinant() < 0 ? -1 : 1, sheet = mat?.side === 2 && Math.min(bb.max.x - bb.min.x, h, bb.max.z - bb.min.z) < .02 && h < 1.5;
       for (let i = 0; i < n; i++) {
         const ia = idx ? idx.getX(3 * i) : 3 * i, ib = idx ? idx.getX(3 * i + 1) : 3 * i + 1, ic = idx ? idx.getX(3 * i + 2) : 3 * i + 2;
         a.fromBufferAttribute(pos, ia).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(pos, ib).applyMatrix4(m.matrixWorld); c.fromBufferAttribute(pos, ic).applyMatrix4(m.matrixWorld);
-        const nm = e1.subVectors(b, a).cross(e2.subVectors(c, a)); const len = nm.length(); if (len < 1e-9) continue; nm.divideScalar(len);
-        const t = {a: a.clone(), b: b.clone(), c: c.clone(), n: nm.clone(), name, top: nm.y > .7};
+        const nm = e1.subVectors(b, a).cross(e2.subVectors(c, a)); const len = nm.length(); if (len < 1e-9) continue; nm.divideScalar(flip * len);
+        const t = {a: a.clone(), b: b.clone(), c: c.clone(), n: nm.clone(), name, top: nm.y > .7, sheet};
         const ti = tris.push(t) - 1;
         const x0 = Math.floor(Math.min(a.x, b.x, c.x) / CELL), x1 = Math.floor(Math.max(a.x, b.x, c.x) / CELL), y0 = Math.floor(Math.min(a.y, b.y, c.y) / CELL), y1 = Math.floor(Math.max(a.y, b.y, c.y) / CELL), z0 = Math.floor(Math.min(a.z, b.z, c.z) / CELL), z1 = Math.floor(Math.max(a.z, b.z, c.z) / CELL);
         if ((x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1) > 4e4) continue; // (a sky sheet or the like)
@@ -63,7 +66,9 @@ await page.evaluate(() => {
   // The closest surface to p within REACH: signed distance (negative =
   // behind the face, i.e. inside the thing) and which triangle.
   const q = new V3(), d = new V3();
+  let face = false; // (the closest point is inside a face, not on an edge or a corner)
   const closestOnTri = (p, t, out) => {
+    face = false;
     // (Real-Time Collision Detection, 5.1.5.)
     const {a, b, c} = t, ab = e1.subVectors(b, a), ac = e2.subVectors(c, a), ap = e3.subVectors(p, a);
     const d1 = ab.dot(ap), d2 = ac.dot(ap); if (d1 <= 0 && d2 <= 0) return out.copy(a);
@@ -72,7 +77,7 @@ await page.evaluate(() => {
     const cp = e4.subVectors(p, c), d5 = ab.dot(cp), d6 = ac.dot(cp); if (d6 >= 0 && d5 <= d6) return out.copy(c);
     const vb = d5 * d2 - d1 * d6; if (vb <= 0 && d2 >= 0 && d6 <= 0) return out.copy(a).addScaledVector(ac, d2 / (d2 - d6));
     const va = d3 * d6 - d5 * d4; if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) return out.copy(b).addScaledVector(e4.subVectors(c, b), (d4 - d3) / (d4 - d3 + d5 - d6));
-    const den = 1 / (va + vb + vc); return out.copy(a).addScaledVector(ab, vb * den).addScaledVector(ac, vc * den);
+    face = true; const den = 1 / (va + vb + vc); return out.copy(a).addScaledVector(ab, vb * den).addScaledVector(ac, vc * den);
   };
   const e1 = new V3(), e2 = new V3(), e3 = new V3(), e4 = new V3();
   const probe = p => {
@@ -80,10 +85,12 @@ await page.evaluate(() => {
     let best = null, bd = REACH;
     for (let x = cx - 2; x <= cx + 2; x++) for (let y = cy - 2; y <= cy + 2; y++) for (let z = cz - 2; z <= cz + 2; z++) {
       const l = grid.cells.get(x + ',' + y + ',' + z); if (!l) continue;
-      for (const ti of l) { if (seen.has(ti)) continue; seen.add(ti); const t = grid.tris[ti]; closestOnTri(p, t, q); const dd = q.distanceTo(p); if (dd < bd - 1e-6 || dd < bd + 1e-6 && best && Math.abs(d.subVectors(p, q).dot(t.n)) > Math.abs(d.subVectors(p, best.q).dot(best.t.n))) { bd = dd; best = {t, q: q.clone()}; } }
+      for (const ti of l) { if (seen.has(ti)) continue; seen.add(ti); const t = grid.tris[ti]; closestOnTri(p, t, q); const dd = q.distanceTo(p); if (dd < bd - 1e-6 || dd < bd + 1e-6 && face && best && !best.face) { bd = dd; best = {t, q: q.clone(), face}; } }
     }
     if (!best) return null;
-    const s = d.subVectors(p, best.q).dot(best.t.n) < 0 ? -1 : 1;
+    // (Inside only behind a face; near an edge or a corner, or by a thin
+    // sheet, it's the distance.)
+    const s = best.face && !best.t.sheet && d.subVectors(p, best.q).dot(best.t.n) < 0 ? -1 : 1;
     return {d: s * bd, t: best.t};
   };
   const worst = {}, log = [];
@@ -141,8 +148,9 @@ for (const room of ROOMS) {
       const [r, kind] = w.split('|'), kk = r + kind, d = +w.split('|')[3];
       if (!SHOTS || (shotOf[kk] && shotOf[kk].d <= d)) continue;
       shotOf[kk] = {d};
-      const [x, y, z] = await page.evaluate(() => { const p = kitten.cat.bones.spine.getWorldPosition(kitten.cat.root.position.clone()); return [p.x, p.y, p.z]; });
-      await look({focus: [x, y, z], yaw: .5, pitch: .5, dist: 1.6});
+      // (From where the Room view looks, closer in.)
+      const [x, y, z, yaw] = await page.evaluate(() => { const k = kitten, p = k.cat.bones.spine.getWorldPosition(k.cat.root.position.clone()); k.CAMERA_VIEWS.room(); return [p.x, p.y, p.z, k.view.goal.yaw]; });
+      await look({focus: [x, y, z], yaw, pitch: .45, dist: 2.4});
       await page.screenshot({path: `${OUT}/clip-${r}-${kind}.png`});
     }
   }
