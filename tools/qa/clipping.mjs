@@ -47,8 +47,9 @@ await page.evaluate(() => {
       if (mat?.transparent && mat.opacity < .3 || mat?.visible === false) return;
       const name = label(m, bb.getCenter(new V3())), idx = m.geometry.index, n = (idx ? idx.count : pos.count) / 3;
       // (A mirrored mesh's triangles wind the other way: flip them back. A
-      // thin two-sided sheet that isn't a wall has no inside.)
-      const flip = m.matrixWorld.determinant() < 0 ? -1 : 1, sheet = mat?.side === 2 && Math.min(bb.max.x - bb.min.x, h, bb.max.z - bb.min.z) < .02 && h < 1.5;
+      // flat sheet (a wall as one plane, a mat) has no inside, whichever way
+      // it faces: through it is the side away from her hips.)
+      const flip = m.matrixWorld.determinant() < 0 ? -1 : 1, sheet = Math.min(bb.max.x - bb.min.x, h, bb.max.z - bb.min.z) < .02;
       for (let i = 0; i < n; i++) {
         const ia = idx ? idx.getX(3 * i) : 3 * i, ib = idx ? idx.getX(3 * i + 1) : 3 * i + 1, ic = idx ? idx.getX(3 * i + 2) : 3 * i + 2;
         a.fromBufferAttribute(pos, ia).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(pos, ib).applyMatrix4(m.matrixWorld); c.fromBufferAttribute(pos, ic).applyMatrix4(m.matrixWorld);
@@ -80,6 +81,7 @@ await page.evaluate(() => {
     face = true; const den = 1 / (va + vb + vc); return out.copy(a).addScaledVector(ab, vb * den).addScaledVector(ac, vc * den);
   };
   const e1 = new V3(), e2 = new V3(), e3 = new V3(), e4 = new V3();
+  const H = new V3(), hipsAt = new V3();
   const probe = p => {
     const cx = Math.floor(p.x / CELL), cy = Math.floor(p.y / CELL), cz = Math.floor(p.z / CELL), seen = new Set();
     let best = null, bd = REACH;
@@ -90,7 +92,7 @@ await page.evaluate(() => {
     if (!best) return null;
     // (Inside only behind a face; near an edge or a corner, or by a thin
     // sheet, it's the distance.)
-    const s = best.face && !best.t.sheet && d.subVectors(p, best.q).dot(best.t.n) < 0 ? -1 : 1;
+    const side = d.subVectors(p, best.q).dot(best.t.n) < 0, s = best.face && (best.t.sheet ? side !== (H.copy(hipsAt).sub(best.q).dot(best.t.n) < 0) : side) ? -1 : 1;
     return {d: s * bd, t: best.t};
   };
   const worst = {}, log = [];
@@ -112,6 +114,7 @@ await page.evaluate(() => {
       const room = where(), kk = room + (k.hall?.level || '') + (k.hall?.wing || '');
       if (kk !== key) { key = kk; this.tris = build(); }
       if (k.brain.jump) return; // (mid-air jumps: the arc isn't a walk)
+      B.hips.getWorldPosition(hipsAt);
       this.secs[room] = (this.secs[room] || 0) + 1 / 20;
       for (const [n, r] of pts) { B[n].getWorldPosition(P); check(room, 'body', n, P, r, t); }
       for (let i = 0; i < 8; i++) {
