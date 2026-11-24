@@ -21,10 +21,8 @@ furniture, her tail). The check for every room is built:
 - Bedroom and bathroom: pass. Landing: only small (5 to 8 cm) knees and
   elbows into the treads while climbing.
 
-## Done 2026-11-24 (second background run), NOT COMMITTED
-The commit was refused by a permission check, so these changes sit
-uncommitted in the working copy (dist/app.js, dist/living.js, dist/room.js,
-tools/qa/clipping.mjs). Commit and push them first.
+## Done 2026-11-24 (second run): commit e85c428, on the preview (build 562)
+Merlin picked "fix the rest first": Go live still waits for the list below.
 - Chair: spot forward (local z .48), take-off 1.8 out. Worst now 2 to 4 cm (was 42).
 - Mantel: sits along it facing the vase (face pi), turns in the air as she
   lands (`turnIn`), take-off off to the vase side. Clean.
@@ -37,7 +35,8 @@ tools/qa/clipping.mjs). Commit and push them first.
 - Check: a draped cloth drawn both ways (chair throw) no longer counts as solid.
 - Full runs: study 1,213 overlap moments to 115; living 4,501 to 30.
 
-## Left
+## Left (next: the first two, then rerun ROOM=living PERCH=throw and
+## ROOM=study, confirm with a picture, push, run Deploy site)
 - Sofa throw perch: hind feet 19 cm into the seat on landing, wrist 12 cm
   into the moss cushion.
 - Study round bed: walking past, wrists and knees 15 to 18 cm into its rim.
