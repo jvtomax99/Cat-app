@@ -172,7 +172,10 @@ export class MotionCat {
     // (A teleport, e.g. changing rooms: up or down, or across, in one go.)
     const jumped = this.prev && ctl.air < 0 && (Math.abs(rootPos.y - this.prev.pos.y) > .5 || Math.hypot(rootPos.x - this.prev.pos.x, rootPos.z - this.prev.pos.z) > .45);
     this.prev = {pos: rootPos.clone(), heading};
-    if (jumped) for (const k of PAWS) this.paws[k].pos = null;
+    // (Her pace and turning are forgotten too: measured across the jump they
+    // read as a sprint, and her planted paws reached far ahead for a moment.)
+    this.lastJumped = jumped;
+    if (jumped) { for (const k of PAWS) this.paws[k].pos = null; this.vel.set(0, 0, 0); this.yawRate = 0; }
     const speed = this.vel.length();
     const air = ctl.air >= 0 || (ctl.lift || 0) > .03;
     const riding = !!ctl.riding;

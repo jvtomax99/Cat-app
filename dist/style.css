@@ -435,7 +435,7 @@ body.watch .cam-buttons .icon-btn:not(#watch-btn) { display: none; }
 .title #loading, .title .scene-hint { display: none; }
 .title .hud, .title .dock, .title .play-meter, .title .speech { visibility: hidden; }
 .title.title-out .hud, .title.title-out .dock { visibility: visible; animation: title-fade .8s var(--ease) both; }
-.title #title { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: calc(9vh + env(safe-area-inset-top)) 24px calc(8vh + env(safe-area-inset-bottom)); text-align: center; color: #fff8f0; background: linear-gradient(180deg, rgba(24, 15, 10, .62) 0%, rgba(24, 15, 10, .18) 30%, rgba(24, 15, 10, 0) 46%, rgba(24, 15, 10, 0) 64%, rgba(24, 15, 10, .58) 100%); transition: opacity .7s var(--ease); }
+.title #title { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: calc(9vh + env(safe-area-inset-top)) 24px calc(8vh + env(safe-area-inset-bottom)); text-align: center; color: #fff8f0; background: linear-gradient(180deg, rgba(24, 15, 10, .7) 0%, rgba(24, 15, 10, .42) 30%, rgba(24, 15, 10, 0) 52%, rgba(24, 15, 10, 0) 64%, rgba(24, 15, 10, .58) 100%); transition: opacity .7s var(--ease); }
 /* While she loads the room is covered; it lifts once she is home. */
 #title::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(120% 80% at 50% 38%, #3a2a20 0%, #1c1612 70%); transition: opacity 1.6s var(--ease); }
 #title.lit::before { opacity: 0; }
@@ -443,8 +443,8 @@ body.watch .cam-buttons .icon-btn:not(#watch-btn) { display: none; }
 .title-top, .title-bottom { display: grid; justify-items: center; gap: 10px; }
 /* The Pocket Kitten logo: the brand, above her name (which can be changed). */
 .title-logo { display: block; width: min(60vw, 34vh, 300px); height: auto; margin-bottom: 2px; filter: drop-shadow(0 8px 22px rgba(30, 14, 6, .5)) drop-shadow(0 0 20px rgba(255, 214, 170, .2)); animation: title-in 1s var(--ease) .15s both; }
-.title-name { margin: 0; max-width: 92vw; font-size: clamp(64px, 21vw, 168px); line-height: .95; font-weight: 800; letter-spacing: -.03em; overflow-wrap: anywhere; text-shadow: 0 2px 2px rgba(40, 20, 10, .35), 0 14px 44px rgba(40, 20, 10, .55); animation: title-name 1.3s var(--ease) .3s both; }
-.title-sub { margin: 0; display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 650; color: #f3d9c2; animation: title-in 1s var(--ease) .7s both; }
+.title-name { margin: 0; max-width: 92vw; font-size: clamp(56px, min(21vw, 14vh), 168px); line-height: .95; font-weight: 800; letter-spacing: -.03em; overflow-wrap: anywhere; text-shadow: 0 2px 2px rgba(40, 20, 10, .35), 0 14px 44px rgba(40, 20, 10, .55); animation: title-name 1.3s var(--ease) .3s both; }
+.title-sub { margin: 0; display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; color: #fbe6d2; text-shadow: 0 1px 2px rgba(30, 14, 6, .6), 0 4px 16px rgba(30, 14, 6, .7); animation: title-in 1s var(--ease) .7s both; }
 .title-sub::before, .title-sub::after { content: ""; width: 34px; height: 1px; background: currentColor; opacity: .55; }
 .title-load { display: grid; justify-items: center; gap: 12px; font-size: 13px; font-weight: 650; color: #f3d9c2; }
 .title-load[hidden], .title-go[hidden] { display: none; }

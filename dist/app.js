@@ -2656,7 +2656,8 @@ function vacuumRide() {
     if (v.state === 'docked' || brain.mode !== 'idle') { brain.vacRide = false; setActivity('sit'); return; }
     // It moved on: after it (a few times), then give up. Still at its dock:
     // she lets it come out first (boarding there, her hips would be in it).
-    if (brain.pos.distanceTo(vacAt()) > 1.4 || kitchen.vacuumNearHome) { if (tries < 5) later(.8, () => go(tries + 1)); else { brain.vacRide = false; setActivity('sit'); } return; }
+    // (By a wall, too: she waits till it's out where there's room for her.)
+    if (brain.pos.distanceTo(vacAt()) > 1.4 || kitchen.vacuumNearHome || !kitchen.vacRideRoom) { if (tries < 5) later(.8, () => go(tries + 1)); else { brain.vacRide = false; setActivity('sit'); } return; }
     brain.vacRide = false;
     // It waits for her (it's polite), and up she hops.
     v.wait = Math.max(v.wait, clockNow + 2.4);

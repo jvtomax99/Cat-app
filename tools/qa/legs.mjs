@@ -18,7 +18,7 @@ await page.evaluate(() => {
       r.n++; if (short > .02) r.over++; r.max = Math.max(r.max, short);
       const planted = !pw.swing, p = last[k];
       if (planted && p?.planted) { const d = Math.hypot(pw.pos.x - p.x, pw.pos.z - p.z); if (d > .006 && d < .5) r.slide += d; }
-      if (short > .04 && EV.length < 25) EV.push(`${key} stretched ${(short * 100).toFixed(1)}cm speed ${m.vel.length().toFixed(2)} turn ${m.yawRate.toFixed(2)}`);
+      if (short > .04 && EV.length < 25) EV.push(`${key} stretched ${(short * 100).toFixed(1)}cm speed ${m.vel.length().toFixed(2)} turn ${m.yawRate.toFixed(2)} at ${B.pos.x.toFixed(2)},${B.pos.z.toFixed(2)} t ${t.toFixed(1)} jumped ${!!m.lastJumped}`);
       last[k] = {x: pw.pos.x, z: pw.pos.z, planted};
     }
   };

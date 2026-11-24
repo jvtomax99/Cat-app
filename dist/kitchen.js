@@ -54,7 +54,9 @@ const FOUNTAIN_HOME = {x: LIVING.fountain.x, z: 9.8 + LIVING.fountain.z, ry: LIV
 const KEEP_OUT = {x0: K.island.x0 - .65, x1: K.island.x1 + .65, z0: K.island.z0 - .65, z1: K.island.z1 + 1.35};
 // Where the robot vacuum's centre may go: its body (.43) clear of the walls
 // and the counter; with her aboard, her head and hips (.6 each way) too.
-const VAC_FLOOR = {x0: -5.4, x1: 9.5, z0: -2.25, z1: 4.3}, VAC_FLOOR_RIDE = {x0: -5.3, x1: 9.3, z0: -1.83, z1: 4.3};
+// (Landing on it her chin reaches .8, and sat on it her tail .95 behind: by
+// the window wall and the counter's front, those are the reach that counts.)
+const VAC_FLOOR = {x0: -5.4, x1: 9.5, z0: -2.25, z1: 4.3}, VAC_FLOOR_RIDE = {x0: -5.0, x1: 9.3, z0: -1.7, z1: 4.3};
 // Round things on the floor she walks round: the fountain, her bowl, the
 // tent (in and out by its doorway only) and the robot vacuum.
 const TENT = {x: K.tent.x, z: K.tent.z, r: 1.55};
@@ -1157,6 +1159,9 @@ export class Kitchen {
   // The living room's round furniture, for things that roll.
   get livingRounds() { const L = LIVING, at = (o, r, top) => ({x: o.x, z: o.z + K.front, r, top}); return [at(L.sling, 1.0, 1.9), at(L.mohair, 1.0, 1.7), at(L.cube, .7, 1.1), at(L.lacquer, L.lacquer.r, L.lacquer.h), at(L.lamp, .4, .4)]; }
   get islandSolid() { const I = K.island; return {x0: I.x0, x1: I.x1, z0: I.z0, z1: I.z1, top: I.top}; }
+  // Room for her on the vacuum where it is now (hopping on by a wall, her
+  // chin or tail would be in it).
+  get vacRideRoom() { const p = this.vacuum.position, F = VAC_FLOOR_RIDE; return p.x >= F.x0 - .02 && p.x <= F.x1 + .02 && p.z >= F.z0 - .02 && p.z <= F.z1 + .02; }
   get counterSolid() { return {x0: K.left, x1: 3.6, z0: K.back, z1: K.counterFront, top: K.counter}; }
   get roundSolids() { return [this.treeOn ? {x: K.xmas.bed.x, z: K.xmas.bed.z, r: .84, top: .3} : {x: TENT.x, z: TENT.z, r: 1.2, top: 1.9}, {x: FOUNTAIN.x, z: FOUNTAIN.z, r: .5, top: .4}, {x: BOWL.x, z: BOWL.z, r: .37, top: .16}, {x: DOCK.x, z: DOCK.z, r: .4, top: .35}]; }
 
