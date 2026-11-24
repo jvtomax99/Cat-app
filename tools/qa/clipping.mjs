@@ -58,7 +58,7 @@ await page.evaluate(() => {
         a.fromBufferAttribute(pos, ia).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(pos, ib).applyMatrix4(m.matrixWorld); c.fromBufferAttribute(pos, ic).applyMatrix4(m.matrixWorld);
         const nm = e1.subVectors(b, a).cross(e2.subVectors(c, a)); const len = nm.length(); if (len < 1e-9) continue; nm.divideScalar(flip * len);
         if (flat && !sheet) { if (!n0) n0 = nm.clone(); else if (n0.dot(nm) < .9) sheet = true; }
-        const t = {a: a.clone(), b: b.clone(), c: c.clone(), n: nm.clone(), name, top: nm.y > .7, mesh: m};
+        const t = {a: a.clone(), b: b.clone(), c: c.clone(), n: nm.clone(), name, top: nm.y > .7 || h < .03, mesh: m}; // (a rug: its edges count as its top)
         const ti = tris.push(t) - 1;
         const x0 = Math.floor(Math.min(a.x, b.x, c.x) / CELL), x1 = Math.floor(Math.max(a.x, b.x, c.x) / CELL), y0 = Math.floor(Math.min(a.y, b.y, c.y) / CELL), y1 = Math.floor(Math.max(a.y, b.y, c.y) / CELL), z0 = Math.floor(Math.min(a.z, b.z, c.z) / CELL), z1 = Math.floor(Math.max(a.z, b.z, c.z) / CELL);
         if ((x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1) > 4e4) continue; // (a sky sheet or the like)
