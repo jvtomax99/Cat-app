@@ -8,13 +8,14 @@
 // counts only past half a ball's radius and 2 cm more: the balls are fatter
 // than she is, and lying on a thing presses into it a little.
 //   ROOM=study,kitchen,living,hall,landing,bedroom,bathroom (the default: all)
-//   SEC=150 per room, SEED=5, SHOTS=1, OUT=qa-out
+//   SEC=150 per room, SEED=5, SHOTS=1, OUT=qa-out, PERCH=sill (only up to
+//   that perch and down again, over and over)
 // Prints, per room: the worst moments per thing (body and tail apart), and
 // a screenshot of the worst body and tail moment in each room.
 import fs from 'node:fs';
 import {open} from './lib.mjs';
 const ROOMS = (process.env.ROOM || 'study,kitchen,living,hall,landing,bedroom,bathroom').split(',');
-const SEC = +(process.env.SEC || 150), SEED = +(process.env.SEED || 5), SHOTS = process.env.SHOTS !== '0', OUT = process.env.OUT || 'qa-out';
+const PERCH = process.env.PERCH || '', SEC = +(process.env.SEC || 150), SEED = +(process.env.SEED || 5), SHOTS = process.env.SHOTS !== '0', OUT = process.env.OUT || 'qa-out';
 fs.mkdirSync(OUT, {recursive: true});
 const {page, step, look, close} = await open({seed: SEED, quiet: false});
 
@@ -137,18 +138,21 @@ const tick = () => page.evaluate(() => {
 const shotOf = {};
 for (const room of ROOMS) {
   await page.evaluate(r => kitten.goTo(r === 'study' ? 'room' : r), room);
-  const perches = await page.evaluate(() => Object.keys(kitten.PERCHES || {}));
+  const perches = PERCH ? [PERCH] : await page.evaluate(() => Object.keys(kitten.PERCHES || {}));
   let pi = 0;
+  await page.evaluate(only => { __clip.only = only; }, !!PERCH);
   for (let s = 0; s < SEC; s++) {
     // Every 12 s: a walk to a random spot, or up to one of the room's
     // perches, or left to her own choices; back if she's wandered off.
     if (s % 12 === 6) await page.evaluate(([room, perch, r]) => {
       const k = kitten; if (k.brain.mode !== 'idle' || k.brain.jump) return;
       if (__clip.where() !== room) return k.goTo(room === 'study' ? 'room' : room);
+      if (__clip.only) return k.brain.perch === perch ? k.jumpDown(() => {}) : k.jumpTo(perch, () => k.setActivity('sit'), 2);
       if (r < .45) { const p = k.place.randomFloorPoint ? k.place.randomFloorPoint(.1) : k.brain.pos.clone().set(Math.random() * 7 - 3.5, 0, Math.random() * 4.5 - 2); if (p) k.walkTo(p, null, Math.random() < .3); }
       else if (r < .7 && perch) k.jumpTo(perch, () => k.setActivity('sit'), 2);
       else if (k.brain.perch) k.stroll();
     }, [room, perches[pi++ % Math.max(1, perches.length)], Math.random()]);
+
     const worse = await tick();
     for (const w of worse) {
       const [r, kind] = w.split('|'), kk = r + kind, d = +w.split('|')[3];
