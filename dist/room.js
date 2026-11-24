@@ -620,6 +620,7 @@ export class Room {
     // On the sill: a white pitcher with greenery, and a few books.
     const pitcher = this.mesh(lathe([[0, 0], [.13, 0], [.15, .05], [.16, .2], [.13, .32], [.1, .38], [.12, .42], [0, .42]], 28), M.white, g);
     pitcher.position.set(-.75, bottom + .02, .22);
+    this.sillPitcher = pitcher;
     const handle = this.mesh(new THREE.TorusGeometry(.08, .018, 8, 20, Math.PI), M.white, g);
     handle.position.set(-.6, bottom + .25, .22); handle.rotation.z = -Math.PI / 2;
     this.sillSprigs = new THREE.Group(); g.add(this.sillSprigs);

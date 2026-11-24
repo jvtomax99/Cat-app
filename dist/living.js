@@ -332,7 +332,8 @@ export class LivingRoom {
     pillow(-1.95, M.velvetOlive, 1.0, .95, -.36, .12);
     pillow(-1.15, M.paisley, .95, .9, -.3, -.1, -.08);
     pillow(.55, M.boucle, .9, .85, -.34, .05);
-    pillow(1.35, M.velvetRust, 1.0, .82, -.3, -.14, -.1);
+    // (A gap by the kitchen end, where she sits: the rust one is in the middle.)
+    pillow(-.3, M.velvetRust, .85, .82, -.3, -.14, -.1);
     pillow(2.0, M.velvetMoss, .95, .95, -.4, -.2);
     // The throw, over the end nearest the kitchen: up from the seat, over
     // the arm and down the outside, in soft folds.
@@ -621,8 +622,10 @@ export class LivingRoom {
       seaLook: V(L.sea - 30, 1.4, 5.6), fireLook: V(L.south - F.deep * .5, .45, F.z),
       perches: {
         // Up onto the sofa from its kitchen end; along the seat; and from
-        // the seat up onto the back.
-        sofa: {spot: at(S.x + .25, S.z - 2.1), top: S.seat, base: at(S.x + 1.5, S.z - 4.0), face: Math.PI / 2, lane: {x: S.x + .2, z0: S.z - 2.2, z1: S.z + 2.2}},
+        // the seat up onto the back. (Sitting at the front of the seat, in
+        // the gap between the cushions and clear of the arm: in front of a
+        // cushion her hips went into it, nearer the end her tail into the arm.)
+        sofa: {spot: at(S.x + .78, S.z - 1.27), top: S.seat, base: at(S.x + 1.5, S.z - 4.0), face: Math.PI / 2, lane: {x: S.x + .2, z0: S.z - 2.2, z1: S.z + 2.2}},
         // The knitted throw over that end: she faces the arm it hangs
         // over, her front paws on the wool.
         throw: {spot: at(S.x + .6, S.z - 2.0), top: S.seat + .05, base: at(S.x + 1.5, S.z - 4.0), face: Math.PI},
@@ -641,6 +644,10 @@ export class LivingRoom {
           // The sofa: its seat, and its back behind it (a box a little
           // generous at the middle, where the sofa curves away).
           box(S.x - 1.05, S.x + 1.5, S.z - S.long / 2, S.z + S.long / 2, 0, S.seat, 'sofa'), box(S.x - 1.05, S.x - .2, S.z - S.long / 2, S.z + S.long / 2, S.seat, S.back, 'sofa'),
+          // Its cushions along the back (all but the gap where she sits),
+          // and its two round arms.
+          box(S.x - .2, S.x + .35, S.z - 1.0, S.z + 2.45, S.seat, S.seat + .85, 'sofa'), box(S.x - .2, S.x + .35, S.z - 2.48, S.z - 1.52, S.seat, S.seat + .85, 'sofa'),
+          box(S.x - 1.0, S.x + 1.0, S.z - 3.1, S.z - 2.1, 0, 1.53, 'sofa'), box(S.x - 1.0, S.x + 1.0, S.z + 2.1, S.z + 3.1, 0, 1.53, 'sofa'),
           // The coffee table: its feet, and the slab.
           cyl(T.x, T.z - 1.15, .6, 0, T.top - .3), cyl(T.x, T.z + 1.05, .55, 0, T.top - .3), box(T.x - T.wide / 2 - .15, T.x + T.wide / 2 + .15, T.z - T.long / 2, T.z + T.long / 2, T.top - .3, T.top + .45, 'table'),
           cyl(L.sling.x, L.sling.z, 1.0, 0, 2.0), cyl(L.mohair.x, L.mohair.z, .98, 0, 1.75),

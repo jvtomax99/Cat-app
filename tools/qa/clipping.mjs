@@ -51,9 +51,10 @@ await page.evaluate(() => {
       // (A mirrored mesh's triangles wind the other way: flip them back. A
       // flat sheet facing one way (a wall as one plane) has its back as
       // inside; one drawn both ways, or with faces both ways (a flat mat
-      // shape with its two caps), has no inside.)
+      // shape with its two caps), has no inside; nor has a cloth draped
+      // over something, drawn both ways (the chair's throw).)
       const flip = m.matrixWorld.determinant() < 0 ? -1 : 1, flat = Math.min(bb.max.x - bb.min.x, h, bb.max.z - bb.min.z) < .02;
-      let sheet = flat && mat?.side !== 0, n0 = null;
+      let sheet = flat && mat?.side !== 0 || mat?.side === 2 && m.geometry.type === 'PlaneGeometry', n0 = null;
       for (let i = 0; i < n; i++) {
         const ia = idx ? idx.getX(3 * i) : 3 * i, ib = idx ? idx.getX(3 * i + 1) : 3 * i + 1, ic = idx ? idx.getX(3 * i + 2) : 3 * i + 2;
         a.fromBufferAttribute(pos, ia).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(pos, ib).applyMatrix4(m.matrixWorld); c.fromBufferAttribute(pos, ic).applyMatrix4(m.matrixWorld);

@@ -642,16 +642,46 @@ function studyLayout() {
       // (Sideways, along the sill, facing the books: square on to the glass
       // her head went through it; the sill is .8 deep. She looks out by
       // turning her head. Merlin, 2026-11-24.)
-      sill: {spot: w.localToWorld(new THREE.Vector3(-.05, 0, room.sillDepth * .5)).setY(0), top: room.sillTop,
-        base: new THREE.Vector3(room.bed.position.x, 0, room.bed.position.z - .3), face: Math.PI / 2},
-      chair: {spot: c.localToWorld(new THREE.Vector3(0, 0, .3)).setY(0), top: room.chairSeatTop,
-        base: c.localToWorld(new THREE.Vector3(0, 0, 1.45)).setY(0), face: c.rotation.y},
-      // The mantel shelf, beside the vase, facing the room; she takes off
-      // from the floor just in front of the hearth.
-      mantel: {spot: f.localToWorld(new THREE.Vector3(-.3, 0, .36)).setY(0), top: room.mantelTop,
-        base: f.localToWorld(new THREE.Vector3(-.3, 0, 1.5)).setY(0), face: -Math.PI / 2},
+      // (Toward the front of the sill, and down off it onto the floor
+      // ahead and to the side of her bed: turning square to jump down to
+      // the bed, her hips swung into the glass.)
+      sill: {spot: w.localToWorld(new THREE.Vector3(.05, 0, room.sillDepth * .7)).setY(0), top: room.sillTop,
+        base: new THREE.Vector3(room.bed.position.x, 0, room.bed.position.z - .3), face: Math.PI / 2, turnIn: true,
+        down: new THREE.Vector3(room.bed.position.x + 1.35, 0, room.bed.position.z - .55)},
+      // (Forward on the seat: further back her hips and tail went into the
+      // cushion and the chair's back. She waits for the jump clear of the
+      // chair's front, her tail too.)
+      chair: {spot: c.localToWorld(new THREE.Vector3(0, 0, .48)).setY(0), top: room.chairSeatTop,
+        base: c.localToWorld(new THREE.Vector3(0, 0, 1.8)).setY(0), face: c.rotation.y},
+      // The mantel shelf, beside the vase; she takes off from the floor
+      // just in front of the hearth. (Sideways along it, facing the vase,
+      // and turned already as she lands: the shelf is .71 deep and she is
+      // longer, so facing the room her hips and tail went into the wall.)
+      // (Her take-off spot is off to the vase's side, so turning to jump
+      // down is a small turn: a big one swung her hips into the wall.)
+      mantel: {spot: f.localToWorld(new THREE.Vector3(.1, 0, .45)).setY(0), top: room.mantelTop,
+        base: f.localToWorld(new THREE.Vector3(-.9, 0, 1.5)).setY(0), face: Math.PI, turnIn: true},
     },
     perchTargets: [['sill', room.windowGroup], ['chair', room.chair], ['mantel', room.fireplace]],
+    // What her tail keeps out of (clearTail in motion.js): the back and
+    // right walls (the window's glass and frame), the sill and its pitcher
+    // of greenery, the armchair's base, back, arms and cushion, the
+    // fireplace, its hearth stone and the vase on the mantel.
+    tailSolids: (() => {
+      const W = room.walls, rb = (g, x, z, hx, hz, y0, y1) => { const p = g.localToWorld(new THREE.Vector3(x, 0, z)); return {kind: 'rbox', x: p.x, z: p.z, ry: g.rotation.y, hx, hz, y0, y1}; };
+      const v = f.localToWorld(room.mantelVase.position.clone()), pj = w.localToWorld(room.sillPitcher.position.clone());
+      return [
+        {kind: 'box', x0: W.left, x1: W.right, z0: W.back - .5, z1: W.back + .08, y0: 0, y1: 12},
+        {kind: 'box', x0: W.right - .02, x1: W.right + .5, z0: W.back, z1: 8.6, y0: 0, y1: 12},
+        {kind: 'cyl', x: pj.x, z: pj.z, r: .2, y0: pj.y, y1: pj.y + .9},
+        {kind: 'box', x0: w.position.x - 1.45, x1: w.position.x + 1.45, z0: W.back, z1: W.back + room.sillDepth, y0: room.sillTop - .12, y1: room.sillTop},
+        rb(c, 0, 0, 1.05, .93, 0, room.chairSeatTop), rb(c, 0, -.74, 1.05, .23, 0, 2.2),
+        rb(c, -.92, .05, .21, .87, 0, 1.64), rb(c, .87, .05, .27, .87, 0, 1.64), rb(c, -.25, -.36, .48, .2, 0, 1.88),
+        rb(f, 0, .23, 1.5, .23, 0, room.mantelTop), rb(f, 0, .525, 1.75, .525, 0, room.hearthTop),
+        // (Her bed's rim: not while she's in it.)
+        {kind: 'cyl', x: room.bed.position.x, z: room.bed.position.z, r: room.bedR + .02, y0: 0, y1: .45, tag: 'bed'}, {kind: 'cyl', x: v.x, z: v.z, r: .26, y0: v.y, y1: v.y + .7},
+      ];
+    })(),
     limits: {dist: [1.1, 13], pitch: [.04, 1.25], x: [-4.1, 4.1], z: [-2.9, 3.8], y: [.08, 2.4]},
     // The camera stays inside the room (it may stand back past the open
     // front) and out of the tall furniture: [x, z, radius, height].
@@ -1158,7 +1188,9 @@ function jumpDown(then = null) {
   if (P.dropTo) { leap(P.dropTo.at, P.dropTo.top, P.dropTo.perch, then); return; }
   // Down the way she went up, one perch at a time.
   if (P.via) { const U = PERCHES[P.via]; leap(U.spot, U.top, P.via, then); return; }
-  leap(P.base, groundAt(P.base), null, then);
+  // (Down where it says, else where she jumped up from.)
+  const D = P.down || P.base;
+  leap(D, groundAt(D), null, then);
 }
 // Partway up (or down) a run of perches: where she's headed next, so her
 // eyes and body stay on it rather than turning back to you at each landing.
@@ -1366,6 +1398,10 @@ function updateCat(dt, t) {
     }
   }
   if (a === 'prejump') desiredHeading = brain.jumpFace;
+  // Up to a narrow perch she sits along (the sill, the mantel): she turns in the air
+  // and lands already facing the way she'll sit, not nose first into the
+  // wall behind it.
+  if (J && J.perch && PERCHES[J.perch]?.turnIn && (t - J.start) / J.dur > .3) desiredHeading = PERCHES[J.perch].face;
   if (pc) {
     const p = (t - pc.start) / 1.3;
     if (p < .5) desiredHeading = angleTo(brain.pos, pc.at ? pc.at() : toy.position);

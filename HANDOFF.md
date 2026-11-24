@@ -21,27 +21,28 @@ furniture, her tail). The check for every room is built:
 - Bedroom and bathroom: pass. Landing: only small (5 to 8 cm) knees and
   elbows into the treads while climbing.
 
-## Left (worst first, from the last runs)
-- Study window sill: Merlin picked "sideways". Done (`app.js` PERCHES.sill
-  face pi/2, facing the books): sitting there is now clean
-  (`ROOM=study PERCH=sill`). Still wrong for a moment: landing (she arrives
-  facing the glass, jaw through it, then turns) and the turn before jumping
-  down (tail through the glass). Ideas: land already turned, or add the
-  window to the tail's solids (`tailSolids` in the study layout).
-- Study mantel: jaw into the wall beside it, hips and tail into the vase
-  (`Lathe@4.3,3.1,0.2`).
-- Study chair: sitting and grooming, wrist and tail 20 to 40 cm into the
-  chair's back and arms (`Plane@3.0,1.0,-1.1`, `Extrude@2.8,1.5,-2.6`).
-  Not looked at yet: could partly be the check (the chair's cushion sheet).
-- Study round bed: walking past it, knees 19 cm into its rim (keep-out
-  circle too small?).
-- Living room sofa: sitting, spine and tail 20 to 36 cm into the back
-  cushions (`Buffer@-0.9,1.5,15.0`): sofa spot too near the back.
-- Kitchen wall step (lowest): landing and grooming, ear into the window
-  wall and back wall, hips into the counter. Cramped corner; the last
-  session found every other spot worse.
-- Hall: hips 8 cm into the foot of the stairs walking past (x -.2, z 3.9);
-  10 cm into the doormat's side.
+## Done 2026-11-24 (second background run), NOT COMMITTED
+The commit was refused by a permission check, so these changes sit
+uncommitted in the working copy (dist/app.js, dist/living.js, dist/room.js,
+tools/qa/clipping.mjs). Commit and push them first.
+- Chair: spot forward (local z .48), take-off 1.8 out. Worst now 2 to 4 cm (was 42).
+- Mantel: sits along it facing the vase (face pi), turns in the air as she
+  lands (`turnIn`), take-off off to the vase side. Clean.
+- Sill: spot toward the front, `turnIn`, jumps down to a new `down` point
+  beside her bed (small turn). Clean on the sill.
+- Study now has `tailSolids` (walls, sill, pitcher, chair pieces, fireplace,
+  hearth, vase, bed rim).
+- Sofa: spot at the front of the seat in a gap; the rust cushion moved to the
+  middle to make that gap; cushions and arms added to the tail list. Clean.
+- Check: a draped cloth drawn both ways (chair throw) no longer counts as solid.
+- Full runs: study 1,213 overlap moments to 115; living 4,501 to 30.
+
+## Left
+- Sofa throw perch: hind feet 19 cm into the seat on landing, wrist 12 cm
+  into the moss cushion.
+- Study round bed: walking past, wrists and knees 15 to 18 cm into its rim.
+- Sill: wrist 3 to 5 cm into the books on landing.
+- Kitchen wall step (lowest), hall stairs foot and doormat (see last handoff).
 
 ## Decisions not yet in SPEC.md
 None.
