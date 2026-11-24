@@ -5,8 +5,8 @@
 // pieces included, walls too (hidden ones as well: the Room view hides the
 // near walls, they are still there). Negative = that much of her went
 // through. Contact with a top (a surface facing up: floor, seat, shelf, bed)
-// counts only past 4 cm, since lying or standing on a thing presses into
-// it a little in a ball model.
+// counts only past half a ball's radius and 2 cm more: the balls are fatter
+// than she is, and lying on a thing presses into it a little.
 //   ROOM=study,kitchen,living,hall,landing,bedroom,bathroom (the default: all)
 //   SEC=150 per room, SEED=5, SHOTS=1, OUT=qa-out
 // Prints, per room: the worst moments per thing (body and tail apart), and
@@ -95,8 +95,9 @@ await page.evaluate(() => {
   const P = new V3(), Q = new V3(), X = new V3();
   const check = (room, kind, part, p, r, t) => {
     const h = probe(p); if (!h) return;
-    // (On a top: only past 4 cm counts.)
-    let c = h.d - r; if (h.t.top) c = Math.min(0, c + .04);
+    // (On a top, a ball is fatter than she is: only sinking past half its
+    // radius and 2 cm more counts.)
+    const c = h.t.top ? Math.min(0, h.d - .5 * r + .02) : h.d - r;
     if (c < .05) note(room, kind, h.t.name, part, c, t, h.t.top);
   };
   window.__clip = {worst, log, secs: {}, tris: 0, where,
@@ -149,7 +150,7 @@ for (const room of ROOMS) {
   console.log(`${room}: done (${t} triangles in its place)`);
 }
 const {worst, log, secs} = await page.evaluate(() => ({worst: Object.values(__clip.worst), log: __clip.log, secs: __clip.secs}));
-console.log(`\nSeed ${SEED}, ${SEC} s a room. Closest approach per thing, metres (negative = went through; "top" = into a surface facing up, past the 4 cm allowed):`);
+console.log(`\nSeed ${SEED}, ${SEC} s a room. Closest approach per thing, metres (negative = went through; "top" = into a surface facing up, past what is allowed):`);
 for (const room of Object.keys(secs)) {
   console.log(`\n${room} (${secs[room].toFixed(0)} s on her feet or lying):`);
   for (const kind of ['body', 'tail']) {
