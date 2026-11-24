@@ -1003,13 +1003,16 @@ export class Kitchen {
       livingHome: far(LV.home),
       // Floor -> stepping perch -> back counter -> lower shelf -> upper
       // shelf, all at the left end, well away from the range.
+      // (Sitting, her hips are .44 behind her spot: the spots stand far
+      // enough from the wall for them, the shelves' .6 out, the steps' at
+      // their front. 2026-11-24, clipping.mjs: hips 14 cm into the wall.)
       perches: {
-        step: {spot: at(-5.6, -3.87), top: this.stepTops[0], base: at(-5.45, -2.45), face: 0},
+        step: {spot: at(-5.6, -3.66), top: this.stepTops[0], base: at(-5.45, -2.45), face: 0},
         counter: {spot: at(-4.65, -3.35), top: K.counter, via: 'step', face: 0, lane: {z: -2.95, x0: -4.9, x1: .1}},
-        stepMid: {spot: at(-5.6, -3.87), top: this.stepTops[1], via: 'counter', face: 0},
-        shelf: {spot: at(-4.6, -3.9), top: K.shelf1, via: 'stepMid', face: 0, lane: {z: K.back + K.shelfD - .17, x0: -4.5, x1: 3.0}},
-        stepTop: {spot: at(-5.6, -3.87), top: this.stepTops[2], via: 'shelf', face: 0},
-        shelfHigh: {spot: at(-4.65, -3.9), top: K.shelf2, via: 'stepTop', face: 0, lane: {z: K.back + K.shelfD - .17, x0: -4.5, x1: 3.0}},
+        stepMid: {spot: at(-5.6, -3.66), top: this.stepTops[1], via: 'counter', face: 0},
+        shelf: {spot: at(-4.6, -3.6), top: K.shelf1, via: 'stepMid', face: 0, lane: {z: K.back + K.shelfD - .17, x0: -4.5, x1: 3.0}},
+        stepTop: {spot: at(-5.6, -3.66), top: this.stepTops[2], via: 'shelf', face: 0},
+        shelfHigh: {spot: at(-4.65, -3.6), top: K.shelf2, via: 'stepTop', face: 0, lane: {z: K.back + K.shelfD - .17, x0: -4.5, x1: 3.0}},
         // Up on the island (from behind it), only for the salmon.
         island: {spot: at(.3, -.2), top: K.island.top, base: at(.3, -1.75), face: 0},
         // Riding the big pendant shade (from the top shelf, a flying leap):

@@ -38,6 +38,7 @@ await page.evaluate(() => {
     g.traverse(m => {
       if (!m.isMesh || m.isInstancedMesh || skip.has(m) || m.isSkinnedMesh) return;
       const pos = m.geometry.attributes.position; if (!pos) return;
+      const first = tris.length;
       m.geometry.computeBoundingBox();
       const bb = m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld), h = bb.max.y - bb.min.y;
       // (A hidden mesh counts if it's tall: a wall the Room view hid. Not
@@ -47,19 +48,23 @@ await page.evaluate(() => {
       if (mat?.transparent && mat.opacity < .3 || mat?.visible === false) return;
       const name = label(m, bb.getCenter(new V3())), idx = m.geometry.index, n = (idx ? idx.count : pos.count) / 3;
       // (A mirrored mesh's triangles wind the other way: flip them back. A
-      // flat sheet (a wall as one plane, a mat) has no inside, whichever way
-      // it faces: through it is the side away from her hips.)
-      const flip = m.matrixWorld.determinant() < 0 ? -1 : 1, sheet = Math.min(bb.max.x - bb.min.x, h, bb.max.z - bb.min.z) < .02;
+      // flat sheet facing one way (a wall as one plane) has its back as
+      // inside; one drawn both ways, or with faces both ways (a flat mat
+      // shape with its two caps), has no inside.)
+      const flip = m.matrixWorld.determinant() < 0 ? -1 : 1, flat = Math.min(bb.max.x - bb.min.x, h, bb.max.z - bb.min.z) < .02;
+      let sheet = flat && mat?.side !== 0, n0 = null;
       for (let i = 0; i < n; i++) {
         const ia = idx ? idx.getX(3 * i) : 3 * i, ib = idx ? idx.getX(3 * i + 1) : 3 * i + 1, ic = idx ? idx.getX(3 * i + 2) : 3 * i + 2;
         a.fromBufferAttribute(pos, ia).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(pos, ib).applyMatrix4(m.matrixWorld); c.fromBufferAttribute(pos, ic).applyMatrix4(m.matrixWorld);
         const nm = e1.subVectors(b, a).cross(e2.subVectors(c, a)); const len = nm.length(); if (len < 1e-9) continue; nm.divideScalar(flip * len);
-        const t = {a: a.clone(), b: b.clone(), c: c.clone(), n: nm.clone(), name, top: nm.y > .7, sheet};
+        if (flat && !sheet) { if (!n0) n0 = nm.clone(); else if (n0.dot(nm) < .9) sheet = true; }
+        const t = {a: a.clone(), b: b.clone(), c: c.clone(), n: nm.clone(), name, top: nm.y > .7, mesh: m};
         const ti = tris.push(t) - 1;
         const x0 = Math.floor(Math.min(a.x, b.x, c.x) / CELL), x1 = Math.floor(Math.max(a.x, b.x, c.x) / CELL), y0 = Math.floor(Math.min(a.y, b.y, c.y) / CELL), y1 = Math.floor(Math.max(a.y, b.y, c.y) / CELL), z0 = Math.floor(Math.min(a.z, b.z, c.z) / CELL), z1 = Math.floor(Math.max(a.z, b.z, c.z) / CELL);
         if ((x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1) > 4e4) continue; // (a sky sheet or the like)
         for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) { const kk = x + ',' + y + ',' + z; let l = cells.get(kk); if (!l) cells.set(kk, l = []); l.push(ti); }
       }
+      for (let i = first; i < tris.length; i++) tris[i].sheet = sheet;
     });
     grid = {cells, tris};
     return tris.length;
@@ -81,7 +86,6 @@ await page.evaluate(() => {
     face = true; const den = 1 / (va + vb + vc); return out.copy(a).addScaledVector(ab, vb * den).addScaledVector(ac, vc * den);
   };
   const e1 = new V3(), e2 = new V3(), e3 = new V3(), e4 = new V3();
-  const H = new V3(), hipsAt = new V3();
   const probe = p => {
     const cx = Math.floor(p.x / CELL), cy = Math.floor(p.y / CELL), cz = Math.floor(p.z / CELL), seen = new Set();
     let best = null, bd = REACH;
@@ -92,7 +96,7 @@ await page.evaluate(() => {
     if (!best) return null;
     // (Inside only behind a face; near an edge or a corner, or by a thin
     // sheet, it's the distance.)
-    const side = d.subVectors(p, best.q).dot(best.t.n) < 0, s = best.face && (best.t.sheet ? side !== (H.copy(hipsAt).sub(best.q).dot(best.t.n) < 0) : side) ? -1 : 1;
+    const s = best.face && !best.t.sheet && d.subVectors(p, best.q).dot(best.t.n) < 0 ? -1 : 1;
     return {d: s * bd, t: best.t};
   };
   const worst = {}, log = [];
@@ -114,7 +118,6 @@ await page.evaluate(() => {
       const room = where(), kk = room + (k.hall?.level || '') + (k.hall?.wing || '');
       if (kk !== key) { key = kk; this.tris = build(); }
       if (k.brain.jump) return; // (mid-air jumps: the arc isn't a walk)
-      B.hips.getWorldPosition(hipsAt);
       this.secs[room] = (this.secs[room] || 0) + 1 / 20;
       for (const [n, r] of pts) { B[n].getWorldPosition(P); check(room, 'body', n, P, r, t); }
       for (let i = 0; i < 8; i++) {
