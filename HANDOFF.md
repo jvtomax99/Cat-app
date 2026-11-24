@@ -3,11 +3,13 @@
 ## Goal and exact next step
 Merlin named "going through things" (riding the vacuum, walking into
 furniture, her tail). The check for every room is built:
-`tools/qa/clipping.mjs` (row in `docs/QA.md`). Next: Merlin picks how to fix
-the study window sill (below), then fix the rest of the list, rerunning
+`tools/qa/clipping.mjs` (row in `docs/QA.md`). Next: fix the rest of the list
+(below), rerunning
 `ROOM=<room> SEC=150 node tools/qa/clipping.mjs` after each.
 
 ## Done this session
+- Merlin is holding "Go live" until this work is on the preview, then
+  releases it with the vacuum, legs and title fixes in one go.
 - Preview publish re-run: `/preview/version.json` showed 41dad08 (has a5549b7).
 - `clipping.mjs`: measures her bones and tail against each room's real
   triangles. Took four rounds to stop false alarms (mirrored meshes, edges,
@@ -20,11 +22,14 @@ the study window sill (below), then fix the rest of the list, rerunning
   elbows into the treads while climbing.
 
 ## Left (worst first, from the last runs)
-- Study window sill: her head goes through the glass (picture confirmed).
-  Tried: spot 8 cm back and turned 26 degrees: not enough, undone. Options
-  for Merlin: (a) sit sideways along the sill, looking out by turning her
-  head (recommended: the sill is 2.9 wide, .8 deep); (b) spot further back,
-  her rump hangs a bit over the front edge.
+- Study window sill: Merlin picked "sideways". Done (`app.js` PERCHES.sill
+  face pi/2, facing the books): sitting there is now clean
+  (`ROOM=study PERCH=sill`). Still wrong for a moment: landing (she arrives
+  facing the glass, jaw through it, then turns) and the turn before jumping
+  down (tail through the glass). Ideas: land already turned, or add the
+  window to the tail's solids (`tailSolids` in the study layout).
+- Study mantel: jaw into the wall beside it, hips and tail into the vase
+  (`Lathe@4.3,3.1,0.2`).
 - Study chair: sitting and grooming, wrist and tail 20 to 40 cm into the
   chair's back and arms (`Plane@3.0,1.0,-1.1`, `Extrude@2.8,1.5,-2.6`).
   Not looked at yet: could partly be the check (the chair's cushion sheet).
