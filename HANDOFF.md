@@ -1,56 +1,46 @@
-# Handoff (2026-11-24): next, a "going through furniture" check for every room
+# Handoff (2026-11-24, background run): going-through-furniture check built, first fixes
 
 ## Goal and exact next step
-Merlin said phases 01 (legs), 02 (vacuum) and 11 (title screen) look wrong:
-"Opening screen, Her walking, Going through things". For going through
-things he named: riding the vacuum, walking into furniture, her tail.
-Riding the vacuum is fixed (below). He picked: **build a check for all
-rooms** that finds every moment her body or tail goes into furniture
-(study, kitchen/living, hall, landing, bedroom, bathroom), then fix the
-real cases.
-
-Start from `tools/qa/vacuum.mjs`: it reads the real meshes of the kitchen
-floor's solids and measures every bone and the tail along its length
-against them (pass: body > 0 everywhere, tail >= about -.03). Make a general
-version, e.g. `tools/qa/clipping.mjs`, `ROOM=` each room, letting her roam
-(as `legs.mjs` does), and add it to `docs/QA.md`. Small change, no plan
-mode needed.
+Merlin named "going through things" (riding the vacuum, walking into
+furniture, her tail). The check for every room is built:
+`tools/qa/clipping.mjs` (row in `docs/QA.md`). Next: Merlin picks how to fix
+the study window sill (below), then fix the rest of the list, rerunning
+`ROOM=<room> SEC=150 node tools/qa/clipping.mjs` after each.
 
 ## Done this session
-- Phase 09 (test group) built, then undone and parked by Merlin: he's the
-  only tester for now. Plan kept in `docs/phases/09-test-group.md`.
-- Phases 06 and 13 (Christmas) checked by Merlin, marked live.
-- `a5549b7` (on the preview branch, preview publish queued, check
-  `/preview/version.json` shows it):
-  - Vacuum: she only hops on where there's room (`kitchen.vacRideRoom`),
-    and riding it keeps further from the window wall and counter
-    (`VAC_FLOOR_RIDE`). vacuum.mjs: riding now touches nothing (was face
-    8cm into the wall, tail 4cm into the counter).
-  - Legs: after a teleport (room change) her pace is reset too
-    (`motion-cat.js`); the stretch left is only the cut frame itself.
-  - Title: "is fast asleep" bigger with a shadow, darker top, name a bit
-    smaller on wide screens. title.mjs 15/17 PASS; 2 not finished (machine
-    too slow / time limit), not failures.
-- Tried moving the kitchen step stool's floor spot: every spot was worse
-  (ear in wall or chin in the counter). Left as it was; a 2cm ear brush on
-  the window wall while walking into that gap remains.
+- Preview publish re-run: `/preview/version.json` showed 41dad08 (has a5549b7).
+- `clipping.mjs`: measures her bones and tail against each room's real
+  triangles. Took four rounds to stop false alarms (mirrored meshes, edges,
+  flat mats with faces both ways, rugs).
+- Fixed: kitchen shelves and wall steps. Sitting on the lower shelf her
+  hips were 14 cm inside the back wall (her spot was .3 from the wall, she
+  sits .44 behind her spot). Spots moved out (`kitchen.js` perches). Shelf
+  hits gone in the rerun.
+- Bedroom and bathroom: pass. Landing: only small (5 to 8 cm) knees and
+  elbows into the treads while climbing.
 
-## Left
-- Merlin hasn't seen a5549b7 on his phone yet; nothing new to go live
-  until he says "Go live" (main equals the preview before a5549b7).
-- ROADMAP rows 01, 02, 11 stay "preview" until he's happy.
-- Committing: the auto-mode check sometimes blocks `git commit`; after
-  Merlin said retry it went through. Stage, commit and push as separate
-  commands.
-- QA runs are slow here (vacuum ~15 min, title ~30 min); run them in the
-  background, one or two at a time, and start `node server.mjs` in the
-  same command as title.mjs.
-- Deploy: GitHub sometimes fails the publish step ("No artifacts named
-  github-pages"); re-run it.
+## Left (worst first, from the last runs)
+- Study window sill: her head goes through the glass (picture confirmed).
+  Tried: spot 8 cm back and turned 26 degrees: not enough, undone. Options
+  for Merlin: (a) sit sideways along the sill, looking out by turning her
+  head (recommended: the sill is 2.9 wide, .8 deep); (b) spot further back,
+  her rump hangs a bit over the front edge.
+- Study chair: sitting and grooming, wrist and tail 20 to 40 cm into the
+  chair's back and arms (`Plane@3.0,1.0,-1.1`, `Extrude@2.8,1.5,-2.6`).
+  Not looked at yet: could partly be the check (the chair's cushion sheet).
+- Study round bed: walking past it, knees 19 cm into its rim (keep-out
+  circle too small?).
+- Living room sofa: sitting, spine and tail 20 to 36 cm into the back
+  cushions (`Buffer@-0.9,1.5,15.0`): sofa spot too near the back.
+- Kitchen wall step (lowest): landing and grooming, ear into the window
+  wall and back wall, hips into the counter. Cramped corner; the last
+  session found every other spot worse.
+- Hall: hips 8 cm into the foot of the stairs walking past (x -.2, z 3.9);
+  10 cm into the doormat's side.
 
 ## Decisions not yet in SPEC.md
-None (phase 09 on hold is in SPEC.md).
+None.
 
 ## Files to look at first
-`tools/qa/vacuum.mjs`, `tools/qa/legs.mjs`, `tools/qa/lib.mjs`,
-`docs/QA.md`, `docs/ARCHITECTURE.md` (rooms and their floors).
+`tools/qa/clipping.mjs`, `dist/app.js` (`PERCHES`, about line 640),
+`dist/kitchen.js` (`layout()` perches), `docs/QA.md`.
