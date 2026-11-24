@@ -639,8 +639,11 @@ function studyLayout() {
     // where she jumps from and back down to; face: the way she sits there.
     perches: {
       // The window sill, from her bed just below it.
+      // (Sideways, along the sill, facing the books: square on to the glass
+      // her head went through it; the sill is .8 deep. She looks out by
+      // turning her head. Merlin, 2026-11-24.)
       sill: {spot: w.localToWorld(new THREE.Vector3(-.05, 0, room.sillDepth * .5)).setY(0), top: room.sillTop,
-        base: new THREE.Vector3(room.bed.position.x, 0, room.bed.position.z - .3), face: Math.PI},
+        base: new THREE.Vector3(room.bed.position.x, 0, room.bed.position.z - .3), face: Math.PI / 2},
       chair: {spot: c.localToWorld(new THREE.Vector3(0, 0, .3)).setY(0), top: room.chairSeatTop,
         base: c.localToWorld(new THREE.Vector3(0, 0, 1.45)).setY(0), face: c.rotation.y},
       // The mantel shelf, beside the vase, facing the room; she takes off
