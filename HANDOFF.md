@@ -35,6 +35,20 @@ Merlin picked "fix the rest first": Go live still waits for the list below.
 - Check: a draped cloth drawn both ways (chair throw) no longer counts as solid.
 - Full runs: study 1,213 overlap moments to 115; living 4,501 to 30.
 
+## Done 2026-11-25 (third run): NOT COMMITTED (git commit was refused by
+## the permission check; changes sit in dist/app.js and dist/living.js)
+- Throw: spot at(S.x + .8, S.z - 1.6), top seat + .07. Rerun clean
+  (was 19 cm hind foot, 13 cm wrist, 13 cm moss cushion).
+- Study bed: `bedGround` (rim height under each paw and her body, low at
+  the front), `bedBody`, `bedWay` (walks round the bed; in and out over the
+  front). Sill take-off bed z - .1, landing bed x + 1.55, z - .4.
+  Bed rim worst 2.5 cm (was 15). `npm run check` passes.
+- Still there: on the sill route her tail tip dips up to 20 cm into the
+  floor for an instant as she sits after jumping down (was 9.5 before;
+  a tail-after-landing thing, not the bed). Rug edge (`Extrude@-0.4,0,0.3`)
+  6 cm knee/tail: likely the check counting the rug's edge.
+- Next: commit, push, Deploy site, check /preview/version.json.
+
 ## Left (next: the first two, then rerun ROOM=living PERCH=throw and
 ## ROOM=study, confirm with a picture, push, run Deploy site)
 - Sofa throw perch: hind feet 19 cm into the seat on landing, wrist 12 cm

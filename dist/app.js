@@ -646,8 +646,8 @@ function studyLayout() {
       // ahead and to the side of her bed: turning square to jump down to
       // the bed, her hips swung into the glass.)
       sill: {spot: w.localToWorld(new THREE.Vector3(.05, 0, room.sillDepth * .7)).setY(0), top: room.sillTop,
-        base: new THREE.Vector3(room.bed.position.x, 0, room.bed.position.z - .3), face: Math.PI / 2, turnIn: true,
-        down: new THREE.Vector3(room.bed.position.x + 1.35, 0, room.bed.position.z - .55)},
+        base: new THREE.Vector3(room.bed.position.x, 0, room.bed.position.z - .1), face: Math.PI / 2, turnIn: true,
+        down: new THREE.Vector3(room.bed.position.x + 1.55, 0, room.bed.position.z - .4)},
       // (Forward on the seat: further back her hips and tail went into the
       // cushion and the chair's back. She waits for the jump clear of the
       // chair's front, her tail too.)
@@ -953,6 +953,10 @@ function walkTo(point, then = null, run = false, anywhere = false) {
     const path = place.route(brain.pos, target);
     if (path.length > 1) { walkTo(path[0], () => walkTo(target, then, run, true), run, true); return; }
   }
+  if (place === room) {
+    const way = bedWay(brain.pos, target);
+    if (way) { walkTo(way, () => walkTo(target, then, run, true), run, true); return; }
+  }
   brain.target = target;
   brain.run = run;
   brain.faceAt = null;
@@ -961,7 +965,44 @@ function walkTo(point, then = null, run = false, anywhere = false) {
 }
 // Jumping: a crouch and a little wiggle while she sizes it up, then an arc to
 // the new spot and height, and a soft landing.
-const groundAt = p => place.rampAt ? place.groundAt(p.x, p.z, brain.elevation) : Math.hypot(p.x - bed.position.x, p.z - bed.position.z) < place.bedRadius ? place.bedTop : 0;
+// The study's bed under her (or under one paw): the cushion inside, up over
+// the rim (lower at the front, where she steps in) and down to the floor.
+// (Walking in on the flat floor, her legs went 15 to 18 cm into the rim.)
+function bedGround(x, z) {
+  const B = room.bed, dx = x - B.position.x, dz = z - B.position.z, r = Math.hypot(dx, dz), R = room.bedR;
+  if (r > R + .08) return 0;
+  if (r < room.bedRadius) return room.bedTop;
+  const c = Math.max(0, (dx * Math.sin(B.rotation.y) + dz * Math.cos(B.rotation.y)) / r), rim = .21 + .29 * (1 - .55 * c * c * c);
+  if (r < R - .14) return lerp(room.bedTop, rim, smoothstep(r, room.bedRadius, R - .14));
+  return r < R - .02 ? rim : lerp(rim, 0, smoothstep(r, R - .02, R + .08));
+}
+// Her body over the bed's rim: as high as it is under her chest, middle or
+// hips (stepping in, her elbows and knees went into the rim).
+function bedBody() {
+  const p = brain.pos, sx = Math.sin(brain.heading), sz = Math.cos(brain.heading);
+  return Math.max(...[.3, 0, -.4].map(k => bedGround(p.x + sx * k, p.z + sz * k)));
+}
+// Walking in the study: round her bed, not through its rim, and in and out
+// of it over its low front, by the spot just in front of it.
+function bedWay(p, t) {
+  const B = room.bed.position, ry = room.bed.rotation.y, fx = Math.sin(ry), fz = Math.cos(ry), R = room.bedR, CLR = R + .5;
+  const front = new THREE.Vector3(B.x + fx * (R + .55), 0, B.z + fz * (R + .55));
+  const inP = Math.hypot(p.x - B.x, p.z - B.z) < R, inT = Math.hypot(t.x - B.x, t.z - B.z) < R;
+  const near = (a, b) => Math.hypot(a.x - b.x, a.z - b.z) < .2;
+  if (inT && !inP) return near(p, front) ? null : front;
+  if (inP && !inT) return near(t, front) ? null : front;
+  if (inP) return null;
+  const sx = t.x - p.x, sz = t.z - p.z, L2 = sx * sx + sz * sz;
+  if (L2 < .01) return null;
+  const k = ((B.x - p.x) * sx + (B.z - p.z) * sz) / L2;
+  if (k <= .02 || k >= .98) return null;
+  const qx = p.x + sx * k - B.x, qz = p.z + sz * k - B.z, d = Math.hypot(qx, qz);
+  if (d >= CLR) return null;
+  // (Out on the side the way passes; straight at it, round the front.)
+  const ux = d > .05 ? qx / d : fx, uz = d > .05 ? qz / d : fz;
+  return new THREE.Vector3(B.x + ux * (CLR + .1), 0, B.z + uz * (CLR + .1));
+}
+const groundAt = p => place.rampAt ? place.groundAt(p.x, p.z, brain.elevation) : place === room ? bedGround(p.x, p.z) : Math.hypot(p.x - bed.position.x, p.z - bed.position.z) < place.bedRadius ? place.bedTop : 0;
 // The stairs (phase 21, step 2). Her hips are about this far behind her
 // root; her body takes this much of the stairs' slope.
 const HIPS_BACK = .55, STAIR_TILT = 1;
@@ -1497,7 +1538,7 @@ function updateCat(dt, t) {
     brain.elevation = Math.abs(hy - ref) > .6 ? damp(ref, hy, 8, dt) : hy;
     brain.slope = damp(brain.slope || 0, Math.atan2(fy - hy, HIPS_BACK + .15) * STAIR_TILT, 10, dt);
     if (place === hall) { const lv = hall.setLevel(hall.levelAt(brain.elevation)), wg = hall.setWing(hall.wingAt(brain.pos)); if (lv || wg) applyLevel(); }
-  } else if (!J) { brain.elevation = damp(brain.elevation, brain.perch ? perchTop() : groundAt(brain.pos), 8, dt); brain.slope = 0; }
+  } else if (!J) { brain.elevation = damp(brain.elevation, brain.perch ? perchTop() : place === room ? bedBody() : groundAt(brain.pos), 8, dt); brain.slope = 0; }
   cat.root.position.set(brain.pos.x, brain.elevation, brain.pos.z);
   cat.root.rotation.y = brain.heading;
 
@@ -1672,7 +1713,7 @@ function updateCat(dt, t) {
     tailBounds: !brain.perch && brain.elevation > .05 && Math.hypot(brain.pos.x - bed.position.x, brain.pos.z - bed.position.z) < place.bedRadius ? {x: bed.position.x, z: bed.position.z, r: place.bedRadius} : null,
     tailSolids: tailSolids(),
     // (On the hall's stairs: the step under each paw, and the slope.)
-    ground: place.rampAt && !J && !brain.perch ? stairGround : null, slope: brain.slope || 0,
+    ground: place.rampAt && !J && !brain.perch ? stairGround : place === room && !J && !brain.perch && Math.hypot(brain.pos.x - bed.position.x, brain.pos.z - bed.position.z) < room.bedR + 1.2 ? bedGround : null, slope: brain.slope || 0,
   });
 
   // Screen anchor above the head for particles, and the face's rough
